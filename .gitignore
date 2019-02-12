@@ -1,0 +1,4 @@
+.*
+!.git*
+/frontend/.next
+/frontend/node_modules

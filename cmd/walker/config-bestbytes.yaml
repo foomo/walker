@@ -1,0 +1,5 @@
+target: http://www.bestbytes.de
+addr: ":3001"
+frontend: "http://localhost:3000"
+ignore:
+  - /foomo
