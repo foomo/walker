@@ -19,6 +19,7 @@ type Structure struct {
 	Title       string
 	Description string
 	Headings    []Heading
+	Robots      string
 	LinkedData  []LinkedData
 	Canonical   string
 	LinkPrev    string
@@ -30,9 +31,11 @@ type Structure struct {
 
 func extractStructure(doc *goquery.Document) (s Structure, err error) {
 	description, _ := doc.Find("meta[name=description]").First().Attr("content")
+	robots, _ := doc.Find("meta[name=robots]").First().Attr("content")
 	s = Structure{
 		Title:       doc.Find("title").First().Text(),
 		Description: description,
+		Robots:      robots,
 	}
 	doc.Find("link[rel=prev], link[rel=next], link[rel=canonical]").Each(func(i int, sel *goquery.Selection) {
 		attrRelVal, attrRelOK := sel.Attr("rel")
