@@ -25,6 +25,7 @@ type ScrapeResult struct {
 	Length      int
 	Links       LinkList
 	Duration    time.Duration
+	Time        time.Time
 	Structure   Structure
 	// duplication title, descr, h1
 	// blocking robots txt
@@ -63,8 +64,6 @@ func Scrape(targetURL string, chanResult chan ScrapeResult) {
 			chanResult <- result
 			return
 		}
-
-		// result.Length = ???
 
 		linkList, errExtract := extractLinks(doc)
 		resp.Body.Close()
