@@ -10,32 +10,17 @@ import (
 )
 
 type Service struct {
-	w         *Walker
+	Walker    *Walker
 	targetURL string
 }
 
 func NewService(conf *config.Config) (s *Service, err error) {
-	w := NewWalker(32)
-	w.Walk(conf.Target, conf.Ignore...)
+	w := NewWalker(conf.Concurrency)
+	w.walk(conf)
 	s = &Service{
-		w:         w,
+		Walker:    w,
 		targetURL: conf.Target,
 	}
-	go func() {
-		lastScanned := 0
-		for {
-			status := s.w.GetStatus()
-			w.PrintStatus(status)
-			scanned := len(status.Results)
-			scannedInLoop := scanned - lastScanned
-			line()
-			fmt.Println("scanned", scannedInLoop, "in 5s => scan speed @", (float64(scannedInLoop) / 5.0), " docs/s")
-			line()
-			line()
-			lastScanned = scanned
-			time.Sleep(time.Second * 5)
-		}
-	}()
 	return
 }
 
@@ -56,6 +41,7 @@ type filterChain []filterFunc
 type Filters struct {
 	Prefix string
 	Status []int
+	Errors []string
 	MinDur time.Duration
 	MaxDur time.Duration
 }
@@ -133,7 +119,7 @@ func (s *Service) GetResults(
 	page int,
 	pageSize int,
 ) (filterOptions FilterOptions, results []ScrapeResult, numPages int) {
-	resultMap := s.w.GetStatus().Results
+	resultMap := s.Walker.GetStatus().Results
 
 	filterOptions = getFilterOptions(resultMap)
 	if filters.Prefix != "" {
@@ -174,7 +160,7 @@ func (s *Service) GetResults(
 }
 
 func (s *Service) GetStatus() ServiceStatus {
-	walkerStatus := s.w.GetStatus()
+	walkerStatus := s.Walker.GetStatus()
 	open := 0
 	pending := 0
 	for _, active := range walkerStatus.Jobs {
