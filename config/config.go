@@ -12,21 +12,24 @@ type CheckContent struct {
 	Tags        []string
 }
 
-type Group struct {
-	Routes       []string
-	CheckContent *CheckContent
-}
-
 type Config struct {
-	Frontend   string
-	Addr       string
-	Target     string
-	Groups     []*Group
-	Ignore     []string
-	UseCookies bool
+	Concurrency       int
+	Frontend          string
+	Addr              string
+	Target            string
+	Ignore            []string
+	IgnoreQueriesWith []string
+	IgnoreAllQueries  bool
+	UseCookies        bool
+	Depth             int
+	Paging            bool
 }
 
 func Get(filename string) (conf *Config, err error) {
+	conf = &Config{
+		Concurrency:      2,
+		IgnoreAllQueries: false,
+	}
 	yamlBytes, errRead := ioutil.ReadFile(filename)
 	if errRead != nil {
 		err = errRead
