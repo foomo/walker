@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	yaml "gopkg.in/yaml.v1"
 )
@@ -18,12 +19,18 @@ func GetReportHandler(basePath string, walker *Walker) func(w http.ResponseWrite
 		path := strings.TrimPrefix(r.URL.Path, basePath+"/")
 		fmt.Println("handling reports:", path)
 		switch true {
+		case strings.HasPrefix(path, "seo"):
+			report(walker, reportSEO, w)
 		case strings.HasPrefix(path, "broken-links"):
 			report(walker, reportBrokenLinks, w)
 		case strings.HasPrefix(path, "results"):
 			report(walker, reportResults, w)
 		case strings.HasPrefix(path, "list"):
 			report(walker, reportList, w)
+		case strings.HasPrefix(path, "highscore"):
+			report(walker, reportHighscore, w)
+		case strings.HasPrefix(path, "summary"):
+			report(walker, reportSummary, w)
 		case strings.HasPrefix(path, "errors"):
 			report(walker, reportErrors, w)
 		default:
@@ -33,12 +40,17 @@ func GetReportHandler(basePath string, walker *Walker) func(w http.ResponseWrite
 }
 
 func report(walker *Walker, r reporter, w io.Writer) {
-	printh, _, _ := printers(w)
+	_, println, _ := printers(w)
 	if walker.CompleteStatus != nil {
-		printh("complete status")
+		println("COMPLETE STATUS")
+		println("=============================================================================")
 		r(*walker.CompleteStatus, w)
+		println()
+		println()
 	}
-	printh("running status")
+	println("=============================================================================")
+	println("RUNNING STATUS")
+	println("=============================================================================")
 	r(walker.GetStatus(), w)
 }
 
@@ -48,11 +60,105 @@ func printers(w io.Writer) (printh func(header ...interface{}), println func(a .
 	}
 	println = func(a ...interface{}) { fmt.Fprintln(w, a...) }
 	printh = func(header ...interface{}) {
-		printsep()
-		println(append([]interface{}{"~"}, header...))
+		println()
+		println(header...)
 		printsep()
 	}
 	return
+}
+
+type duplications map[string][]string
+
+func (d duplications) add(value, url string) {
+	existingURLs, ok := d[value]
+	if ok {
+		for _, existingURL := range existingURLs {
+			if existingURL == url {
+				return
+			}
+		}
+	}
+	d[value] = append(d[value], url)
+}
+
+func (d duplications) printlnDuplications(w io.Writer) {
+	_, println, _ := printers(w)
+	for value, urls := range d {
+		if len(urls) > 1 {
+			println(value)
+			for _, url := range urls {
+				println("	", url)
+			}
+		}
+	}
+}
+
+type uniqueList []string
+
+func (ul uniqueList) add(v string) {
+	for _, ev := range ul {
+		if ev == v {
+			return
+		}
+	}
+	ul = append(ul, v)
+}
+
+func reportSEO(status Status, w io.Writer) {
+	printh, println, _ := printers(w)
+	h1s := duplications{}
+	titles := duplications{}
+	descriptions := duplications{}
+	missingTitles := uniqueList{}
+	missingH1 := uniqueList{}
+	missingDescriptions := uniqueList{}
+	printh("SEO duplications")
+	for _, r := range status.Results {
+		if strings.Contains(r.ContentType, "html") {
+			foundH1 := false
+			for _, heading := range r.Structure.Headings {
+				if r.Structure.Title == "" {
+					missingTitles.add(r.TargetURL)
+				} else {
+					titles.add(r.Structure.Title, r.TargetURL)
+				}
+				if r.Structure.Description == "" {
+					descriptions.add(r.Structure.Description, r.TargetURL)
+				} else {
+					missingDescriptions.add(r.TargetURL)
+				}
+				if heading.Level == 1 && heading.Text != "" {
+					h1s.add(heading.Text, r.TargetURL)
+					foundH1 = true
+				}
+			}
+			if !foundH1 {
+				missingH1.add(r.TargetURL)
+			}
+		}
+	}
+	printDuplicates := func(title string, d duplications) {
+		if len(d) > 0 {
+			printh(title)
+			d.printlnDuplications(w)
+		}
+	}
+	printDuplicates("duplicate h1", h1s)
+	printDuplicates("duplicate titles", titles)
+	printDuplicates("duplicate descriptions", descriptions)
+
+	printList := func(name string, list []string) {
+		if len(list) > 0 {
+			printh(name)
+			sort.Strings(list)
+			for _, l := range list {
+				println("	", l)
+			}
+		}
+	}
+	printList("missing titles", missingTitles)
+	printList("missing descriptions", missingDescriptions)
+	printList("missing h1", missingH1)
 }
 
 func reportBrokenLinks(status Status, w io.Writer) {
@@ -165,4 +271,55 @@ func reportErrors(status Status, w io.Writer) {
 			println("	", url)
 		}
 	}
+}
+
+type score struct {
+	TargetURL string
+	Code      int
+	Duration  time.Duration
+}
+
+type scores []score
+
+func (s scores) Len() int           { return len(s) }
+func (s scores) Less(i, j int) bool { return s[i].Duration < s[j].Duration }
+func (s scores) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+func reportHighscore(status Status, w io.Writer) {
+	printh, println, _ := printers(w)
+	printh("high score")
+	scores := make(scores, len(status.Results))
+	i := 0
+	for _, r := range status.Results {
+		scores[i] = score{
+			Duration:  r.Duration,
+			Code:      r.Code,
+			TargetURL: r.TargetURL,
+		}
+		i++
+	}
+	sort.Sort(scores)
+	for i, s := range scores {
+		println(i, s.Code, s.TargetURL, s.Duration)
+	}
+}
+
+func reportSummary(status Status, w io.Writer) {
+	printh, println, _ := printers(w)
+	printh("summary")
+	printh("status codes")
+	statusMap := map[int]int{}
+	for _, r := range status.Results {
+		statusMap[r.Code]++
+	}
+	codes := sort.IntSlice{}
+	for code := range statusMap {
+		codes = append(codes, code)
+	}
+	sort.Sort(codes)
+	for _, code := range codes {
+		println(code, statusMap[code])
+	}
+	printh("performance buckets")
+	bucketListStatus(w, status.Results)
 }
