@@ -12,6 +12,7 @@ func (w *Walker) scrapeloop() {
 	depth := 0
 	paging := false
 	ignoreAllQueries := false
+	ignoreRobots := false
 	var jobs map[string]bool
 	var results map[string]ScrapeResult
 	var ignore []string
@@ -29,6 +30,7 @@ func (w *Walker) scrapeloop() {
 			ignore = st.conf.Ignore
 			depth = st.conf.Depth
 			paging = st.conf.Paging
+			ignoreRobots = st.conf.IgnoreRobots
 			ignoreQueriesWith = st.conf.IgnoreQueriesWith
 			ignoreAllQueries = st.conf.IgnoreAllQueries
 			startU, errParseStartU := url.Parse(st.conf.Target)
@@ -72,7 +74,7 @@ func (w *Walker) scrapeloop() {
 			scanResult.Time = time.Now()
 			results[scanResult.TargetURL] = scanResult
 
-			if !strings.Contains(scanResult.Structure.Robots, "nofollow") {
+			if ignoreRobots || !strings.Contains(scanResult.Structure.Robots, "nofollow") {
 				// should we follow the links
 				for linkURL := range scanResult.Links {
 

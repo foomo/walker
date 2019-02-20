@@ -23,12 +23,15 @@ type Config struct {
 	UseCookies        bool
 	Depth             int
 	Paging            bool
+	IgnoreRobots      bool
 }
 
 func Get(filename string) (conf *Config, err error) {
 	conf = &Config{
 		Concurrency:      2,
+		UseCookies:       true,
 		IgnoreAllQueries: false,
+		IgnoreRobots:     false,
 	}
 	yamlBytes, errRead := ioutil.ReadFile(filename)
 	if errRead != nil {
