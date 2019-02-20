@@ -32,11 +32,14 @@ const htmlIndex = `<html>
 <body>
 	<h1>Walker</h1>
 	<ul>
-		<li><a href="/status">walker status</a></li>
+		<li><a href="/status">crawling status</a></li>
+		<li><a href="/reports/summary">summary of status codes and performance overview</a></li>
 		<li><a href="/reports/results">all plain results (this can be a very long doc)</a></li>
-		<li><a href="/reports/list">list all jobs / results</a></li>
+		<li><a href="/reports/list">list of all jobs / results</a></li>
+		<li><a href="/reports/highscore">highscore - all results sorted by request duration</a></li>
 		<li><a href="/reports/broken-links">broken links</a></li>
-		<li><a href="/reports/errors">errors</a></li>
+		<li><a href="/reports/seo">seo</a></li>
+		<li><a href="/reports/errors">errors - calls that returned error status codes</a></li>
 	</ul>
 </body>
 </html>`
@@ -48,8 +51,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.Path == "/status" {
 		w.Write([]byte(":::::::::::::::::: STATUS ::::::::::::::::::\n"))
-		w.Write([]byte("running with config:\n" + s.conf + "\n"))
-		w.Write([]byte("::::::::::::::::::::::::::::::::::::::::::::\n"))
+		w.Write([]byte("\nrunning with config:\n\n" + s.conf + "\n"))
 		s.s.Walker.PrintStatus(w, s.s.Walker.GetStatus())
 		return
 	}
