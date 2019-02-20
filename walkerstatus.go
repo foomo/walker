@@ -7,6 +7,82 @@ import (
 	"time"
 )
 
+type bucket struct {
+	Name string
+	From time.Duration
+	To   time.Duration
+}
+
+type bucketList []bucket
+
+func getBucketList() bucketList {
+	return bucketList{
+		bucket{
+			Name: "awesome",
+			From: time.Duration(time.Millisecond * 0),
+			To:   time.Duration(time.Millisecond * 50),
+		},
+		bucket{
+			Name: "great",
+			From: time.Duration(time.Millisecond * 50),
+			To:   time.Duration(time.Millisecond * 100),
+		},
+		bucket{
+			Name: "ok, google loves you",
+			From: time.Duration(time.Millisecond * 100),
+			To:   time.Duration(time.Millisecond * 200),
+		},
+		bucket{
+			Name: "not too good, but still ok",
+			From: time.Duration(time.Millisecond * 200),
+			To:   time.Duration(time.Millisecond * 300),
+		},
+		bucket{
+			Name: "not great",
+			From: time.Duration(time.Millisecond * 300),
+			To:   time.Duration(time.Millisecond * 500),
+		},
+		bucket{
+			Name: "bad, users start to feel a real difference",
+			From: time.Duration(time.Millisecond * 500),
+			To:   time.Duration(time.Millisecond * 1000),
+		},
+		bucket{
+			Name: "really bad, you are using users",
+			From: time.Duration(time.Millisecond * 1000),
+			To:   time.Duration(time.Millisecond * 3000),
+		},
+		bucket{
+			Name: "ouch this seems broken",
+			From: time.Duration(time.Millisecond * 3000),
+			To:   time.Duration(time.Millisecond * 5000),
+		},
+		bucket{
+			Name: "catastrophic you site seems to be down",
+			From: time.Duration(time.Millisecond * 5000),
+			To:   time.Duration(time.Millisecond * 10000),
+		},
+		bucket{
+			Name: "end of the world - this must not happen",
+			From: time.Duration(time.Millisecond * 10000),
+			To:   time.Duration(time.Hour),
+		},
+	}
+}
+
+func bucketListStatus(writer io.Writer, results map[string]ScrapeResult) {
+	for _, bucket := range getBucketList() {
+		bucketI := 0
+		for _, result := range results {
+			if result.Duration > bucket.From && result.Duration < bucket.To {
+				bucketI++
+			}
+		}
+		fmt.Fprintln(writer, bucketI, "	(", bucket.From, "=>", bucket.To, ")", bucket.Name)
+	}
+
+}
+
 func (w *Walker) PrintStatus(writer io.Writer, status Status) {
 	headline(writer, "Status: ", " jobs: ", len(status.Jobs), ", results: ", len(status.Results), "current scapespeed: ", status.ScrapeSpeed, "requests/s")
 	statusCodes := map[int]int{}
@@ -29,86 +105,9 @@ func (w *Walker) PrintStatus(writer io.Writer, status Status) {
 	sort.Strings(notFoundKeys)
 
 	fmt.Fprintln(writer, statusCodes)
-	type bucket struct {
-		Name string
-		From time.Duration
-		To   time.Duration
-		Show bool
-	}
 
-	buckets := []bucket{
-		bucket{
-			Name: "awesome < 50 ms",
-			From: time.Duration(time.Millisecond * 0),
-			To:   time.Duration(time.Millisecond * 50),
-			Show: false,
-		},
-		bucket{
-			Name: "great < 100 ms",
-			From: time.Duration(time.Millisecond * 50),
-			To:   time.Duration(time.Millisecond * 100),
-		},
-		bucket{
-			Name: "ok < 200 ms",
-			From: time.Duration(time.Millisecond * 100),
-			To:   time.Duration(time.Millisecond * 200),
-		},
-		bucket{
-			Name: "not too good < 300 ms",
-			From: time.Duration(time.Millisecond * 200),
-			To:   time.Duration(time.Millisecond * 300),
-			Show: false,
-		},
-		bucket{
-			Name: "meh < 500 ms",
-			From: time.Duration(time.Millisecond * 300),
-			To:   time.Duration(time.Millisecond * 500),
-			Show: false,
-		},
-		bucket{
-			Name: "bad < 1 s",
-			From: time.Duration(time.Millisecond * 500),
-			To:   time.Duration(time.Millisecond * 1000),
-			Show: false,
-		},
-		bucket{
-			Name: "really bad < 3 s",
-			From: time.Duration(time.Millisecond * 1000),
-			To:   time.Duration(time.Millisecond * 3000),
-			Show: false,
-		},
-		bucket{
-			Name: "ouch < 5 s",
-			From: time.Duration(time.Millisecond * 3000),
-			To:   time.Duration(time.Millisecond * 5000),
-			Show: false,
-		},
-		bucket{
-			Name: "catastrophic < 10 s",
-			From: time.Duration(time.Millisecond * 5000),
-			To:   time.Duration(time.Millisecond * 10000),
-			Show: false,
-		},
-		bucket{
-			Name: "end of the world > 10 s",
-			From: time.Duration(time.Millisecond * 10000),
-			To:   time.Duration(time.Hour),
-			Show: false,
-		},
-	}
-	for _, bucket := range buckets {
-		bucketI := 0
-		fmt.Fprintln(writer, bucket.Name, bucket.From, bucket.To)
-		for _, result := range status.Results {
-			if result.Duration > bucket.From && result.Duration < bucket.To {
-				bucketI++
-				if bucket.Show {
-					fmt.Fprintln(writer, "	", result.Status, result.Duration, result.TargetURL)
-				}
-			}
-		}
-		fmt.Fprintln(writer, "	-> bucket contains", bucketI)
-	}
+	bucketListStatus(writer, status.Results)
+
 	headline(writer, "currently scanning")
 	for targetURL, active := range status.Jobs {
 		if active {
