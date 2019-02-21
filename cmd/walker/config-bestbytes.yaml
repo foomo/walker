@@ -1,5 +1,5 @@
 target: http://www.bestbytes.de
+concurrency: 2
 addr: ":3001"
-frontend: "http://localhost:3000"
 ignore:
   - /foomo
