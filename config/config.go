@@ -14,7 +14,6 @@ type CheckContent struct {
 
 type Config struct {
 	Concurrency       int
-	Frontend          string
 	Addr              string
 	Target            string
 	Ignore            []string

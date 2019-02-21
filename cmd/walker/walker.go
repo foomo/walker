@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/cookiejar"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"strings"
 
@@ -17,9 +15,6 @@ import (
 )
 
 type server struct {
-	servicePath   string
-	serviveProxy  http.Handler
-	p             *httputil.ReverseProxy
 	s             *walker.Service
 	conf          string
 	reportHandler http.HandlerFunc
@@ -59,13 +54,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.reportHandler(w, r)
 		return
 	}
-	if strings.HasPrefix(r.URL.Path, s.servicePath) {
-		fmt.Println("service call", r.URL.Path)
-		s.serviveProxy.ServeHTTP(w, r)
-		return
-	}
-	fmt.Println("proxying", r.URL.Path)
-	s.p.ServeHTTP(w, r)
+	http.NotFound(w, r)
 }
 
 func must(comment string, err error) {
@@ -90,9 +79,6 @@ func main() {
 	fmt.Println(string(yamlConfBytes))
 	fmt.Println("------------------------------------------------------------------")
 
-	proxyURL, errProxyURL := url.Parse(conf.Frontend)
-	must("can not parse frontend url: "+conf.Frontend+" :", errProxyURL)
-	fmt.Println("proxying frontend requests to", proxyURL)
 	if conf.UseCookies {
 		fmt.Println("using cookies")
 		cookieJar, _ := cookiejar.New(nil)
@@ -102,13 +88,8 @@ func main() {
 	s, errS := walker.NewService(conf)
 	must("could not start service", errS)
 
-	serviceProxy := walker.NewDefaultServiceGoTSRPCProxy(s, []string{})
-
 	log.Fatal(http.ListenAndServe(conf.Addr, &server{
 		conf:          string(yamlConfBytes),
-		servicePath:   serviceProxy.EndPoint,
-		serviveProxy:  serviceProxy,
-		p:             httputil.NewSingleHostReverseProxy(proxyURL),
 		s:             s,
 		reportHandler: walker.GetReportHandler(pathReports, s.Walker),
 	}))
