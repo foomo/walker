@@ -85,13 +85,21 @@ func bucketListStatus(writer io.Writer, results map[string]ScrapeResult) {
 
 func (w *Walker) PrintStatus(writer io.Writer, status Status) {
 	headline(writer, "Status: ", " jobs: ", len(status.Jobs), ", results: ", len(status.Results), "current scapespeed: ", status.ScrapeSpeed, "requests/s")
-	statusCodes := map[int]int{}
+
+	reportSummaryBody(status, writer)
+
+	headline(writer, "currently scanning")
+	for targetURL, active := range status.Jobs {
+		if active {
+			fmt.Fprintln(writer, targetURL)
+		}
+	}
+
 	notFoundKeys := []string{}
 	notFoundMap := map[string]ScrapeResult{}
 	errorKeys := []string{}
 	errorMap := map[string]ScrapeResult{}
 	for targetURL, result := range status.Results {
-		statusCodes[result.Code]++
 		switch true {
 		case result.Code == 404:
 			notFoundKeys = append(notFoundKeys, targetURL)
@@ -104,16 +112,6 @@ func (w *Walker) PrintStatus(writer io.Writer, status Status) {
 	sort.Strings(errorKeys)
 	sort.Strings(notFoundKeys)
 
-	fmt.Fprintln(writer, statusCodes)
-
-	bucketListStatus(writer, status.Results)
-
-	headline(writer, "currently scanning")
-	for targetURL, active := range status.Jobs {
-		if active {
-			fmt.Fprintln(writer, targetURL)
-		}
-	}
 	headline(writer, "bad errors")
 
 	for _, targetURL := range errorKeys {

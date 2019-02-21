@@ -305,8 +305,13 @@ func reportHighscore(status Status, w io.Writer) {
 }
 
 func reportSummary(status Status, w io.Writer) {
-	printh, println, _ := printers(w)
+	printh, _, _ := printers(w)
 	printh("summary")
+	reportSummaryBody(status, w)
+}
+
+func reportSummaryBody(status Status, w io.Writer) {
+	printh, println, _ := printers(w)
 	printh("status codes")
 	statusMap := map[int]int{}
 	for _, r := range status.Results {

@@ -56,8 +56,7 @@ func line(w io.Writer) {
 }
 
 func headline(w io.Writer, v ...interface{}) {
-	line(w)
-	v = append([]interface{}{"~"}, v...)
+	fmt.Fprintln(w)
 	fmt.Fprintln(w, v...)
 	line(w)
 }
