@@ -3,6 +3,7 @@ package walker
 import (
 	"fmt"
 	"io"
+	"math"
 	"sort"
 	"time"
 )
@@ -71,16 +72,33 @@ func getBucketList() bucketList {
 }
 
 func bucketListStatus(writer io.Writer, results map[string]ScrapeResult) {
+	countAllRequests := float64(len(results))
+	max := int64(0)
+	min := ^int64(0)
 	for _, bucket := range getBucketList() {
 		bucketI := 0
 		for _, result := range results {
+			ts := int64(result.Time.Unix())
+			if ts > min {
+				min = ts
+			}
+			if ts < max {
+				max = ts
+			}
 			if result.Duration > bucket.From && result.Duration < bucket.To {
 				bucketI++
 			}
 		}
-		fmt.Fprintln(writer, bucketI, "	(", bucket.From, "=>", bucket.To, ")", bucket.Name)
+		fmt.Fprintln(
+			writer,
+			bucketI,
+			"	",
+			math.Round(float64(bucketI)/countAllRequests*100),
+			"%	(", bucket.From, "=>", bucket.To, ")",
+			bucket.Name,
+		)
 	}
-
+	fmt.Fprintln(writer, "=>", min, time.Unix(min, 0), max, time.Unix(max, 0))
 }
 
 func (w *Walker) PrintStatus(writer io.Writer, status Status) {
