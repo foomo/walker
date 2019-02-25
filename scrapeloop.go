@@ -18,10 +18,14 @@ func (w *Walker) scrapeloop() {
 	var ignore []string
 	var ignoreQueriesWith []string
 	var baseURL *url.URL
-	start := func(startURL *url.URL) {
+	paths := []string{}
+	start := func(startURL *url.URL, configPaths []string) {
 		baseURL = startURL
+		paths = configPaths
 		running = 0
-		jobs = map[string]bool{baseURL.String(): false}
+		for _, p := range paths {
+			jobs = map[string]bool{baseURL.String() + p: false}
+		}
 		results = map[string]ScrapeResult{}
 	}
 	for {
@@ -33,9 +37,9 @@ func (w *Walker) scrapeloop() {
 			ignoreRobots = st.conf.IgnoreRobots
 			ignoreQueriesWith = st.conf.IgnoreQueriesWith
 			ignoreAllQueries = st.conf.IgnoreAllQueries
-			startU, errParseStartU := url.Parse(st.conf.Target)
+			startU, errParseStartU := url.Parse(st.conf.Target.BaseURL)
 			if errParseStartU == nil {
-				start(startU)
+				start(startU, st.conf.Target.Paths)
 				w.chanErrStart <- nil
 			} else {
 				w.chanErrStart <- errParseStartU
@@ -110,9 +114,18 @@ func (w *Walker) scrapeloop() {
 								}
 							}
 						}
-						if !ignoreLink && !strings.HasPrefix(linkU.Path, baseURL.Path) {
-							// not in the scrape path
-							ignoreLink = true
+						if !ignoreLink {
+							foundPath := false
+							for _, p := range paths {
+								if strings.HasPrefix(linkU.Path, p) {
+									foundPath = true
+									break
+								}
+							}
+							if !foundPath {
+								// not in the scrape path
+								ignoreLink = true
+							}
 						}
 						if !ignoreLink && depth > 0 {
 							// too deep?
@@ -161,12 +174,12 @@ func (w *Walker) scrapeloop() {
 		}
 		// time to restart
 		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil {
-			fmt.Println("restarting")
+			fmt.Println("restarting", baseURL, paths)
 			w.CompleteStatus = &Status{
 				Results: results,
 				Jobs:    jobs,
 			}
-			start(baseURL)
+			start(baseURL, paths)
 		}
 	}
 }

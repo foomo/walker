@@ -12,10 +12,14 @@ type CheckContent struct {
 	Tags        []string
 }
 
+type Target struct {
+	BaseURL string
+	Paths   []string
+}
 type Config struct {
 	Concurrency       int
 	Addr              string
-	Target            string
+	Target            Target
 	Ignore            []string
 	IgnoreQueriesWith []string
 	IgnoreAllQueries  bool

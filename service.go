@@ -10,16 +10,16 @@ import (
 )
 
 type Service struct {
-	Walker    *Walker
-	targetURL string
+	Walker *Walker
+	// targetURL string
 }
 
 func NewService(conf *config.Config) (s *Service, err error) {
 	w := NewWalker(conf.Concurrency)
 	w.walk(conf)
 	s = &Service{
-		Walker:    w,
-		targetURL: conf.Target,
+		Walker: w,
+		// targetURL: conf.Target,
 	}
 	return
 }
@@ -123,7 +123,7 @@ func (s *Service) GetResults(
 
 	filterOptions = getFilterOptions(resultMap)
 	if filters.Prefix != "" {
-		filters.Prefix = s.targetURL + filters.Prefix
+		filters.Prefix = filters.Prefix
 	}
 	filter(resultMap, getFilterChain(filters))
 
@@ -171,9 +171,9 @@ func (s *Service) GetStatus() ServiceStatus {
 		}
 	}
 	return ServiceStatus{
-		TargetURL: s.targetURL,
-		Done:      len(walkerStatus.Results),
-		Open:      open,
-		Pending:   pending,
+		//		TargetURL: s.targetURL,
+		Done:    len(walkerStatus.Results),
+		Open:    open,
+		Pending: pending,
 	}
 }
