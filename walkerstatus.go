@@ -71,32 +71,49 @@ func getBucketList() bucketList {
 	}
 }
 
-func bucketListStatus(writer io.Writer, results map[string]ScrapeResult) {
+func groupedBucketListStatus(writer io.Writer, results map[string]ScrapeResult) {
 	countAllRequests := float64(len(results))
 	max := int64(0)
 	min := ^int64(0)
-	for _, bucket := range getBucketList() {
-		bucketI := 0
-		for _, result := range results {
-			ts := int64(result.Time.Unix())
-			if ts > min {
-				min = ts
+	groups := map[string]int64{}
+	for _, r := range results {
+		groups[r.Group]++
+	}
+	i := 0
+	groupNames := make([]string, len(groups))
+
+	for group := range groups {
+		groupNames[i] = group
+		i++
+	}
+	sort.Strings(groupNames)
+	for _, groupName := range groupNames {
+		fmt.Fprintln(writer, "group: "+groupName)
+		for _, bucket := range getBucketList() {
+			bucketI := 0
+			for _, result := range results {
+				if result.Group == groupName {
+					ts := int64(result.Time.Unix())
+					if ts > min {
+						min = ts
+					}
+					if ts < max {
+						max = ts
+					}
+					if result.Duration > bucket.From && result.Duration < bucket.To {
+						bucketI++
+					}
+				}
 			}
-			if ts < max {
-				max = ts
-			}
-			if result.Duration > bucket.From && result.Duration < bucket.To {
-				bucketI++
-			}
+			fmt.Fprintln(
+				writer,
+				bucketI,
+				"	",
+				math.Round(float64(bucketI)/countAllRequests*100),
+				"%	(", bucket.From, "=>", bucket.To, ")",
+				bucket.Name,
+			)
 		}
-		fmt.Fprintln(
-			writer,
-			bucketI,
-			"	",
-			math.Round(float64(bucketI)/countAllRequests*100),
-			"%	(", bucket.From, "=>", bucket.To, ")",
-			bucket.Name,
-		)
 	}
 	fmt.Fprintln(writer, "=>", min, time.Unix(min, 0), max, time.Unix(max, 0))
 }

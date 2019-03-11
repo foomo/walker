@@ -326,5 +326,5 @@ func reportSummaryBody(status Status, w io.Writer) {
 		println(code, statusMap[code])
 	}
 	printh("performance buckets")
-	bucketListStatus(w, status.Results)
+	groupedBucketListStatus(w, status.Results)
 }

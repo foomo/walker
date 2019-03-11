@@ -27,6 +27,7 @@ type Config struct {
 	Depth             int
 	Paging            bool
 	IgnoreRobots      bool
+	GroupHeader       string
 }
 
 func Get(filename string) (conf *Config, err error) {

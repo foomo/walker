@@ -27,16 +27,18 @@ type ScrapeResult struct {
 	Duration    time.Duration
 	Time        time.Time
 	Structure   Structure
+	Group       string
 	// duplication title, descr, h1
 	// blocking robots txt
 }
 
 var ErrorNoBody = "no body"
 
-func Scrape(targetURL string, chanResult chan ScrapeResult) {
+func Scrape(targetURL string, groupHeader string, chanResult chan ScrapeResult) {
 	result := ScrapeResult{
 		Code:      0,
 		TargetURL: targetURL,
+		Group:     "default",
 	}
 	start := time.Now()
 	resp, errGet := http.Get(targetURL)
@@ -56,6 +58,12 @@ func Scrape(targetURL string, chanResult chan ScrapeResult) {
 
 	result.ContentType = resp.Header.Get("Content-type")
 
+	if groupHeader != "" {
+		group := resp.Header.Get(groupHeader)
+		if group != "" {
+			result.Group = group
+		}
+	}
 	if strings.Contains(result.ContentType, "html") {
 
 		doc, errNewDoc := goquery.NewDocumentFromResponse(resp)

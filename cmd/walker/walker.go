@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
@@ -84,6 +85,8 @@ func main() {
 		cookieJar, _ := cookiejar.New(nil)
 		http.DefaultClient.Jar = cookieJar
 	}
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	//http.DefaultClient.Transport.(*http.Transport).TLSClientConfig =
 
 	s, errS := walker.NewService(conf)
 	must("could not start service", errS)

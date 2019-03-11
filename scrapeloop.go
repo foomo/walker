@@ -11,6 +11,7 @@ func (w *Walker) scrapeloop() {
 	running := 0
 	depth := 0
 	paging := false
+	groupHeader := ""
 	ignoreAllQueries := false
 	ignoreRobots := false
 	var jobs map[string]bool
@@ -23,14 +24,25 @@ func (w *Walker) scrapeloop() {
 		baseURL = startURL
 		paths = configPaths
 		running = 0
+		baseURLString := baseURL.Scheme + "://" + baseURL.Host
+		port := baseURL.Port()
+		if port != "" {
+			baseURLString += ":" + port
+		}
+		baseURLString += baseURL.RawPath
+		q := ""
+		if len(baseURL.Query()) > 0 {
+			q = "?" + baseURL.RawQuery
+		}
 		for _, p := range paths {
-			jobs = map[string]bool{baseURL.String() + p: false}
+			jobs = map[string]bool{baseURLString + p + q: false}
 		}
 		results = map[string]ScrapeResult{}
 	}
 	for {
 		select {
 		case st := <-w.chanStart:
+			groupHeader = st.conf.GroupHeader
 			ignore = st.conf.Ignore
 			depth = st.conf.Depth
 			paging = st.conf.Paging
@@ -168,7 +180,7 @@ func (w *Walker) scrapeloop() {
 				if !jobActive {
 					running++
 					jobs[jobURL] = true
-					go Scrape(jobURL, w.chanResult)
+					go Scrape(jobURL, groupHeader, w.chanResult)
 				}
 			}
 		}
