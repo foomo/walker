@@ -72,7 +72,6 @@ func getBucketList() bucketList {
 }
 
 func groupedBucketListStatus(writer io.Writer, results map[string]ScrapeResult) {
-	countAllRequests := float64(len(results))
 	max := int64(0)
 	min := ^int64(0)
 	groups := map[string]int64{}
@@ -109,7 +108,7 @@ func groupedBucketListStatus(writer io.Writer, results map[string]ScrapeResult) 
 				writer,
 				bucketI,
 				"	",
-				math.Round(float64(bucketI)/countAllRequests*100),
+				math.Round(float64(bucketI)/float64(groups[groupName])*100),
 				"%	(", bucket.From, "=>", bucket.To, ")",
 				bucket.Name,
 			)
