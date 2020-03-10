@@ -49,7 +49,7 @@ func getBucketList() bucketList {
 			To:   time.Duration(time.Millisecond * 1000),
 		},
 		bucket{
-			Name: "really bad, you are using users",
+			Name: "really bad, you are loosing users",
 			From: time.Duration(time.Millisecond * 1000),
 			To:   time.Duration(time.Millisecond * 3000),
 		},
@@ -118,7 +118,22 @@ func groupedBucketListStatus(writer io.Writer, results map[string]ScrapeResult) 
 }
 
 func (w *Walker) PrintStatus(writer io.Writer, status Status) {
-	headline(writer, "Status: ", " jobs: ", len(status.Jobs), ", results: ", len(status.Results), "current scapespeed: ", status.ScrapeSpeed, "requests/s")
+
+	headline(writer,
+		"Status: ",
+		" jobs: ", len(status.Jobs),
+		", results: ", len(status.Results),
+		", current scapespeed: ", status.ScrapeSpeed, "requests/s",
+		",average scrape speed:", status.ScrapeSpeedAverage, "requests/s",
+	)
+	headline(writer,
+		" scrape window: ", status.ScrapeWindowRequests, status.ScrapeWindowSeconds,
+		", scapespeed: ", status.ScrapeSpeed, "requests/s",
+	)
+	headline(writer,
+		" scrape average: ", status.ScrapeTotalRequests, status.ScrapeTotalSeconds,
+		", scapespeed: ", status.ScrapeSpeedAverage, "requests/s",
+	)
 
 	reportSummaryBody(status, writer)
 
@@ -139,6 +154,9 @@ func (w *Walker) PrintStatus(writer io.Writer, status Status) {
 			notFoundKeys = append(notFoundKeys, targetURL)
 			notFoundMap[targetURL] = result
 		case result.Code >= 500:
+			errorKeys = append(errorKeys, targetURL)
+			errorMap[targetURL] = result
+		case result.Code == 0:
 			errorKeys = append(errorKeys, targetURL)
 			errorMap[targetURL] = result
 		}
