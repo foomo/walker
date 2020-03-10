@@ -1,24 +1,24 @@
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/cookiejar"
 	"os"
 	"strings"
 
 	"github.com/foomo/walker"
 	"github.com/foomo/walker/config"
-	yaml "gopkg.in/yaml.v1"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type server struct {
-	s             *walker.Service
-	conf          string
-	reportHandler http.HandlerFunc
+	s              *walker.Service
+	conf           string
+	reportHandler  http.HandlerFunc
+	metricsHandler http.HandlerFunc
 }
 
 const pathReports = "/reports"
@@ -29,6 +29,7 @@ const htmlIndex = `<html>
 	<h1>Walker</h1>
 	<ul>
 		<li><a href="/status">crawling status</a></li>
+		<li><a href="/metrics">prometheus metrics scraping endpoint</a></li>
 		<li><a href="/reports/summary">summary of status codes and performance overview</a></li>
 		<li><a href="/reports/results">all plain results (this can be a very long doc)</a></li>
 		<li><a href="/reports/list">list of all jobs / results</a></li>
@@ -43,6 +44,10 @@ const htmlIndex = `<html>
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
 		w.Write([]byte(htmlIndex))
+		return
+	}
+	if r.URL.Path == "/metrics" {
+		s.metricsHandler(w, r)
 		return
 	}
 	if r.URL.Path == "/status" {
@@ -80,20 +85,15 @@ func main() {
 	fmt.Println(string(yamlConfBytes))
 	fmt.Println("------------------------------------------------------------------")
 
-	if conf.UseCookies {
-		fmt.Println("using cookies")
-		cookieJar, _ := cookiejar.New(nil)
-		http.DefaultClient.Jar = cookieJar
-	}
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	//http.DefaultClient.Transport.(*http.Transport).TLSClientConfig =
+	// http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	s, errS := walker.NewService(conf)
 	must("could not start service", errS)
 
 	log.Fatal(http.ListenAndServe(conf.Addr, &server{
-		conf:          string(yamlConfBytes),
-		s:             s,
-		reportHandler: walker.GetReportHandler(pathReports, s.Walker),
+		conf:           string(yamlConfBytes),
+		s:              s,
+		reportHandler:  walker.GetReportHandler(pathReports, s.Walker),
+		metricsHandler: promhttp.Handler().ServeHTTP,
 	}))
 }
