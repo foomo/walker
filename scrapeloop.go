@@ -2,10 +2,21 @@ package walker
 
 import (
 	"fmt"
+	"net"
+	"net/http"
+	"net/http/cookiejar"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+type poolClient struct {
+	client *http.Client
+	busy   bool
+}
 
 func (w *Walker) scrapeloop() {
 	running := 0
@@ -20,7 +31,87 @@ func (w *Walker) scrapeloop() {
 	var ignoreQueriesWith []string
 	var baseURL *url.URL
 	paths := []string{}
+	clientPool := []*poolClient{}
+	getBucketList()
+
+	const prometheusLabelGroup = "group"
+	const prometheusLabelStatus = "status"
+
+	summaryVec := prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name:       "walker_scrape_durations_seconds",
+			Help:       "scrape duration whole request time including streaming of body",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{prometheusLabelGroup},
+	)
+
+	counterVec := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "walker_scrape_running_total",
+			Help: "Number of scrapes in scan.",
+		},
+		[]string{prometheusLabelGroup, prometheusLabelStatus},
+	)
+
+	totalCounter := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "walker_scrape_counter_total",
+		Help: "number of scrapes since start of walker",
+	})
+
+	progressGaugeOpen := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "walker_progress_gauge_open",
+			Help: "progress open to scrape",
+		},
+	)
+
+	progressGaugeComplete := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "walker_progress_gauge_complete",
+			Help: "progress complete scrapes",
+		},
+	)
+
+	counterVecStatus := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "walker_progress_status_code_total",
+		Help: "status codes for running scrape",
+	}, []string{prometheusLabelStatus})
+
+	prometheus.MustRegister(
+		summaryVec,
+		counterVec,
+		totalCounter,
+		progressGaugeComplete,
+		progressGaugeOpen,
+		counterVecStatus,
+	)
+
+	clientPool = make([]*poolClient, w.concurrency)
+	for i := 0; i < w.concurrency; i++ {
+		client := &http.Client{
+			Timeout: time.Second * 10,
+			Transport: &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout: 5 * time.Second,
+				}).Dial,
+				TLSHandshakeTimeout: 5 * time.Second,
+			},
+		}
+		if w.useCookies {
+			cookieJar, _ := cookiejar.New(nil)
+			client.Jar = cookieJar
+		}
+		clientPool[i] = &poolClient{
+			client: client,
+			busy:   false,
+		}
+	}
+
 	start := func(startURL *url.URL, configPaths []string) {
+		summaryVec.Reset()
+		counterVec.Reset()
+		counterVecStatus.Reset()
 		baseURL = startURL
 		paths = configPaths
 		running = 0
@@ -38,9 +129,49 @@ func (w *Walker) scrapeloop() {
 			jobs = map[string]bool{baseURLString + p + q: false}
 		}
 		results = map[string]ScrapeResult{}
+
 	}
 	for {
+
+		progressGaugeComplete.Set(float64(len(results)))
+		progressGaugeOpen.Set(float64(len(jobs)))
+		if len(jobs) > 0 {
+		JobLoop:
+			for jobURL, jobActive := range jobs {
+				if running >= w.concurrency {
+					// concurrency limit
+					break
+				}
+				if !jobActive {
+					for _, poolClient := range clientPool {
+						if !poolClient.busy {
+							running++
+							jobs[jobURL] = true
+							poolClient.busy = true
+							// u, _ := url.Parse(jobURL)
+							// fmt.Println("got pool client", i, poolClient.client.Jar.Cookies(u))
+							go Scrape(poolClient, jobURL, groupHeader, w.chanResult)
+							continue JobLoop
+						}
+					}
+					// fmt.Println("all clients are busy")
+					break JobLoop
+				}
+			}
+		}
+		// time to restart
+		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil {
+			fmt.Println("restarting", baseURL, paths)
+			w.CompleteStatus = &Status{
+				Results: results,
+				Jobs:    jobs,
+			}
+			start(baseURL, paths)
+		}
+
 		select {
+		case <-time.After(time.Millisecond * 1000):
+			// make sure we do not get stuck
 		case st := <-w.chanStart:
 			groupHeader = st.conf.GroupHeader
 			ignore = st.conf.Ignore
@@ -69,26 +200,50 @@ func (w *Walker) scrapeloop() {
 			}
 			scrapeWindowSeconds := 60
 			scrapeWindow := time.Second * time.Duration(scrapeWindowSeconds)
-			scrapeWindowCount := 0
+			scrapeWindowCount := int64(0)
 			now := time.Now()
-			//var first time.Time
-			//fmt.Println("status", len(results), now, "window", scrapeWindow)
+
+			first := now.Unix()
+			scrapeWindowFirst := now.Unix()
+			totalCount := int64(0)
+
 			for _, r := range results {
-				// fmt.Println(now, " r.Time", r.Time, "sub", now.Sub(r.Time), "window", scrapeWindow)
+				// the results are not sorted baby
+				totalCount++
+				if first > r.Time.Unix() {
+					first = r.Time.Unix()
+				}
 				if now.Sub(r.Time) < scrapeWindow {
+					if scrapeWindowFirst > r.Time.Unix() {
+						scrapeWindowFirst = r.Time.Unix()
+					}
 					scrapeWindowCount++
 				}
 			}
+			currentScrapeWindowSeconds := now.Unix() - scrapeWindowFirst
+			scrapeTotalSeconds := now.Unix() - first
 			w.chanStatus <- Status{
-				Results:     resultsCopy,
-				ScrapeSpeed: float64(scrapeWindowCount) / float64(scrapeWindowSeconds),
-				Jobs:        jobsCopy,
+				Results:              resultsCopy,
+				ScrapeSpeed:          float64(scrapeWindowCount) / float64(currentScrapeWindowSeconds),
+				ScrapeSpeedAverage:   float64(totalCount) / float64(scrapeTotalSeconds),
+				ScrapeWindowRequests: scrapeWindowCount,
+				ScrapeWindowSeconds:  currentScrapeWindowSeconds,
+				ScrapeTotalRequests:  totalCount,
+				ScrapeTotalSeconds:   scrapeTotalSeconds,
+				Jobs:                 jobsCopy,
 			}
 		case scanResult := <-w.chanResult:
 			running--
 			delete(jobs, scanResult.TargetURL)
+			scanResult.poolClient.busy = false
 			scanResult.Time = time.Now()
+			statusCodeAsString := strconv.Itoa(scanResult.Code)
+			counterVecStatus.WithLabelValues(statusCodeAsString).Inc()
 			results[scanResult.TargetURL] = scanResult
+
+			summaryVec.WithLabelValues(scanResult.Group).Observe(scanResult.Duration.Seconds())
+			counterVec.WithLabelValues(scanResult.Group, statusCodeAsString).Inc()
+			totalCounter.Inc()
 
 			if ignoreRobots || !strings.Contains(scanResult.Structure.Robots, "nofollow") {
 				// should we follow the links
@@ -170,28 +325,6 @@ func (w *Walker) scrapeloop() {
 					}
 				}
 			}
-		}
-		if len(jobs) > 0 {
-			for jobURL, jobActive := range jobs {
-				if running >= w.concurrency {
-					// fmt.Println("pool exceeded")
-					break
-				}
-				if !jobActive {
-					running++
-					jobs[jobURL] = true
-					go Scrape(jobURL, groupHeader, w.chanResult)
-				}
-			}
-		}
-		// time to restart
-		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil {
-			fmt.Println("restarting", baseURL, paths)
-			w.CompleteStatus = &Status{
-				Results: results,
-				Jobs:    jobs,
-			}
-			start(baseURL, paths)
 		}
 	}
 }
