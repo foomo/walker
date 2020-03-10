@@ -95,13 +95,13 @@ func (d duplications) printlnDuplications(w io.Writer) {
 
 type uniqueList []string
 
-func (ul uniqueList) add(v string) {
-	for _, ev := range ul {
+func (ul *uniqueList) add(v string) {
+	for _, ev := range *ul {
 		if ev == v {
 			return
 		}
 	}
-	ul = append(ul, v)
+	*ul = append(*ul, v)
 }
 
 func reportSEO(status Status, w io.Writer) {
@@ -112,10 +112,15 @@ func reportSEO(status Status, w io.Writer) {
 	missingTitles := uniqueList{}
 	missingH1 := uniqueList{}
 	missingDescriptions := uniqueList{}
+	canonicalMismatches := uniqueList{}
 	printh("SEO duplications")
 	for _, r := range status.Results {
 		if strings.Contains(r.ContentType, "html") {
+			fmt.Println("html", r.TargetURL)
 			foundH1 := false
+			if r.TargetURL != r.Structure.Canonical {
+				canonicalMismatches.add(r.TargetURL + " should be " + r.Structure.Canonical)
+			}
 			for _, heading := range r.Structure.Headings {
 				if r.Structure.Title == "" {
 					missingTitles.add(r.TargetURL)
@@ -135,6 +140,8 @@ func reportSEO(status Status, w io.Writer) {
 			if !foundH1 {
 				missingH1.add(r.TargetURL)
 			}
+		} else {
+			fmt.Println(r.ContentType)
 		}
 	}
 	printDuplicates := func(title string, d duplications) {
@@ -159,6 +166,7 @@ func reportSEO(status Status, w io.Writer) {
 	printList("missing titles", missingTitles)
 	printList("missing descriptions", missingDescriptions)
 	printList("missing h1", missingH1)
+	printList("canonical mismatches", canonicalMismatches)
 }
 
 func reportBrokenLinks(status Status, w io.Writer) {
