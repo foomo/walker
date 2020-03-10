@@ -28,20 +28,31 @@ type ScrapeResult struct {
 	Time        time.Time
 	Structure   Structure
 	Group       string
+	poolClient  *poolClient
 	// duplication title, descr, h1
 	// blocking robots txt
 }
 
 var ErrorNoBody = "no body"
 
-func Scrape(targetURL string, groupHeader string, chanResult chan ScrapeResult) {
+func Scrape(pc *poolClient, targetURL string, groupHeader string, chanResult chan ScrapeResult) {
 	result := ScrapeResult{
-		Code:      0,
-		TargetURL: targetURL,
-		Group:     "default",
+		Code:       0,
+		TargetURL:  targetURL,
+		Group:      "default",
+		poolClient: pc,
 	}
 	start := time.Now()
-	resp, errGet := http.Get(targetURL)
+
+	req, errRequest := http.NewRequest("GET", targetURL, nil)
+	if errRequest != nil {
+		result.Error = errRequest.Error()
+		chanResult <- result
+		return
+	}
+	req.Header.Set("User-Agent", "foomo-walker")
+
+	resp, errGet := pc.client.Do(req)
 	if errGet != nil {
 		result.Error = errGet.Error()
 		chanResult <- result
