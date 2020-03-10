@@ -15,7 +15,7 @@ type Service struct {
 }
 
 func NewService(conf *config.Config) (s *Service, err error) {
-	w := NewWalker(conf.Concurrency)
+	w := NewWalker(conf.Concurrency, conf.UseCookies)
 	w.walk(conf)
 	s = &Service{
 		Walker: w,
