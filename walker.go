@@ -23,24 +23,19 @@ type Status struct {
 }
 
 type Walker struct {
-	concurrency    int
-	depth          int
 	chanResult     chan ScrapeResult
 	chanStart      chan start
 	chanStatus     chan Status
 	chanErrStart   chan error
 	CompleteStatus *Status
-	useCookies     bool
 }
 
-func NewWalker(concurrency int, useCookies bool) *Walker {
+func NewWalker() *Walker {
 	w := &Walker{
-		concurrency:  concurrency,
 		chanResult:   make(chan ScrapeResult),
 		chanStart:    make(chan start),
 		chanStatus:   make(chan Status),
 		chanErrStart: make(chan error),
-		useCookies:   useCookies,
 	}
 	go w.scrapeloop()
 	return w
