@@ -50,7 +50,7 @@ func Scrape(pc *poolClient, targetURL string, groupHeader string, chanResult cha
 		chanResult <- result
 		return
 	}
-	req.Header.Set("User-Agent", "foomo-walker")
+	req.Header.Set("User-Agent", pc.agent)
 
 	resp, errGet := pc.client.Do(req)
 	if errGet != nil {

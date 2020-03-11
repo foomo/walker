@@ -7,6 +7,15 @@ import (
 	"github.com/temoto/robotstxt"
 )
 
+type linkLimitations struct {
+	depth               int
+	paging              bool
+	ignoreAllQueries    bool
+	ignorePathPrefixes  []string
+	includePathPrefixes []string
+	ignoreQueriesWith   []string
+}
+
 func normalizeLink(baseURL *url.URL, linkURL string) (normalizedLink *url.URL, err error) {
 	// let us ditch anchors
 	anchorParts := strings.Split(linkURL, "#")
@@ -32,7 +41,7 @@ func normalizeLink(baseURL *url.URL, linkURL string) (normalizedLink *url.URL, e
 	return
 }
 
-func extractLinksToScrape(
+func filterScrapeLinks(
 	linkList LinkList,
 	baseURL *url.URL,
 	linkNextNormalized string,

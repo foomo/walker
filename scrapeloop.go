@@ -1,6 +1,7 @@
 package walker
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,85 +11,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/temoto/robotstxt"
 )
 
 type poolClient struct {
+	agent  string
 	client *http.Client
 	busy   bool
 }
 
-func (w *Walker) scrapeloop() {
-	running := 0
-	depth := 0
-	paging := false
-	groupHeader := ""
-	ignoreAllQueries := false
-	ignoreRobots := false
-	var jobs map[string]bool
-	var results map[string]ScrapeResult
-	var ignore []string
-	var ignoreQueriesWith []string
-	var baseURL *url.URL
-	paths := []string{}
-	clientPool := []*poolClient{}
-	getBucketList()
+type clientPool struct {
+	agent       string
+	concurrency int
+	useCookies  bool
+	clients     []*poolClient
+}
 
-	const prometheusLabelGroup = "group"
-	const prometheusLabelStatus = "status"
-
-	summaryVec := prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Name:       "walker_scrape_durations_seconds",
-			Help:       "scrape duration whole request time including streaming of body",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		},
-		[]string{prometheusLabelGroup},
-	)
-
-	counterVec := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "walker_scrape_running_total",
-			Help: "Number of scrapes in scan.",
-		},
-		[]string{prometheusLabelGroup, prometheusLabelStatus},
-	)
-
-	totalCounter := prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "walker_scrape_counter_total",
-		Help: "number of scrapes since start of walker",
-	})
-
-	progressGaugeOpen := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "walker_progress_gauge_open",
-			Help: "progress open to scrape",
-		},
-	)
-
-	progressGaugeComplete := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "walker_progress_gauge_complete",
-			Help: "progress complete scrapes",
-		},
-	)
-
-	counterVecStatus := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "walker_progress_status_code_total",
-		Help: "status codes for running scrape",
-	}, []string{prometheusLabelStatus})
-
-	prometheus.MustRegister(
-		summaryVec,
-		counterVec,
-		totalCounter,
-		progressGaugeComplete,
-		progressGaugeOpen,
-		counterVecStatus,
-	)
-
-	clientPool = make([]*poolClient, w.concurrency)
-	for i := 0; i < w.concurrency; i++ {
+func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
+	clients := make([]*poolClient, concurrency)
+	for i := 0; i < concurrency; i++ {
 		client := &http.Client{
 			Timeout: time.Second * 10,
 			Transport: &http.Transport{
@@ -98,17 +39,41 @@ func (w *Walker) scrapeloop() {
 				TLSHandshakeTimeout: 5 * time.Second,
 			},
 		}
-		if w.useCookies {
+		if useCookies {
 			cookieJar, _ := cookiejar.New(nil)
 			client.Jar = cookieJar
 		}
-		clientPool[i] = &poolClient{
+		clients[i] = &poolClient{
 			client: client,
 			busy:   false,
+			agent:  agent,
 		}
 	}
+	return &clientPool{
+		agent:       agent,
+		concurrency: concurrency,
+		clients:     clients,
+		useCookies:  useCookies,
+	}
+}
 
-	start := func(startURL *url.URL, configPaths []string) {
+func (w *Walker) scrapeloop() {
+	summaryVec, counterVec, totalCounter, progressGaugeOpen, progressGaugeComplete, counterVecStatus := setupMetrics()
+	running := 0
+	concurrency := 0
+	groupHeader := ""
+	ignoreRobots := false
+	started := false
+	ll := linkLimitations{}
+	var jobs map[string]bool
+	var results map[string]ScrapeResult
+	var baseURL *url.URL
+	paths := []string{}
+	var cp *clientPool
+	var robotsGroup *robotstxt.Group
+
+	restart := func(startURL *url.URL, configPaths []string) {
+		started = false
 		summaryVec.Reset()
 		counterVec.Reset()
 		counterVecStatus.Reset()
@@ -129,36 +94,36 @@ func (w *Walker) scrapeloop() {
 			jobs = map[string]bool{baseURLString + p + q: false}
 		}
 		results = map[string]ScrapeResult{}
-
+		started = true
 	}
-	for {
 
-		progressGaugeComplete.Set(float64(len(results)))
-		progressGaugeOpen.Set(float64(len(jobs)))
-		if len(jobs) > 0 {
-		JobLoop:
-			for jobURL, jobActive := range jobs {
-				if running >= w.concurrency {
-					// concurrency limit
-					break
-				}
-				if !jobActive {
-					for _, poolClient := range clientPool {
-						if !poolClient.busy {
-							running++
-							jobs[jobURL] = true
-							poolClient.busy = true
-							// u, _ := url.Parse(jobURL)
-							// fmt.Println("got pool client", i, poolClient.client.Jar.Cookies(u))
-							go Scrape(poolClient, jobURL, groupHeader, w.chanResult)
-							continue JobLoop
-						}
+	for {
+		if started {
+			progressGaugeComplete.Set(float64(len(results)))
+			progressGaugeOpen.Set(float64(len(jobs)))
+			if len(jobs) > 0 {
+			JobLoop:
+				for jobURL, jobActive := range jobs {
+					if running >= concurrency {
+						// concurrency limit
+						break
 					}
-					// fmt.Println("all clients are busy")
-					break JobLoop
+					if !jobActive {
+						for _, poolClient := range cp.clients {
+							if !poolClient.busy {
+								running++
+								jobs[jobURL] = true
+								poolClient.busy = true
+								go Scrape(poolClient, jobURL, groupHeader, w.chanResult)
+								continue JobLoop
+							}
+						}
+						break JobLoop
+					}
 				}
 			}
 		}
+
 		// time to restart
 		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil {
 			fmt.Println("restarting", baseURL, paths)
@@ -166,27 +131,57 @@ func (w *Walker) scrapeloop() {
 				Results: results,
 				Jobs:    jobs,
 			}
-			start(baseURL, paths)
+			restart(baseURL, paths)
 		}
 
 		select {
 		case <-time.After(time.Millisecond * 1000):
 			// make sure we do not get stuck
 		case st := <-w.chanStart:
+			robotsGroup = nil
 			groupHeader = st.conf.GroupHeader
-			ignore = st.conf.Ignore
-			depth = st.conf.Depth
-			paging = st.conf.Paging
+			concurrency = st.conf.Concurrency
+			ll.ignorePathPrefixes = st.conf.Ignore
+			ll.depth = st.conf.Depth
+			ll.paging = st.conf.Paging
+			ll.includePathPrefixes = st.conf.Target.Paths
 			ignoreRobots = st.conf.IgnoreRobots
-			ignoreQueriesWith = st.conf.IgnoreQueriesWith
-			ignoreAllQueries = st.conf.IgnoreAllQueries
+			ll.ignoreQueriesWith = st.conf.IgnoreQueriesWith
+			ll.ignoreAllQueries = st.conf.IgnoreAllQueries
+
+			if cp == nil || cp.agent != st.conf.Agent || cp.concurrency != st.conf.Concurrency || cp.useCookies != st.conf.UseCookies {
+				cp = newClientPool(st.conf.Concurrency, st.conf.Agent, st.conf.UseCookies)
+			}
+
+			var errStart error
 			startU, errParseStartU := url.Parse(st.conf.Target.BaseURL)
-			if errParseStartU == nil {
-				start(startU, st.conf.Target.Paths)
+			if errParseStartU != nil {
+				errStart = errParseStartU
+			}
+			if errStart == nil && !ignoreRobots {
+				robotsData, errRobotsGroup := getRobotsData(st.conf.Target.BaseURL)
+				if errRobotsGroup == nil {
+					robotsGroup = robotsData.FindGroup(st.conf.Agent)
+					robotForbiddenPath := []string{}
+					for _, p := range st.conf.Target.Paths {
+						if !robotsGroup.Test(p) {
+							robotForbiddenPath = append(robotForbiddenPath, p)
+						}
+					}
+					if len(robotForbiddenPath) > 0 {
+						errStart = errors.New("robots.txt does not allow access to the following path (you can either ignore robots or try as a different user agent): " + strings.Join(robotForbiddenPath, ", "))
+					}
+				} else {
+					errStart = errRobotsGroup
+				}
+			}
+			if errStart == nil {
+				restart(startU, st.conf.Target.Paths)
 				w.chanErrStart <- nil
 			} else {
-				w.chanErrStart <- errParseStartU
+				w.chanErrStart <- errStart
 			}
+
 		case <-w.chanStatus:
 			resultsCopy := make(map[string]ScrapeResult, len(results))
 			jobsCopy := make(map[string]bool, len(jobs))
@@ -246,110 +241,31 @@ func (w *Walker) scrapeloop() {
 			totalCounter.Inc()
 
 			if ignoreRobots || !strings.Contains(scanResult.Structure.Robots, "nofollow") {
+				linkNextNormalized := ""
+				linkPrevNormalized := ""
 				// should we follow the links
-				for linkURL := range scanResult.Links {
+				linkNextNormalizedURL, errNormalizeNext := normalizeLink(baseURL, scanResult.Structure.LinkNext)
+				if errNormalizeNext == nil {
+					linkNextNormalized = linkNextNormalizedURL.String()
+				}
+				linkPrevNormalizedURL, errNormalizedPrev := normalizeLink(baseURL, scanResult.Structure.LinkPrev)
+				if errNormalizedPrev == nil {
+					linkPrevNormalized = linkPrevNormalizedURL.String()
+				}
 
-					// is it a pager link
-					// this might want to be normalized
-					isPagerLink := scanResult.Structure.LinkNext == linkURL || scanResult.Structure.LinkPrev == linkURL
-					if !paging && isPagerLink {
-						continue
-					}
-
-					// ok, time to really look at that url
-					linkU, errParseLinkU := normalizeLink(baseURL, linkURL)
-					if errParseLinkU == nil {
-
-						// to be ignored ?!
-						ignoreLink := false
-
-						if len(linkU.Query()) > 0 {
-							// it has a query
-							if ignoreAllQueries {
-								// no queries in general
-								ignoreLink = true
-							} else {
-								// do we filter a query parameter
-							IgnoreLoop:
-								for _, ignoreP := range ignoreQueriesWith {
-									for pName := range linkU.Query() {
-										if pName == ignoreP {
-											ignoreLink = true
-											break IgnoreLoop
-										}
-									}
-								}
-							}
-						}
-						if !ignoreLink {
-							foundPath := false
-							for _, p := range paths {
-								if strings.HasPrefix(linkU.Path, p) {
-									foundPath = true
-									break
-								}
-							}
-							if !foundPath {
-								// not in the scrape path
-								ignoreLink = true
-							}
-						}
-						if !ignoreLink && depth > 0 {
-							// too deep?
-							linkDepth := len(strings.Split(linkU.Path, "/")) - 1
-							ignoreLink = linkDepth > depth
-							if ignoreLink {
-								fmt.Println("ignoring", linkU.Path, depth, linkDepth)
-							}
-						}
-						// ignore prefix
-						if !ignoreLink {
-							for _, ignorePrefix := range ignore {
-								if strings.HasPrefix(linkU.Path, ignorePrefix) {
-									ignoreLink = true
-									break
-								}
-							}
-						}
-
-						if !ignoreLink && linkU.Host == baseURL.Host &&
-							linkU.Scheme == baseURL.Scheme {
-							scanResult.Links[linkU.String()] = scanResult.Links[linkURL]
-							linkURL = linkU.String()
-							_, existingResultOK := results[linkURL]
-							_, existingJobOK := jobs[linkURL]
-							if !existingResultOK && !existingJobOK {
-								jobs[linkURL] = false
-							}
-						}
+				linksToScrape := filterScrapeLinks(scanResult.Links, baseURL, linkNextNormalized, linkPrevNormalized, ll, robotsGroup)
+				for linkToScrape := range linksToScrape {
+					// scanResult.Links[linkU.String()] = scanResult.Links[linkURL]
+					// linkURL = linkU.String()
+					_, existingResultOK := results[linkToScrape]
+					_, existingJobOK := jobs[linkToScrape]
+					if !existingResultOK && !existingJobOK {
+						jobs[linkToScrape] = false
 					}
 				}
+
 			}
+
 		}
 	}
-}
-
-func normalizeLink(baseURL *url.URL, linkURL string) (normalizedLink *url.URL, err error) {
-	// let us ditch anchors
-	anchorParts := strings.Split(linkURL, "#")
-	linkURL = anchorParts[0]
-	link, errParseLink := url.Parse(linkURL)
-	if errParseLink != nil {
-		err = errParseLink
-		return
-	}
-	// host
-	if link.Host == "" {
-		link.Host = baseURL.Host
-	}
-	// scheme
-	if link.Scheme == "" || link.Scheme == "//" {
-		link.Scheme = baseURL.Scheme
-	}
-	if baseURL.User != nil {
-		link.User = baseURL.User
-	}
-	// it is beautiful now
-	normalizedLink = link
-	return
 }

@@ -1,5 +1,0 @@
-target: http://www.bestbytes.de
-concurrency: 2
-addr: ":3001"
-ignore:
-  - /foomo
