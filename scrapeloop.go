@@ -263,9 +263,7 @@ func (w *Walker) scrapeloop() {
 						jobs[linkToScrape] = false
 					}
 				}
-
 			}
-
 		}
 	}
 }

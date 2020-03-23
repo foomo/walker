@@ -45,7 +45,9 @@ ignore:
 - missing title, description, h1
 - duplication title, description, h1
 
-## metrics (not implemented yet)
+## metrics
+
+Work in progress exposed on /metrics
 
 - vector of status codes
 - performance buckets
