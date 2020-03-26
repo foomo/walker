@@ -5,34 +5,13 @@ import (
 	"fmt"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/foomo/walker/vo"
 )
 
-type Heading struct {
-	Level int
-	Text  string
-}
-type LinkedData struct {
-	Context string `json:"@context"`
-	Type    string ` json:"@type"`
-}
-type Structure struct {
-	Title       string
-	Description string
-	Headings    []Heading
-	Robots      string
-	LinkedData  []LinkedData
-	Canonical   string
-	LinkPrev    string
-	LinkNext    string
-	// <link rel="prev" href="/herren/herrenmode/jacken">
-	// <link rel="next" href="/herren/herrenmode/jacken?page=3">
-	// <link rel="canonical" href="https://www.globus.ch/damen/damenmode/kleider">
-}
-
-func extractStructure(doc *goquery.Document) (s Structure, err error) {
+func extractStructure(doc *goquery.Document) (s vo.Structure, err error) {
 	description, _ := doc.Find("meta[name=description]").First().Attr("content")
 	robots, _ := doc.Find("meta[name=robots]").First().Attr("content")
-	s = Structure{
+	s = vo.Structure{
 		Title:       doc.Find("title").First().Text(),
 		Description: description,
 		Robots:      robots,
@@ -52,7 +31,7 @@ func extractStructure(doc *goquery.Document) (s Structure, err error) {
 		}
 	})
 	doc.Find("script[type=\"application/ld+json\"]").Each(func(i int, sel *goquery.Selection) {
-		ld := &LinkedData{}
+		ld := &vo.LinkedData{}
 		errDoc := json.Unmarshal([]byte(sel.Text()), &ld)
 		if errDoc != nil {
 			fmt.Println("json crap", errDoc)
@@ -76,7 +55,7 @@ func extractStructure(doc *goquery.Document) (s Structure, err error) {
 		case "h6":
 			level = 6
 		}
-		s.Headings = append(s.Headings, Heading{
+		s.Headings = append(s.Headings, vo.Heading{
 			Level: level,
 			Text:  sel.Text(),
 		})

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/foomo/walker/vo"
 	"github.com/temoto/robotstxt"
 )
 
@@ -63,17 +64,20 @@ func (w *Walker) scrapeloop() {
 	concurrency := 0
 	groupHeader := ""
 	ignoreRobots := false
-	started := false
+	scrapeLoopStarted := false
+	var chanLoopComplete chan vo.Status
+	var scrapeFunc ScrapeFunc
+	var linkListFilterFunc LinkListFilterFunc
 	ll := linkLimitations{}
 	var jobs map[string]bool
-	var results map[string]ScrapeResult
+	var results map[string]vo.ScrapeResult
 	var baseURL *url.URL
 	paths := []string{}
 	var cp *clientPool
 	var robotsGroup *robotstxt.Group
 
 	restart := func(startURL *url.URL, configPaths []string) {
-		started = false
+		scrapeLoopStarted = false
 		summaryVec.Reset()
 		counterVec.Reset()
 		counterVecStatus.Reset()
@@ -93,12 +97,12 @@ func (w *Walker) scrapeloop() {
 		for _, p := range paths {
 			jobs = map[string]bool{baseURLString + p + q: false}
 		}
-		results = map[string]ScrapeResult{}
-		started = true
+		results = map[string]vo.ScrapeResult{}
+		scrapeLoopStarted = true
 	}
 
 	for {
-		if started {
+		if scrapeLoopStarted {
 			progressGaugeComplete.Set(float64(len(results)))
 			progressGaugeOpen.Set(float64(len(jobs)))
 			if len(jobs) > 0 {
@@ -114,7 +118,8 @@ func (w *Walker) scrapeloop() {
 								running++
 								jobs[jobURL] = true
 								poolClient.busy = true
-								go Scrape(poolClient, jobURL, groupHeader, w.chanResult)
+								fmt.Println("go scrape", jobURL, scrapeFunc)
+								go scrape(poolClient, jobURL, groupHeader, scrapeFunc, w.chanResult)
 								continue JobLoop
 							}
 						}
@@ -127,9 +132,12 @@ func (w *Walker) scrapeloop() {
 		// time to restart
 		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil {
 			fmt.Println("restarting", baseURL, paths)
-			w.CompleteStatus = &Status{
+			w.CompleteStatus = &vo.Status{
 				Results: results,
 				Jobs:    jobs,
+			}
+			if chanLoopComplete != nil {
+				chanLoopComplete <- *w.CompleteStatus
 			}
 			restart(baseURL, paths)
 		}
@@ -141,6 +149,8 @@ func (w *Walker) scrapeloop() {
 			robotsGroup = nil
 			groupHeader = st.conf.GroupHeader
 			concurrency = st.conf.Concurrency
+			scrapeFunc = st.scrapeFunc
+			linkListFilterFunc = st.linkListFilterFunc
 			ll.ignorePathPrefixes = st.conf.Ignore
 			ll.depth = st.conf.Depth
 			ll.paging = st.conf.Paging
@@ -177,13 +187,20 @@ func (w *Walker) scrapeloop() {
 			}
 			if errStart == nil {
 				restart(startU, st.conf.Target.Paths)
-				w.chanErrStart <- nil
+				chanLoopComplete = make(chan vo.Status)
+				w.chanStarted <- started{
+					Err:              errStart,
+					ChanLoopComplete: chanLoopComplete,
+				}
 			} else {
-				w.chanErrStart <- errStart
+				chanLoopComplete = nil
+				w.chanStarted <- started{
+					Err: errStart,
+				}
 			}
 
 		case <-w.chanStatus:
-			resultsCopy := make(map[string]ScrapeResult, len(results))
+			resultsCopy := make(map[string]vo.ScrapeResult, len(results))
 			jobsCopy := make(map[string]bool, len(jobs))
 			if results != nil {
 				for targetURL, result := range results {
@@ -217,7 +234,7 @@ func (w *Walker) scrapeloop() {
 			}
 			currentScrapeWindowSeconds := now.Unix() - scrapeWindowFirst
 			scrapeTotalSeconds := now.Unix() - first
-			w.chanStatus <- Status{
+			w.chanStatus <- vo.Status{
 				Results:              resultsCopy,
 				ScrapeSpeed:          float64(scrapeWindowCount) / float64(currentScrapeWindowSeconds),
 				ScrapeSpeedAverage:   float64(totalCount) / float64(scrapeTotalSeconds),
@@ -229,39 +246,49 @@ func (w *Walker) scrapeloop() {
 			}
 		case scanResult := <-w.chanResult:
 			running--
-			delete(jobs, scanResult.TargetURL)
+			delete(jobs, scanResult.result.TargetURL)
 			scanResult.poolClient.busy = false
-			scanResult.Time = time.Now()
-			statusCodeAsString := strconv.Itoa(scanResult.Code)
+			scanResult.result.Time = time.Now()
+			statusCodeAsString := strconv.Itoa(scanResult.result.Code)
 			counterVecStatus.WithLabelValues(statusCodeAsString).Inc()
-			results[scanResult.TargetURL] = scanResult
+			results[scanResult.result.TargetURL] = scanResult.result
 
-			summaryVec.WithLabelValues(scanResult.Group).Observe(scanResult.Duration.Seconds())
-			counterVec.WithLabelValues(scanResult.Group, statusCodeAsString).Inc()
+			summaryVec.WithLabelValues(scanResult.result.Group).Observe(scanResult.result.Duration.Seconds())
+			counterVec.WithLabelValues(scanResult.result.Group, statusCodeAsString).Inc()
 			totalCounter.Inc()
 
-			if ignoreRobots || !strings.Contains(scanResult.Structure.Robots, "nofollow") {
+			var linksToScrape vo.LinkList
+
+			if linkListFilterFunc != nil {
+				if scanResult.result.Error != "" {
+					fmt.Println("there was an error", scanResult.result.Error)
+				} else {
+					linksToScrapeFromFromLilterFunc, errFilterLinkList := linkListFilterFunc(baseURL, scanResult.docURL, scanResult.doc)
+					if errFilterLinkList != nil {
+						fmt.Println("aua", errFilterLinkList)
+					}
+					linksToScrape = linksToScrapeFromFromLilterFunc
+				}
+			} else if ignoreRobots || !strings.Contains(scanResult.result.Structure.Robots, "nofollow") {
 				linkNextNormalized := ""
 				linkPrevNormalized := ""
 				// should we follow the links
-				linkNextNormalizedURL, errNormalizeNext := normalizeLink(baseURL, scanResult.Structure.LinkNext)
+				linkNextNormalizedURL, errNormalizeNext := NormalizeLink(baseURL, scanResult.result.Structure.LinkNext)
 				if errNormalizeNext == nil {
 					linkNextNormalized = linkNextNormalizedURL.String()
 				}
-				linkPrevNormalizedURL, errNormalizedPrev := normalizeLink(baseURL, scanResult.Structure.LinkPrev)
+				linkPrevNormalizedURL, errNormalizedPrev := NormalizeLink(baseURL, scanResult.result.Structure.LinkPrev)
 				if errNormalizedPrev == nil {
 					linkPrevNormalized = linkPrevNormalizedURL.String()
 				}
 
-				linksToScrape := filterScrapeLinks(scanResult.Links, baseURL, linkNextNormalized, linkPrevNormalized, ll, robotsGroup)
-				for linkToScrape := range linksToScrape {
-					// scanResult.Links[linkU.String()] = scanResult.Links[linkURL]
-					// linkURL = linkU.String()
-					_, existingResultOK := results[linkToScrape]
-					_, existingJobOK := jobs[linkToScrape]
-					if !existingResultOK && !existingJobOK {
-						jobs[linkToScrape] = false
-					}
+				linksToScrape = filterScrapeLinks(scanResult.result.Links, baseURL, linkNextNormalized, linkPrevNormalized, ll, robotsGroup)
+			}
+			for linkToScrape := range linksToScrape {
+				_, existingResultOK := results[linkToScrape]
+				_, existingJobOK := jobs[linkToScrape]
+				if !existingResultOK && !existingJobOK {
+					jobs[linkToScrape] = false
 				}
 			}
 		}

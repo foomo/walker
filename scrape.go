@@ -1,53 +1,55 @@
 package walker
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/foomo/walker/vo"
 )
 
 type Scraper struct {
 }
 
-type LinkList map[string]int
-
-type ScrapeResult struct {
-	// index || noindex
-	// <link rel="next" href="/damen/damentaschen/alle-taschen?page=2">
-	// <meta name="robots" content="index,follow,noodp">
-	TargetURL   string
-	Error       string
-	Code        int
-	Status      string
-	ContentType string
-	Length      int
-	Links       LinkList
-	Duration    time.Duration
-	Time        time.Time
-	Structure   Structure
-	Group       string
-	poolClient  *poolClient
-	// duplication title, descr, h1
-	// blocking robots txt
-}
-
 var ErrorNoBody = "no body"
 
-func Scrape(pc *poolClient, targetURL string, groupHeader string, chanResult chan ScrapeResult) {
-	result := ScrapeResult{
-		Code:       0,
-		TargetURL:  targetURL,
-		Group:      "default",
+type scrapeResultAndClient struct {
+	result     vo.ScrapeResult
+	poolClient *poolClient
+	doc        *goquery.Document
+	docURL     *url.URL
+}
+
+func newScrapeResultandClient(r vo.ScrapeResult, pc *poolClient) scrapeResultAndClient {
+	return scrapeResultAndClient{
+		result:     r,
 		poolClient: pc,
 	}
+}
+
+func scrape(
+	pc *poolClient,
+	targetURL string,
+	groupHeader string,
+	scrapeFunc ScrapeFunc,
+	chanResult chan scrapeResultAndClient,
+) {
+	result := vo.ScrapeResult{
+		Code:      0,
+		TargetURL: targetURL,
+		Group:     "default",
+	}
+	var doc *goquery.Document
 	start := time.Now()
 
 	req, errRequest := http.NewRequest("GET", targetURL, nil)
 	if errRequest != nil {
 		result.Error = errRequest.Error()
-		chanResult <- result
+		chanResult <- newScrapeResultandClient(result, pc)
 		return
 	}
 	req.Header.Set("User-Agent", pc.agent)
@@ -55,7 +57,7 @@ func Scrape(pc *poolClient, targetURL string, groupHeader string, chanResult cha
 	resp, errGet := pc.client.Do(req)
 	if errGet != nil {
 		result.Error = errGet.Error()
-		chanResult <- result
+		chanResult <- newScrapeResultandClient(result, pc)
 		return
 	}
 	result.Duration = time.Now().Sub(start)
@@ -63,7 +65,7 @@ func Scrape(pc *poolClient, targetURL string, groupHeader string, chanResult cha
 	result.Status = resp.Status
 	if resp.Body == nil {
 		result.Error = ErrorNoBody
-		chanResult <- result
+		chanResult <- newScrapeResultandClient(result, pc)
 		return
 	}
 
@@ -76,19 +78,29 @@ func Scrape(pc *poolClient, targetURL string, groupHeader string, chanResult cha
 		}
 	}
 	if strings.Contains(result.ContentType, "html") {
-
-		doc, errNewDoc := goquery.NewDocumentFromResponse(resp)
-		if errNewDoc != nil {
-			result.Error = errNewDoc.Error()
-			chanResult <- result
+		bodyBytes, errReadAll := ioutil.ReadAll(resp.Body)
+		if errReadAll != nil {
+			result.Error = errReadAll.Error()
+			chanResult <- newScrapeResultandClient(result, pc)
 			return
 		}
-
-		linkList, errExtract := extractLinks(doc)
 		resp.Body.Close()
+
+		bodyReadCloser := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		resp.Body = bodyReadCloser
+
+		nextDoc, errNewDoc := goquery.NewDocumentFromReader(bytes.NewBuffer(bodyBytes))
+		if errNewDoc != nil {
+			result.Error = errNewDoc.Error()
+			chanResult <- newScrapeResultandClient(result, pc)
+			return
+		}
+		doc = nextDoc
+		linkList, errExtract := extractLinks(doc)
 		if errExtract != nil {
 			result.Error = errExtract.Error()
-			chanResult <- result
+			chanResult <- newScrapeResultandClient(result, pc)
 			return
 		}
 		result.Links = linkList
@@ -99,15 +111,26 @@ func Scrape(pc *poolClient, targetURL string, groupHeader string, chanResult cha
 			return
 		}
 		result.Structure = structure
-	} else {
-
 	}
-	chanResult <- result
+
+	if scrapeFunc != nil {
+		errScrape := scrapeFunc(resp)
+		if errScrape != nil {
+			result.Error = errScrape.Error()
+			chanResult <- newScrapeResultandClient(result, pc)
+			return
+		}
+	}
+
+	r := newScrapeResultandClient(result, pc)
+	r.doc = doc
+	r.docURL = req.URL
+	chanResult <- r
 	return
 }
 
-func extractLinks(doc *goquery.Document) (linkList LinkList, err error) {
-	linkList = LinkList{}
+func extractLinks(doc *goquery.Document) (linkList vo.LinkList, err error) {
+	linkList = vo.LinkList{}
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
 		if exists && href != "" {

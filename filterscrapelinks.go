@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/foomo/walker/vo"
 	"github.com/temoto/robotstxt"
 )
 
@@ -16,7 +17,7 @@ type linkLimitations struct {
 	ignoreQueriesWith   []string
 }
 
-func normalizeLink(baseURL *url.URL, linkURL string) (normalizedLink *url.URL, err error) {
+func NormalizeLink(baseURL *url.URL, linkURL string) (normalizedLink *url.URL, err error) {
 	// let us ditch anchors
 	anchorParts := strings.Split(linkURL, "#")
 	linkURL = anchorParts[0]
@@ -42,7 +43,7 @@ func normalizeLink(baseURL *url.URL, linkURL string) (normalizedLink *url.URL, e
 }
 
 func filterScrapeLinks(
-	linkList LinkList,
+	linkList vo.LinkList,
 	baseURL *url.URL,
 	linkNextNormalized string,
 	linkPrevNormalized string,
@@ -53,7 +54,7 @@ func filterScrapeLinks(
 LinkLoop:
 	for linkURL := range linkList {
 		// ok, time to really look at that url
-		linkU, errParseLinkU := normalizeLink(baseURL, linkURL)
+		linkU, errParseLinkU := NormalizeLink(baseURL, linkURL)
 		if errParseLinkU == nil {
 
 			// is it a pager link

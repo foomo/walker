@@ -87,7 +87,7 @@ func main() {
 
 	// http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
-	s, errS := walker.NewService(conf)
+	s, _, errS := walker.NewService(conf, nil, nil)
 	must("could not start service", errS)
 
 	log.Fatal(http.ListenAndServe(conf.Addr, &server{

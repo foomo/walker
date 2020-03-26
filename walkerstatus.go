@@ -6,72 +6,11 @@ import (
 	"math"
 	"sort"
 	"time"
+
+	"github.com/foomo/walker/vo"
 )
 
-type bucket struct {
-	Name string
-	From time.Duration
-	To   time.Duration
-}
-
-type bucketList []bucket
-
-func getBucketList() bucketList {
-	return bucketList{
-		bucket{
-			Name: "awesome",
-			From: time.Duration(time.Millisecond * 0),
-			To:   time.Duration(time.Millisecond * 50),
-		},
-		bucket{
-			Name: "great",
-			From: time.Duration(time.Millisecond * 50),
-			To:   time.Duration(time.Millisecond * 100),
-		},
-		bucket{
-			Name: "ok, google loves you",
-			From: time.Duration(time.Millisecond * 100),
-			To:   time.Duration(time.Millisecond * 200),
-		},
-		bucket{
-			Name: "not too good, but still ok",
-			From: time.Duration(time.Millisecond * 200),
-			To:   time.Duration(time.Millisecond * 300),
-		},
-		bucket{
-			Name: "not great",
-			From: time.Duration(time.Millisecond * 300),
-			To:   time.Duration(time.Millisecond * 500),
-		},
-		bucket{
-			Name: "bad, users start to feel a real difference",
-			From: time.Duration(time.Millisecond * 500),
-			To:   time.Duration(time.Millisecond * 1000),
-		},
-		bucket{
-			Name: "really bad, you are loosing users",
-			From: time.Duration(time.Millisecond * 1000),
-			To:   time.Duration(time.Millisecond * 3000),
-		},
-		bucket{
-			Name: "ouch this seems broken",
-			From: time.Duration(time.Millisecond * 3000),
-			To:   time.Duration(time.Millisecond * 5000),
-		},
-		bucket{
-			Name: "catastrophic you site seems to be down",
-			From: time.Duration(time.Millisecond * 5000),
-			To:   time.Duration(time.Millisecond * 10000),
-		},
-		bucket{
-			Name: "end of the world - this must not happen",
-			From: time.Duration(time.Millisecond * 10000),
-			To:   time.Duration(time.Hour),
-		},
-	}
-}
-
-func groupedBucketListStatus(writer io.Writer, results map[string]ScrapeResult) {
+func groupedBucketListStatus(writer io.Writer, results map[string]vo.ScrapeResult) {
 	max := int64(0)
 	min := ^int64(0)
 	groups := map[string]int64{}
@@ -88,7 +27,7 @@ func groupedBucketListStatus(writer io.Writer, results map[string]ScrapeResult) 
 	sort.Strings(groupNames)
 	for _, groupName := range groupNames {
 		fmt.Fprintln(writer, "group: "+groupName)
-		for _, bucket := range getBucketList() {
+		for _, bucket := range vo.GetBucketList() {
 			bucketI := 0
 			for _, result := range results {
 				if result.Group == groupName {
@@ -117,7 +56,7 @@ func groupedBucketListStatus(writer io.Writer, results map[string]ScrapeResult) 
 	fmt.Fprintln(writer, "=>", min, time.Unix(min, 0), max, time.Unix(max, 0))
 }
 
-func (w *Walker) PrintStatus(writer io.Writer, status Status) {
+func (w *Walker) PrintStatus(writer io.Writer, status vo.Status) {
 
 	headline(writer,
 		"Status: ",
@@ -145,9 +84,9 @@ func (w *Walker) PrintStatus(writer io.Writer, status Status) {
 	}
 
 	notFoundKeys := []string{}
-	notFoundMap := map[string]ScrapeResult{}
+	notFoundMap := map[string]vo.ScrapeResult{}
 	errorKeys := []string{}
-	errorMap := map[string]ScrapeResult{}
+	errorMap := map[string]vo.ScrapeResult{}
 	for targetURL, result := range status.Results {
 		switch true {
 		case result.Code == 404:

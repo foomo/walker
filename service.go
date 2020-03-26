@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/foomo/walker/config"
+	"github.com/foomo/walker/vo"
 )
 
 type Service struct {
@@ -14,11 +15,11 @@ type Service struct {
 	// targetURL string
 }
 
-func NewService(conf *config.Config) (s *Service, err error) {
+func NewService(conf *config.Config, linkListFilter LinkListFilterFunc, scrapeFunc ScrapeFunc) (s *Service, chanLoopComplete chan vo.Status, err error) {
 	w := NewWalker()
-	errWalk := w.walk(conf)
+	chanLoopComplete, errWalk := w.Walk(conf, linkListFilter, scrapeFunc)
 	if errWalk != nil {
-		return nil, errWalk
+		return nil, nil, errWalk
 	}
 	s = &Service{
 		Walker: w,
@@ -27,7 +28,7 @@ func NewService(conf *config.Config) (s *Service, err error) {
 	return
 }
 
-func filter(resultMap map[string]ScrapeResult, filterChain filterChain) {
+func filter(resultMap map[string]vo.ScrapeResult, filterChain filterChain) {
 	for targetURL, scrapeResult := range resultMap {
 		for _, filterFunc := range filterChain {
 			if !filterFunc(scrapeResult) {
@@ -38,7 +39,7 @@ func filter(resultMap map[string]ScrapeResult, filterChain filterChain) {
 	}
 }
 
-type filterFunc func(result ScrapeResult) bool
+type filterFunc func(result vo.ScrapeResult) bool
 type filterChain []filterFunc
 
 type Filters struct {
@@ -63,12 +64,12 @@ type FilterOptions struct {
 func getFilterChain(filters Filters) filterChain {
 	chain := filterChain{}
 	if filters.Prefix != "" {
-		chain = append(chain, func(result ScrapeResult) bool {
+		chain = append(chain, func(result vo.ScrapeResult) bool {
 			return strings.HasPrefix(result.TargetURL, filters.Prefix)
 		})
 	}
 	if len(filters.Status) > 0 {
-		chain = append(chain, func(result ScrapeResult) bool {
+		chain = append(chain, func(result vo.ScrapeResult) bool {
 			for _, status := range filters.Status {
 				if result.Code == status {
 					return true
@@ -78,19 +79,19 @@ func getFilterChain(filters Filters) filterChain {
 		})
 	}
 	if filters.MaxDur > 0 {
-		chain = append(chain, func(result ScrapeResult) bool {
+		chain = append(chain, func(result vo.ScrapeResult) bool {
 			return result.Duration < filters.MaxDur
 		})
 	}
 	if filters.MinDur > 0 {
-		chain = append(chain, func(result ScrapeResult) bool {
+		chain = append(chain, func(result vo.ScrapeResult) bool {
 			return result.Duration > filters.MinDur
 		})
 	}
 	return chain
 }
 
-func getFilterOptions(resultMap map[string]ScrapeResult) FilterOptions {
+func getFilterOptions(resultMap map[string]vo.ScrapeResult) FilterOptions {
 	statusMap := map[int]int{}
 	minDur := time.Duration(1000000000000000000)
 	maxDur := time.Duration(0)
@@ -121,7 +122,7 @@ func (s *Service) GetResults(
 	filters Filters,
 	page int,
 	pageSize int,
-) (filterOptions FilterOptions, results []ScrapeResult, numPages int) {
+) (filterOptions FilterOptions, results []vo.ScrapeResult, numPages int) {
 	resultMap := s.Walker.GetStatus().Results
 
 	filterOptions = getFilterOptions(resultMap)
@@ -131,7 +132,7 @@ func (s *Service) GetResults(
 	filter(resultMap, getFilterChain(filters))
 
 	i := 0
-	results = make([]ScrapeResult, len(resultMap))
+	results = make([]vo.ScrapeResult, len(resultMap))
 
 	urls := make([]string, len(resultMap))
 	for url := range resultMap {
@@ -162,7 +163,7 @@ func (s *Service) GetResults(
 	return
 }
 
-func (s *Service) GetStatus() ServiceStatus {
+func (s *Service) GetStatus() vo.ServiceStatus {
 	walkerStatus := s.Walker.GetStatus()
 	open := 0
 	pending := 0
@@ -173,7 +174,7 @@ func (s *Service) GetStatus() ServiceStatus {
 			open++
 		}
 	}
-	return ServiceStatus{
+	return vo.ServiceStatus{
 		//		TargetURL: s.targetURL,
 		Done:    len(walkerStatus.Results),
 		Open:    open,

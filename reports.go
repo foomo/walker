@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/foomo/walker/vo"
 	yaml "gopkg.in/yaml.v1"
 )
 
-type reporter func(status Status, w io.Writer)
+type reporter func(status vo.Status, w io.Writer)
 
 func GetReportHandler(basePath string, walker *Walker) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +105,7 @@ func (ul *uniqueList) add(v string) {
 	*ul = append(*ul, v)
 }
 
-func reportSEO(status Status, w io.Writer) {
+func reportSEO(status vo.Status, w io.Writer) {
 	printh, println, _ := printers(w)
 	h1s := duplications{}
 	titles := duplications{}
@@ -169,7 +170,7 @@ func reportSEO(status Status, w io.Writer) {
 	printList("canonical mismatches", canonicalMismatches)
 }
 
-func reportBrokenLinks(status Status, w io.Writer) {
+func reportBrokenLinks(status vo.Status, w io.Writer) {
 	printh, println, _ := printers(w)
 	printh("broken links")
 	broken := map[string][]string{}
@@ -211,7 +212,7 @@ func reportBrokenLinks(status Status, w io.Writer) {
 	}
 }
 
-func reportResults(status Status, w io.Writer) {
+func reportResults(status vo.Status, w io.Writer) {
 	printh, println, _ := printers(w)
 	printh("results", len(status.Results))
 	for _, res := range status.Results {
@@ -224,7 +225,7 @@ func reportResults(status Status, w io.Writer) {
 	}
 }
 
-func reportList(status Status, w io.Writer) {
+func reportList(status vo.Status, w io.Writer) {
 	printh, println, _ := printers(w)
 	printh("results", len(status.Results))
 	results := make([]string, len(status.Results))
@@ -250,17 +251,17 @@ func reportList(status Status, w io.Writer) {
 	}
 }
 
-func reportErrors(status Status, w io.Writer) {
+func reportErrors(status vo.Status, w io.Writer) {
 	printh, println, _ := printers(w)
 	printh("errors")
-	errorBuckets := map[int]map[string]ScrapeResult{}
+	errorBuckets := map[int]map[string]vo.ScrapeResult{}
 	codes := sort.IntSlice{}
 	for _, res := range status.Results {
 		if res.Code >= 400 {
 			_, mapOK := errorBuckets[res.Code]
 			if !mapOK {
 				codes = append(codes, res.Code)
-				errorBuckets[res.Code] = map[string]ScrapeResult{}
+				errorBuckets[res.Code] = map[string]vo.ScrapeResult{}
 			}
 			errorBuckets[res.Code][res.TargetURL] = res
 		}
@@ -293,7 +294,7 @@ func (s scores) Len() int           { return len(s) }
 func (s scores) Less(i, j int) bool { return s[i].Duration < s[j].Duration }
 func (s scores) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-func reportHighscore(status Status, w io.Writer) {
+func reportHighscore(status vo.Status, w io.Writer) {
 	printh, println, _ := printers(w)
 	printh("high score")
 	scores := make(scores, len(status.Results))
@@ -312,13 +313,13 @@ func reportHighscore(status Status, w io.Writer) {
 	}
 }
 
-func reportSummary(status Status, w io.Writer) {
+func reportSummary(status vo.Status, w io.Writer) {
 	printh, _, _ := printers(w)
 	printh("summary")
 	reportSummaryBody(status, w)
 }
 
-func reportSummaryBody(status Status, w io.Writer) {
+func reportSummaryBody(status vo.Status, w io.Writer) {
 	printh, println, _ := printers(w)
 	printh("status codes")
 	statusMap := map[int]int{}

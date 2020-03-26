@@ -3,53 +3,63 @@ package walker
 import (
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/foomo/walker/config"
+	"github.com/foomo/walker/vo"
 )
 
 type start struct {
-	conf config.Config
+	conf               config.Config
+	linkListFilterFunc LinkListFilterFunc
+	scrapeFunc         ScrapeFunc
 }
 
-type Status struct {
-	Results              map[string]ScrapeResult
-	Jobs                 map[string]bool
-	ScrapeSpeed          float64
-	ScrapeSpeedAverage   float64
-	ScrapeWindowRequests int64
-	ScrapeWindowSeconds  int64
-	ScrapeTotalRequests  int64
-	ScrapeTotalSeconds   int64
+type started struct {
+	Err              error
+	ChanLoopComplete chan vo.Status
 }
+
+type LinkListFilterFunc func(baseURL, docURL *url.URL, doc *goquery.Document) (ll vo.LinkList, err error)
+type ScrapeFunc func(response *http.Response) error
 
 type Walker struct {
-	chanResult     chan ScrapeResult
+	chanResult     chan scrapeResultAndClient
 	chanStart      chan start
-	chanStatus     chan Status
-	chanErrStart   chan error
-	CompleteStatus *Status
+	chanStatus     chan vo.Status
+	chanStarted    chan started
+	CompleteStatus *vo.Status
 }
 
 func NewWalker() *Walker {
 	w := &Walker{
-		chanResult:   make(chan ScrapeResult),
-		chanStart:    make(chan start),
-		chanStatus:   make(chan Status),
-		chanErrStart: make(chan error),
+		chanResult:  make(chan scrapeResultAndClient),
+		chanStart:   make(chan start),
+		chanStatus:  make(chan vo.Status),
+		chanStarted: make(chan started),
 	}
 	go w.scrapeloop()
 	return w
 }
 
-func (w *Walker) walk(conf *config.Config) error {
+func (w *Walker) Walk(
+	conf *config.Config,
+	linkListFilter LinkListFilterFunc,
+	scrapeFunc ScrapeFunc,
+) (chanLoopStatus chan vo.Status, err error) {
 	w.chanStart <- start{
-		conf: *conf,
+		conf:               *conf,
+		scrapeFunc:         scrapeFunc,
+		linkListFilterFunc: linkListFilter,
 	}
-	return <-w.chanErrStart
+	st := <-w.chanStarted
+	return st.ChanLoopComplete, st.Err
 }
 
-func (w *Walker) GetStatus() Status {
-	w.chanStatus <- Status{}
+func (w *Walker) GetStatus() vo.Status {
+	w.chanStatus <- vo.Status{}
 	return <-w.chanStatus
 }
 
