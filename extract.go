@@ -8,7 +8,7 @@ import (
 	"github.com/foomo/walker/vo"
 )
 
-func extractStructure(doc *goquery.Document) (s vo.Structure, err error) {
+func ExtractStructure(doc *goquery.Document) (s vo.Structure, err error) {
 	description, _ := doc.Find("meta[name=description]").First().Attr("content")
 	robots, _ := doc.Find("meta[name=robots]").First().Attr("content")
 	s = vo.Structure{

@@ -43,9 +43,9 @@ func getDoc(t *testing.T, html string) *goquery.Document {
 func TestExtract(t *testing.T) {
 	testDoc := getDoc(t, testDocHTML)
 	emptyDoc := getDoc(t, emptyDocHTML)
-	testDocStructure, eStucture := extractStructure(testDoc)
+	testDocStructure, eStucture := ExtractStructure(testDoc)
 	t.Log(testDocStructure, eStucture)
 	spew.Dump(testDocStructure)
-	emptyDocStructure, eStucture := extractStructure(emptyDoc)
+	emptyDocStructure, eStucture := ExtractStructure(emptyDoc)
 	t.Log(emptyDocStructure, eStucture)
 }

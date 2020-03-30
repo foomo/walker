@@ -105,7 +105,7 @@ func scrape(
 		}
 		result.Links = linkList
 
-		structure, errExtractStructure := extractStructure(doc)
+		structure, errExtractStructure := ExtractStructure(doc)
 		if errExtractStructure != nil {
 			result.Error = errExtractStructure.Error()
 			return
