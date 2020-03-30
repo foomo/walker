@@ -118,7 +118,6 @@ func (w *Walker) scrapeloop() {
 								running++
 								jobs[jobURL] = true
 								poolClient.busy = true
-								fmt.Println("go scrape", jobURL, scrapeFunc)
 								go scrape(poolClient, jobURL, groupHeader, scrapeFunc, w.chanResult)
 								continue JobLoop
 							}

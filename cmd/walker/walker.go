@@ -85,10 +85,18 @@ func main() {
 	fmt.Println(string(yamlConfBytes))
 	fmt.Println("------------------------------------------------------------------")
 
-	// http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	s, chanLoopComplete, errS := walker.NewService(conf, nil, nil)
 
-	s, _, errS := walker.NewService(conf, nil, nil)
 	must("could not start service", errS)
+
+	go func() {
+		for {
+			select {
+			case completeStatus := <-chanLoopComplete:
+				fmt.Println("a loop was completed, I walked around", len(completeStatus.Results), "docs")
+			}
+		}
+	}()
 
 	log.Fatal(http.ListenAndServe(conf.Addr, &server{
 		conf:           string(yamlConfBytes),
