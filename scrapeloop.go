@@ -67,6 +67,7 @@ func (w *Walker) scrapeloop() {
 	scrapeLoopStarted := false
 	var chanLoopComplete chan vo.Status
 	var scrapeFunc ScrapeFunc
+	var validationFunc ValidationFunc
 	var linkListFilterFunc LinkListFilterFunc
 	ll := linkLimitations{}
 	var jobs map[string]bool
@@ -94,9 +95,11 @@ func (w *Walker) scrapeloop() {
 		if len(baseURL.Query()) > 0 {
 			q = "?" + baseURL.RawQuery
 		}
+		jobs = map[string]bool{}
 		for _, p := range paths {
-			jobs = map[string]bool{baseURLString + p + q: false}
+			jobs[baseURLString+p+q] = false
 		}
+
 		results = map[string]vo.ScrapeResult{}
 		scrapeLoopStarted = true
 	}
@@ -118,7 +121,7 @@ func (w *Walker) scrapeloop() {
 								running++
 								jobs[jobURL] = true
 								poolClient.busy = true
-								go scrape(poolClient, jobURL, groupHeader, scrapeFunc, w.chanResult)
+								go scrape(poolClient, jobURL, groupHeader, scrapeFunc, validationFunc, w.chanResult)
 								continue JobLoop
 							}
 						}
@@ -149,6 +152,7 @@ func (w *Walker) scrapeloop() {
 			groupHeader = st.conf.GroupHeader
 			concurrency = st.conf.Concurrency
 			scrapeFunc = st.scrapeFunc
+			validationFunc = st.validationFunc
 			linkListFilterFunc = st.linkListFilterFunc
 			ll.ignorePathPrefixes = st.conf.Ignore
 			ll.depth = st.conf.Depth
@@ -261,7 +265,7 @@ func (w *Walker) scrapeloop() {
 			if linkListFilterFunc != nil {
 				if scanResult.result.Error != "" {
 					fmt.Println("there was an error", scanResult.result.Error)
-				} else {
+				} else if scanResult.doc != nil {
 					linksToScrapeFromFromLilterFunc, errFilterLinkList := linkListFilterFunc(baseURL, scanResult.docURL, scanResult.doc)
 					if errFilterLinkList != nil {
 						fmt.Println("aua", errFilterLinkList)

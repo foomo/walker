@@ -12,9 +12,6 @@ import (
 	"github.com/foomo/walker/vo"
 )
 
-type Scraper struct {
-}
-
 var ErrorNoBody = "no body"
 
 type scrapeResultAndClient struct {
@@ -36,6 +33,7 @@ func scrape(
 	targetURL string,
 	groupHeader string,
 	scrapeFunc ScrapeFunc,
+	validationFunc ValidationFunc,
 	chanResult chan scrapeResultAndClient,
 ) {
 	result := vo.ScrapeResult{
@@ -111,15 +109,26 @@ func scrape(
 			return
 		}
 		result.Structure = structure
-	}
 
-	if scrapeFunc != nil {
-		errScrape := scrapeFunc(resp)
-		if errScrape != nil {
-			result.Error = errScrape.Error()
-			chanResult <- newScrapeResultandClient(result, pc)
-			return
+		if scrapeFunc != nil {
+			customScrapeData, errScrape := scrapeFunc(resp)
+			if errScrape != nil {
+				result.Error = errScrape.Error()
+				chanResult <- newScrapeResultandClient(result, pc)
+				return
+			}
+			result.Data = customScrapeData
 		}
+
+		if validationFunc != nil {
+			validations, errValidate := validationFunc(result.Structure, result.Data)
+			if errValidate != nil {
+				result.Error = errValidate.Error()
+				return
+			}
+			result.Validations = validations
+		}
+
 	}
 
 	r := newScrapeResultandClient(result, pc)

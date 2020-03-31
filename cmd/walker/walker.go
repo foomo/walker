@@ -36,6 +36,7 @@ const htmlIndex = `<html>
 		<li><a href="/reports/highscore">highscore - all results sorted by request duration</a></li>
 		<li><a href="/reports/broken-links">broken links</a></li>
 		<li><a href="/reports/seo">seo</a></li>
+		<li><a href="/reports/validations">validations</a></li>
 		<li><a href="/reports/errors">errors - calls that returned error status codes</a></li>
 	</ul>
 </body>
@@ -85,7 +86,7 @@ func main() {
 	fmt.Println(string(yamlConfBytes))
 	fmt.Println("------------------------------------------------------------------")
 
-	s, chanLoopComplete, errS := walker.NewService(conf, nil, nil)
+	s, chanLoopComplete, errS := walker.NewService(conf, nil, nil, nil)
 
 	must("could not start service", errS)
 

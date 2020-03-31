@@ -34,6 +34,8 @@ func GetReportHandler(basePath string, walker *Walker) func(w http.ResponseWrite
 			report(walker, reportSummary, w)
 		case strings.HasPrefix(path, "errors"):
 			report(walker, reportErrors, w)
+		case strings.HasPrefix(path, "validations"):
+			report(walker, reportValidations, w)
 		default:
 			http.NotFound(w, r)
 		}
@@ -103,6 +105,19 @@ func (ul *uniqueList) add(v string) {
 		}
 	}
 	*ul = append(*ul, v)
+}
+
+func reportValidations(status vo.Status, w io.Writer) {
+	printh, println, _ := printers(w)
+	printh("validations")
+	for _, r := range status.Results {
+		if len(r.Validations) > 0 {
+			println(r.TargetURL)
+			for _, v := range r.Validations {
+				println("	", v.Group, v.Level, v.Message)
+			}
+		}
+	}
 }
 
 func reportSEO(status vo.Status, w io.Writer) {

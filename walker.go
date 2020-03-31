@@ -14,6 +14,7 @@ import (
 type start struct {
 	conf               config.Config
 	linkListFilterFunc LinkListFilterFunc
+	validationFunc     ValidationFunc
 	scrapeFunc         ScrapeFunc
 }
 
@@ -23,7 +24,8 @@ type started struct {
 }
 
 type LinkListFilterFunc func(baseURL, docURL *url.URL, doc *goquery.Document) (ll vo.LinkList, err error)
-type ScrapeFunc func(response *http.Response) error
+type ScrapeFunc func(response *http.Response) (scarepeData interface{}, err error)
+type ValidationFunc func(structure vo.Structure, scrapeData interface{}) (vo.Validations, error)
 
 type Walker struct {
 	chanResult     chan scrapeResultAndClient
@@ -48,11 +50,13 @@ func (w *Walker) Walk(
 	conf *config.Config,
 	linkListFilter LinkListFilterFunc,
 	scrapeFunc ScrapeFunc,
+	validationFunc ValidationFunc,
 ) (chanLoopStatus chan vo.Status, err error) {
 	w.chanStart <- start{
 		conf:               *conf,
 		scrapeFunc:         scrapeFunc,
 		linkListFilterFunc: linkListFilter,
+		validationFunc:     validationFunc,
 	}
 	st := <-w.chanStarted
 	return st.ChanLoopComplete, st.Err

@@ -15,9 +15,14 @@ type Service struct {
 	// targetURL string
 }
 
-func NewService(conf *config.Config, linkListFilter LinkListFilterFunc, scrapeFunc ScrapeFunc) (s *Service, chanLoopComplete chan vo.Status, err error) {
+func NewService(
+	conf *config.Config,
+	linkListFilter LinkListFilterFunc,
+	scrapeFunc ScrapeFunc,
+	validationFunc ValidationFunc,
+) (s *Service, chanLoopComplete chan vo.Status, err error) {
 	w := NewWalker()
-	chanLoopComplete, errWalk := w.Walk(conf, linkListFilter, scrapeFunc)
+	chanLoopComplete, errWalk := w.Walk(conf, linkListFilter, scrapeFunc, validationFunc)
 	if errWalk != nil {
 		return nil, nil, errWalk
 	}

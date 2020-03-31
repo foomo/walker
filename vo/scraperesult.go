@@ -18,7 +18,7 @@ type ScrapeResult struct {
 	Duration    time.Duration
 	Time        time.Time
 	Structure   Structure
+	Validations []Validation
+	Data        interface{}
 	Group       string
-	// duplication title, descr, h1
-	// blocking robots txt
 }
