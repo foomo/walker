@@ -2,6 +2,9 @@ package walker
 
 import "github.com/prometheus/client_golang/prometheus"
 
+type trackValidationScore func(group, path string, score int)
+type trackValidationPenalty func(group, path, validationType string, score int)
+
 func setupMetrics() (
 	summaryVec *prometheus.SummaryVec,
 	counterVec *prometheus.CounterVec,
@@ -9,10 +12,16 @@ func setupMetrics() (
 	progressGaugeOpen prometheus.Gauge,
 	progressGaugeComplete prometheus.Gauge,
 	counterVecStatus *prometheus.CounterVec,
+	trackValidationScore trackValidationScore,
+	trackValidationPenalty trackValidationPenalty,
 ) {
 
-	const prometheusLabelGroup = "group"
-	const prometheusLabelStatus = "status"
+	const (
+		prometheusLabelGroup          = "group"
+		prometheusLabelStatus         = "status"
+		prometheusLabelPath           = "path"
+		prometheusLabelValidationType = "type"
+	)
 
 	summaryVec = prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
@@ -22,6 +31,37 @@ func setupMetrics() (
 		},
 		[]string{prometheusLabelGroup},
 	)
+
+	schemaValidationScoreVec := prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name:       "walker_validation_score",
+			Help:       "html schema score for groups in paths",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{prometheusLabelGroup, prometheusLabelPath},
+	)
+	trackValidationScore = func(group, path string, score int) {
+		schemaValidationScoreVec.With(prometheus.Labels{
+			prometheusLabelGroup: group,
+			prometheusLabelPath:  path,
+		}).Observe(float64(score))
+	}
+
+	schemaValidationPenaltyVec := prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name:       "walker_validation_penalty",
+			Help:       "html schema score for groups and validation types in paths",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		},
+		[]string{prometheusLabelGroup, prometheusLabelPath, prometheusLabelValidationType},
+	)
+	trackValidationPenalty = func(group, path, validationType string, score int) {
+		schemaValidationPenaltyVec.With(prometheus.Labels{
+			prometheusLabelGroup:          group,
+			prometheusLabelPath:           path,
+			prometheusLabelValidationType: validationType,
+		}).Observe(float64(score))
+	}
 
 	counterVec = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -59,10 +99,11 @@ func setupMetrics() (
 		summaryVec,
 		counterVec,
 		totalCounter,
-		progressGaugeComplete,
-		progressGaugeOpen,
 		counterVecStatus,
+		progressGaugeOpen,
+		progressGaugeComplete,
+		schemaValidationScoreVec,
+		schemaValidationPenaltyVec,
 	)
-
 	return
 }

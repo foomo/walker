@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/foomo/walker/htmlschema"
 	"github.com/foomo/walker/vo"
 	"github.com/temoto/robotstxt"
 )
@@ -59,7 +60,14 @@ func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
 }
 
 func (w *Walker) scrapeloop() {
-	summaryVec, counterVec, totalCounter, progressGaugeOpen, progressGaugeComplete, counterVecStatus := setupMetrics()
+	summaryVec,
+		counterVec,
+		totalCounter,
+		progressGaugeOpen,
+		progressGaugeComplete,
+		counterVecStatus,
+		trackValidationScore,
+		trackValidationPenalties := setupMetrics()
 	running := 0
 	concurrency := 0
 	groupHeader := ""
@@ -76,6 +84,7 @@ func (w *Walker) scrapeloop() {
 	paths := []string{}
 	var cp *clientPool
 	var robotsGroup *robotstxt.Group
+	var groupValidator *htmlschema.GroupValidator
 
 	restart := func(startURL *url.URL, configPaths []string) {
 		scrapeLoopStarted = false
@@ -86,10 +95,10 @@ func (w *Walker) scrapeloop() {
 		paths = configPaths
 		running = 0
 		baseURLString := baseURL.Scheme + "://" + baseURL.Host
-		port := baseURL.Port()
-		if port != "" {
-			baseURLString += ":" + port
-		}
+		// port := baseURL.Port()
+		// if port != "" {
+		// 	baseURLString += ":" + port
+		// }
 		baseURLString += baseURL.RawPath
 		q := ""
 		if len(baseURL.Query()) > 0 {
@@ -102,6 +111,53 @@ func (w *Walker) scrapeloop() {
 
 		results = map[string]vo.ScrapeResult{}
 		scrapeLoopStarted = true
+	}
+
+	getStatus := func() vo.Status {
+		resultsCopy := make(map[string]vo.ScrapeResult, len(results))
+		jobsCopy := make(map[string]bool, len(jobs))
+		if results != nil {
+			for targetURL, result := range results {
+				resultsCopy[targetURL] = result
+			}
+			for targetURL, active := range jobs {
+				jobsCopy[targetURL] = active
+			}
+		}
+		scrapeWindowSeconds := 60
+		scrapeWindow := time.Second * time.Duration(scrapeWindowSeconds)
+		scrapeWindowCount := int64(0)
+		now := time.Now()
+
+		first := now.Unix()
+		scrapeWindowFirst := now.Unix()
+		totalCount := int64(0)
+
+		for _, r := range results {
+			// the results are not sorted baby
+			totalCount++
+			if first > r.Time.Unix() {
+				first = r.Time.Unix()
+			}
+			if now.Sub(r.Time) < scrapeWindow {
+				if scrapeWindowFirst > r.Time.Unix() {
+					scrapeWindowFirst = r.Time.Unix()
+				}
+				scrapeWindowCount++
+			}
+		}
+		currentScrapeWindowSeconds := now.Unix() - scrapeWindowFirst
+		scrapeTotalSeconds := now.Unix() - first
+		return vo.Status{
+			Results:              resultsCopy,
+			ScrapeSpeed:          float64(scrapeWindowCount) / float64(currentScrapeWindowSeconds),
+			ScrapeSpeedAverage:   float64(totalCount) / float64(scrapeTotalSeconds),
+			ScrapeWindowRequests: scrapeWindowCount,
+			ScrapeWindowSeconds:  currentScrapeWindowSeconds,
+			ScrapeTotalRequests:  totalCount,
+			ScrapeTotalSeconds:   scrapeTotalSeconds,
+			Jobs:                 jobsCopy,
+		}
 	}
 
 	for {
@@ -121,7 +177,7 @@ func (w *Walker) scrapeloop() {
 								running++
 								jobs[jobURL] = true
 								poolClient.busy = true
-								go scrape(poolClient, jobURL, groupHeader, scrapeFunc, validationFunc, w.chanResult)
+								go scrape(poolClient, jobURL, groupHeader, scrapeFunc, validationFunc, groupValidator, w.chanResult)
 								continue JobLoop
 							}
 						}
@@ -139,6 +195,12 @@ func (w *Walker) scrapeloop() {
 				Jobs:    jobs,
 			}
 			if chanLoopComplete != nil {
+				go reportSchemaValidationMetrics(
+					*w.CompleteStatus,
+					paths,
+					trackValidationPenalties,
+					trackValidationScore,
+				)
 				chanLoopComplete <- *w.CompleteStatus
 			}
 			restart(baseURL, paths)
@@ -157,6 +219,7 @@ func (w *Walker) scrapeloop() {
 			ll.ignorePathPrefixes = st.conf.Ignore
 			ll.depth = st.conf.Depth
 			ll.paging = st.conf.Paging
+			groupValidator = st.groupValidator
 			ll.includePathPrefixes = st.conf.Target.Paths
 			ignoreRobots = st.conf.IgnoreRobots
 			ll.ignoreQueriesWith = st.conf.IgnoreQueriesWith
@@ -203,50 +266,10 @@ func (w *Walker) scrapeloop() {
 			}
 
 		case <-w.chanStatus:
-			resultsCopy := make(map[string]vo.ScrapeResult, len(results))
-			jobsCopy := make(map[string]bool, len(jobs))
-			if results != nil {
-				for targetURL, result := range results {
-					resultsCopy[targetURL] = result
-				}
-				for targetURL, active := range jobs {
-					jobsCopy[targetURL] = active
-				}
-			}
-			scrapeWindowSeconds := 60
-			scrapeWindow := time.Second * time.Duration(scrapeWindowSeconds)
-			scrapeWindowCount := int64(0)
-			now := time.Now()
-
-			first := now.Unix()
-			scrapeWindowFirst := now.Unix()
-			totalCount := int64(0)
-
-			for _, r := range results {
-				// the results are not sorted baby
-				totalCount++
-				if first > r.Time.Unix() {
-					first = r.Time.Unix()
-				}
-				if now.Sub(r.Time) < scrapeWindow {
-					if scrapeWindowFirst > r.Time.Unix() {
-						scrapeWindowFirst = r.Time.Unix()
-					}
-					scrapeWindowCount++
-				}
-			}
-			currentScrapeWindowSeconds := now.Unix() - scrapeWindowFirst
-			scrapeTotalSeconds := now.Unix() - first
-			w.chanStatus <- vo.Status{
-				Results:              resultsCopy,
-				ScrapeSpeed:          float64(scrapeWindowCount) / float64(currentScrapeWindowSeconds),
-				ScrapeSpeedAverage:   float64(totalCount) / float64(scrapeTotalSeconds),
-				ScrapeWindowRequests: scrapeWindowCount,
-				ScrapeWindowSeconds:  currentScrapeWindowSeconds,
-				ScrapeTotalRequests:  totalCount,
-				ScrapeTotalSeconds:   scrapeTotalSeconds,
-				Jobs:                 jobsCopy,
-			}
+			w.chanStatus <- getStatus()
+		case <-w.chanStop:
+			w.chanStop <- getStatus()
+			return
 		case scanResult := <-w.chanResult:
 			running--
 			delete(jobs, scanResult.result.TargetURL)

@@ -8,11 +8,13 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/foomo/walker/config"
+	"github.com/foomo/walker/htmlschema"
 	"github.com/foomo/walker/vo"
 )
 
 type start struct {
 	conf               config.Config
+	groupValidator     *htmlschema.GroupValidator
 	linkListFilterFunc LinkListFilterFunc
 	validationFunc     ValidationFunc
 	scrapeFunc         ScrapeFunc
@@ -31,6 +33,7 @@ type Walker struct {
 	chanResult     chan scrapeResultAndClient
 	chanStart      chan start
 	chanStatus     chan vo.Status
+	chanStop       chan vo.Status
 	chanStarted    chan started
 	CompleteStatus *vo.Status
 }
@@ -39,6 +42,7 @@ func NewWalker() *Walker {
 	w := &Walker{
 		chanResult:  make(chan scrapeResultAndClient),
 		chanStart:   make(chan start),
+		chanStop:    make(chan vo.Status),
 		chanStatus:  make(chan vo.Status),
 		chanStarted: make(chan started),
 	}
@@ -52,7 +56,16 @@ func (w *Walker) Walk(
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
 ) (chanLoopStatus chan vo.Status, err error) {
+	var groupValidator *htmlschema.GroupValidator
+	if conf.SchemaRoot != "" {
+		gv, errGroupValidator := htmlschema.NewGroupValidator(conf.SchemaRoot)
+		if errGroupValidator != nil {
+			return nil, errGroupValidator
+		}
+		groupValidator = gv
+	}
 	w.chanStart <- start{
+		groupValidator:     groupValidator,
 		conf:               *conf,
 		scrapeFunc:         scrapeFunc,
 		linkListFilterFunc: linkListFilter,
@@ -60,6 +73,11 @@ func (w *Walker) Walk(
 	}
 	st := <-w.chanStarted
 	return st.ChanLoopComplete, st.Err
+}
+
+func (w *Walker) Stop() vo.Status {
+	w.chanStop <- vo.Status{}
+	return <-w.chanStop
 }
 
 func (w *Walker) GetStatus() vo.Status {

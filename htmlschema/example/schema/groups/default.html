@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <title val:score=10 val:min-length=10>we need a title</title>
+    </head>
+    <body>
+        <!-- just looking for some generic content -->
+        <val:selector selector="h1">
+            <h1 val:score=100>A Title</h1>
+        </val:selector>
+        <val:selector selector="h2">
+            <h2 val:optional score=50></h2>
+        </val:selector>
+        <val:selector selector="h3">
+            <h3 val:optional score=50></h3>
+        </val:selector>
+        <val:selector selector="img">
+            <img val:attr="alt;min-length:4">
+        </val:selector>
+        <val:selector selector="p">
+            <p val:optional score=10></p>
+        </val:selector>
+        
+    </body>
+</html>

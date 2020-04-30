@@ -1,0 +1,58 @@
+<html val:attr="lang;regex:%5E%28de%7Cen%29%24;length:2">
+    <head >
+        <title val:score=100 val:min-length=20 val:max-length=80>just a document</title>
+        <link val:score=20 hrefLang=de-DE rel="alternate" href=*>
+        <link val:score=20 hrefLang=en-EN rel="alternate" href=*>
+    </head>
+    <body>
+        <header>
+            <ref>../../components/nav.html</ref>
+        </header>
+        <article>
+            <h1 val:score=20 val:min-length=100 val:max-length=200>Hello article</h1>
+            <section val:optional>
+                <h2 val:score=5>sub title</h2>
+                <p val:min=1 val:score=5>bla <b val:optional val:score=1>important</b>bla</p>
+                <i val:forbidden val:score=1000>forbidden</i>
+            </section>
+            <p val:min=1>this is the content</p>
+        </article>
+        <footer></footer>
+    </body>
+</html>
+
+
+        <!--
+            <val:pager/>
+
+            <val:ld type=breadcrump/>
+
+            <val:script name=some/script>
+                {
+                    "some": "json"
+                }
+            </val:script>
+
+            <val:group name="pager" group-only-next="pager-next" group-only-prev="pager-prev" group-whatever-you-name-it="pager-next,pager-prev"/>
+            
+            <link val:id="pager-next" rel="next" val:attr="href;notempty;one-of:(foo,bar,baz)">
+            <link val:id="pager-prev" rel="prev" href="*">
+            
+            
+            <val:group 
+                name="pager" 
+                group-only-next="next" 
+                group-only-prev="prev" 
+                group-prev-and-next="next,prev"
+            /> 
+        -->
+
+                <!-- 
+                    <h1 val:no-sibling=h2,h3></h1>
+                    <h2 val:no-sibling=h1,h3></h2>
+                    <h3 val:no-sibling=h1,h2></h3>
+
+                    <h1 val:one=header></h1>
+                    <h2 val:one=header></h2>
+                    <h3 val:one=header></h3> 
+                -->

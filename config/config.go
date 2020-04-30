@@ -31,6 +31,7 @@ type Config struct {
 	IgnoreRobots      bool
 	GroupHeader       string
 	Agent             string
+	SchemaRoot        string
 }
 
 type shortConfig struct {

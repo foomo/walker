@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/foomo/walker/htmlschema"
 	"github.com/foomo/walker/vo"
 )
 
@@ -34,6 +35,7 @@ func scrape(
 	groupHeader string,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
+	groupValidator *htmlschema.GroupValidator,
 	chanResult chan scrapeResultAndClient,
 ) {
 	result := vo.ScrapeResult{
@@ -87,6 +89,12 @@ func scrape(
 		bodyReadCloser := ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
 		resp.Body = bodyReadCloser
+
+		if groupValidator != nil {
+			report, errValidate := groupValidator.Validate(result.Group, bodyBytes, nil)
+			result.ValidationReport = report
+			result.ValidionError = errValidate
+		}
 
 		nextDoc, errNewDoc := goquery.NewDocumentFromReader(bytes.NewBuffer(bodyBytes))
 		if errNewDoc != nil {
