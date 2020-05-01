@@ -19,6 +19,14 @@ func getExampleDir(path ...string) string {
 	return filepath.Join(append([]string{filepath.Dir(filename)}, path...)...)
 }
 
+func TestSortPathsByLength(t *testing.T) {
+	paths := []string{"/", "/deeper", "/deeper/and/deeper"}
+	sortedPaths := sortPathsByLength(paths)
+	for i, p := range paths {
+		assert.Equal(t, sortedPaths[len(sortedPaths)-1-i], p)
+	}
+}
+
 func TestWalker(t *testing.T) {
 	s := example.NewServer(getExampleDir("htmlschema", "example", "htdocs"))
 	testServer := httptest.NewServer(s)

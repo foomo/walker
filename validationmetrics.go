@@ -4,7 +4,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/foomo/walker/vo"
 )
 
@@ -14,13 +13,13 @@ func reportSchemaValidationMetrics(
 	trackPenalty trackValidationPenalty,
 	trackScore trackValidationScore,
 ) {
-	spew.Dump(paths)
+	sortedPaths := sortPathsByLength(paths)
 ResultLoop:
 	for _, r := range completeStatus.Results {
 		if r.ValidationReport != nil {
 			// r.ValidationReport.
 			path := "/"
-			for _, p := range paths {
+			for _, p := range sortedPaths {
 				u, errParse := url.Parse(r.TargetURL)
 				if errParse != nil {
 					continue ResultLoop

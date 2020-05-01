@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/foomo/walker/config"
@@ -23,6 +24,21 @@ type start struct {
 type started struct {
 	Err              error
 	ChanLoopComplete chan vo.Status
+}
+
+type sortLenStrings []string
+
+func (p sortLenStrings) Len() int           { return len(p) }
+func (p sortLenStrings) Less(i, j int) bool { return len(p[i]) > len(p[j]) }
+func (p sortLenStrings) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func sortPathsByLength(paths []string) []string {
+	sls := make(sortLenStrings, len(paths))
+	for i, p := range paths {
+		sls[i] = p
+	}
+	sort.Sort(sls)
+	return []string(sls)
 }
 
 type LinkListFilterFunc func(baseURL, docURL *url.URL, doc *goquery.Document) (ll vo.LinkList, err error)
