@@ -249,7 +249,7 @@ func dumpNode(n *html.Node, p *printer) {
 func (e *Element) getMatchingNodes(parentNode *html.Node) (matchingNodes []*html.Node, expectedAttributes map[string]string) {
 	matchingNodes = []*html.Node{}
 	expectedAttributes = map[string]string{}
-	if e.Selector != "" {
+	if e.Selector != "" && parentNode != nil {
 		for _, selectorNode := range goquery.NewDocumentFromNode(parentNode).Find(e.Selector).Nodes {
 			if selectorNode.Type == html.ElementNode {
 				nextNode := &html.Node{
