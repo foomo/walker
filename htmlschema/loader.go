@@ -41,7 +41,7 @@ func load(file string, context *html.Node) (schema *Schema, err error) {
 	for _, n := range childNodes {
 		el, errLoadElement := NewElementFromNode(n, file)
 		if errLoadElement != nil {
-			return nil, errLoadElement
+			return nil, errors.New("error in file " + file + ": ," + errLoadElement.Error())
 		}
 		if el == nil {
 			continue
