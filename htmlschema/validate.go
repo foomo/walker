@@ -253,11 +253,18 @@ func (e *Element) getMatchingNodes(parentNode *html.Node) (matchingNodes []*html
 		for _, selectorNode := range goquery.NewDocumentFromNode(parentNode).Find(e.Selector).Nodes {
 			if selectorNode.Type == html.ElementNode {
 				nextNode := &html.Node{
-					FirstChild: selectorNode,
-					Type:       html.ElementNode,
-					Data:       "selectionRoot",
+					FirstChild: &html.Node{
+						FirstChild: selectorNode.FirstChild,
+						Type:       selectorNode.Type,
+						Data:       selectorNode.Data,
+						Attr:       selectorNode.Attr,
+						DataAtom:   selectorNode.DataAtom,
+						Namespace:  selectorNode.Namespace,
+					},
+					Type: html.ElementNode,
+					Data: "selectionRoot",
 				}
-				// dumpNode(nextNode, nil)
+				nextNode.FirstChild.Parent = nextNode
 				matchingNodes = append(matchingNodes, nextNode)
 			}
 		}
