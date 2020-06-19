@@ -1,6 +1,7 @@
 package walker
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -29,6 +30,16 @@ type clientPool struct {
 	clients     []*poolClient
 }
 
+type contextKeyRedirects struct{}
+
+func getRedirectsFromRequest(r *http.Request) []vo.Redirect {
+	via := r.Context().Value(contextKeyRedirects{})
+	if via != nil {
+		return via.([]vo.Redirect)
+	}
+	return []vo.Redirect{}
+}
+
 func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
 	clients := make([]*poolClient, concurrency)
 	for i := 0; i < concurrency; i++ {
@@ -39,6 +50,23 @@ func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
 					Timeout: 5 * time.Second,
 				}).Dial,
 				TLSHandshakeTimeout: 5 * time.Second,
+			},
+
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) > 9 {
+					return errors.New("stopped after 10 redirects")
+				}
+				c := req.Context()
+				vias := getRedirectsFromRequest(req)
+				newR := req.WithContext(
+					context.WithValue(
+						c,
+						contextKeyRedirects{}, append(vias, vo.Redirect{
+							Code: req.Response.StatusCode,
+							URL:  req.URL.String(),
+						})))
+				*req = *newR
+				return nil
 			},
 		}
 		if useCookies {

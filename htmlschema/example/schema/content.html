@@ -1,0 +1,19 @@
+<html>
+    <head>
+        
+    </head>
+    <body>
+        <val:selector selector=".neos-nodetypes-text > div">
+            <div>
+                <h1 val:optional val:score=10>Hi ist immer gut</h1>
+                <h2 val:optional val:score=5>h2 is auch schön</h2>
+                <p val:optional val:score=5>Mit tollenm text<a val:optional val:score=5 val:attr="target;max-length:0">Links sind auch gut</a></p>
+            </div>
+        </val:selector>
+        <val:selector selector=".neos-nodetypes-image > figure">
+            <figure val:score=10>
+                <img val:score=10 val:attr="title;min-length:32">
+            </figure>
+        </val:selector>
+    </body>
+</html>

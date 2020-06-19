@@ -8,11 +8,17 @@ import (
 
 type LinkList map[string]int
 
+type Redirect struct {
+	Code int
+	URL  string
+}
+
 type ScrapeResult struct {
 	// index || noindex
 	// <link rel="next" href="/damen/damentaschen/alle-taschen?page=2">
 	// <meta name="robots" content="index,follow,noodp">
 	TargetURL        string
+	Redirects        []Redirect
 	Error            string
 	Code             int
 	ValidationReport *htmlschema.Report

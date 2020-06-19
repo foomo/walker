@@ -10,41 +10,59 @@ import (
 
 	"github.com/foomo/walker"
 	"github.com/foomo/walker/config"
+	"github.com/foomo/walker/reports"
+	"github.com/foomo/walker/vo"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 type server struct {
-	s              *walker.Service
-	conf           string
-	reportHandler  http.HandlerFunc
+	s             *walker.Service
+	conf          string
+	reportHandler func(
+		w http.ResponseWriter, r *http.Request,
+		completeStatus, runningStatus *vo.Status,
+	)
 	metricsHandler http.HandlerFunc
 }
 
 const pathReports = "/reports"
 
-const htmlIndex = `<html>
-<head><title>Walker</title></head>
-<body>
-	<h1>Walker</h1>
-	<ul>
-		<li><a href="/status">crawling status</a></li>
-		<li><a href="/metrics">prometheus metrics scraping endpoint</a></li>
-		<li><a href="/reports/summary">summary of status codes and performance overview</a></li>
-		<li><a href="/reports/results">all plain results (this can be a very long doc)</a></li>
-		<li><a href="/reports/list">list of all jobs / results</a></li>
-		<li><a href="/reports/highscore">highscore - all results sorted by request duration</a></li>
-		<li><a href="/reports/broken-links">broken links</a></li>
-		<li><a href="/reports/seo">seo</a></li>
-		<li><a href="/reports/validations">validations</a></li>
-		<li><a href="/reports/errors">errors - calls that returned error status codes</a></li>
-	</ul>
-</body>
-</html>`
+func htmlIndex() []byte {
+	return []byte(
+		`<html>
+			<head><title>Walker</title></head>
+			<body>
+			<style>
+				body {
+					color: black;
+					font-family: 'Courier New', Courier, monospace;
+					
+				}
+				table {
+					border-collapse: collapse;
+					border: 1px solid black;
+					width: 100%;
+				}
+				table tr, table tr td {
+					padding: 0.5rem;
+					border: 1px solid black;
+				}
+			</style>
+			<h1>walker</h1>
+			<ul>
+				<li><a href="/status">crawling status</a></li>
+				<li><a href="/metrics">prometheus metrics scraping endpoint</a></li>
+			</ul>
+	
+			` + reports.GetReportHandlerMenuHTML(pathReports) + `
+			</body>
+		</html>`)
+}
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
-		w.Write([]byte(htmlIndex))
+		w.Write(htmlIndex())
 		return
 	}
 	if r.URL.Path == "/metrics" {
@@ -58,7 +76,8 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, pathReports) {
-		s.reportHandler(w, r)
+		runningStatus := s.s.Walker.GetStatus()
+		s.reportHandler(w, r, s.s.Walker.CompleteStatus, &runningStatus)
 		return
 	}
 	http.NotFound(w, r)
@@ -102,7 +121,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(conf.Addr, &server{
 		conf:           string(yamlConfBytes),
 		s:              s,
-		reportHandler:  walker.GetReportHandler(pathReports, s.Walker),
+		reportHandler:  reports.GetReportHandler(pathReports),
 		metricsHandler: promhttp.Handler().ServeHTTP,
 	}))
 }

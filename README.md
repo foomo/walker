@@ -45,6 +45,10 @@ ignore:
 - missing title, description, h1
 - duplication title, description, h1
 
+### seo validation schemata
+
+WIP
+
 ## metrics
 
 Work in progress exposed on /metrics

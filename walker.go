@@ -10,6 +10,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/foomo/walker/config"
 	"github.com/foomo/walker/htmlschema"
+	"github.com/foomo/walker/reports"
 	"github.com/foomo/walker/vo"
 )
 
@@ -109,4 +110,12 @@ func headline(w io.Writer, v ...interface{}) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, v...)
 	line(w)
+}
+
+func (wlkr *Walker) GetReportHandler(basePath string) http.HandlerFunc {
+	h := reports.GetReportHandler(basePath)
+	return func(w http.ResponseWriter, r *http.Request) {
+		runningStatus := wlkr.GetStatus()
+		h(w, r, wlkr.CompleteStatus, &runningStatus)
+	}
 }

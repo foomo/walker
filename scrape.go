@@ -2,6 +2,7 @@ package walker
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -53,7 +54,7 @@ func scrape(
 		return
 	}
 	req.Header.Set("User-Agent", pc.agent)
-
+	req = req.WithContext(context.TODO())
 	resp, errGet := pc.client.Do(req)
 	if errGet != nil {
 		result.Error = errGet.Error()
@@ -63,6 +64,7 @@ func scrape(
 	result.Duration = time.Now().Sub(start)
 	result.Code = resp.StatusCode
 	result.Status = resp.Status
+	result.Redirects = getRedirectsFromRequest(resp.Request)
 	if resp.Body == nil {
 		result.Error = ErrorNoBody
 		chanResult <- newScrapeResultandClient(result, pc)
@@ -75,6 +77,9 @@ func scrape(
 		group := resp.Header.Get(groupHeader)
 		if group != "" {
 			result.Group = group
+		}
+		if strings.HasSuffix(result.Group, "/") {
+			result.Group += "index"
 		}
 	}
 	if strings.Contains(result.ContentType, "html") {

@@ -17,7 +17,6 @@ func reportSchemaValidationMetrics(
 ResultLoop:
 	for _, r := range completeStatus.Results {
 		if r.ValidationReport != nil {
-			// r.ValidationReport.
 			path := "/"
 			for _, p := range sortedPaths {
 				u, errParse := url.Parse(r.TargetURL)
@@ -38,7 +37,6 @@ ResultLoop:
 			for validationType, penalty := range penalties {
 				trackPenalty(r.Group, path, validationType, penalty)
 			}
-
 		}
 	}
 
