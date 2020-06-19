@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/docker/docker/pkg/testutil/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGroupValidator(t *testing.T) {
@@ -16,7 +16,7 @@ func TestGroupValidator(t *testing.T) {
 	schemaCatalogueProduct := gv.getSchemaForGroup("catalogue/product")
 	assert.NotNil(t, schemaCatalogueProduct)
 	report, errValidate := gv.Validate("catalogue/product", []byte(`<html></html>`), os.Stdout)
-	assert.NilError(t, errValidate)
+	assert.NoError(t, errValidate)
 	assert.NotNil(t, report)
 	report.Print(os.Stdout)
 }

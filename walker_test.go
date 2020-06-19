@@ -11,7 +11,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/foomo/walker/config"
 	"github.com/foomo/walker/htmlschema/example"
-	"github.com/moby/moby/pkg/testutil/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func getExampleDir(path ...string) string {
@@ -45,7 +45,7 @@ func TestWalker(t *testing.T) {
 		SchemaRoot:   getExampleDir("htmlschema", "example", "schema", "groups"),
 	}
 	chanStatus, errWalk := w.Walk(conf, nil, nil, nil)
-	assert.NilError(t, errWalk)
+	assert.NoError(t, errWalk)
 StatusLoop:
 	for {
 		select {
