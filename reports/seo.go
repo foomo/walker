@@ -26,7 +26,7 @@ func normalizeCanonical(target, canonical string) string {
 	if canonicalURL.Scheme != "" {
 		return canonical
 	}
-	normalized := targetURL.Scheme + "//" + targetURL.Host
+	normalized := targetURL.Scheme + "://" + targetURL.Host
 	port := targetURL.Port()
 	if port != "" {
 		normalized += ":" + port
