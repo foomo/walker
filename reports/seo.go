@@ -3,6 +3,7 @@ package reports
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -48,10 +49,14 @@ func reportSEO(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 		if filter != nil && filter(r) == false {
 			continue
 		}
+		if r.Code != http.StatusOK {
+			continue
+		}
 		finalURL := getFinalURLForScrapeResult(r)
 		normalizedCanonical := normalizeCanonical(r.TargetURL, r.Structure.Canonical)
 		if normalizedCanonical != finalURL {
-			finalURL = normalizedCanonical
+			// we are skipping this one
+			continue
 		}
 		if strings.Contains(r.ContentType, "html") {
 			foundH1 := false

@@ -27,7 +27,7 @@ func reportBrokenLinks(status vo.Status, w io.Writer, filter scrapeResultFilter)
 		if filter != nil && filter(res) == false {
 			continue
 		}
-		for l := range res.Links {
+		for l := range res.NormalizedLinks {
 			for link := range broken {
 				if link == l {
 					broken[l] = append(broken[l], res.TargetURL)

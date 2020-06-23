@@ -30,6 +30,7 @@ func GetReportHandlerMenuHTML(basePath string) string {
 		<li><a href="` + basePath + `/schema">schema</a></li>
 		<li><a href="` + basePath + `/validations">validations</a></li>
 		<li><a href="` + basePath + `/errors">errors - calls that returned error status codes</a></li>
+		<li><a href="` + basePath + `/links">links where are pages being linked from</a></li>
 	</ul>
 	<p>query parameters</p>
 	<table>
@@ -90,6 +91,8 @@ func GetReportHandler(basePath string) func(
 			rep = reportSchema
 		case strings.HasPrefix(path, "redirects"):
 			rep = reportRedirects
+		case strings.HasPrefix(path, "links"):
+			rep = reportLinks
 		default:
 			http.NotFound(w, r)
 			return

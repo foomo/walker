@@ -27,6 +27,7 @@ type ScrapeResult struct {
 	ContentType      string
 	Length           int
 	Links            LinkList
+	NormalizedLinks  LinkList
 	Duration         time.Duration
 	Time             time.Time
 	Structure        Structure

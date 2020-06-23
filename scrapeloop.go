@@ -205,7 +205,7 @@ func (w *Walker) scrapeloop() {
 								running++
 								jobs[jobURL] = true
 								poolClient.busy = true
-								go scrape(poolClient, jobURL, groupHeader, scrapeFunc, validationFunc, groupValidator, w.chanResult)
+								go scrape(poolClient, jobURL, baseURL, groupHeader, scrapeFunc, validationFunc, groupValidator, w.chanResult)
 								continue JobLoop
 							}
 						}

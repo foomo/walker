@@ -33,6 +33,7 @@ func newScrapeResultandClient(r vo.ScrapeResult, pc *poolClient) scrapeResultAnd
 func scrape(
 	pc *poolClient,
 	targetURL string,
+	baseURL *url.URL,
 	groupHeader string,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
@@ -108,13 +109,14 @@ func scrape(
 			return
 		}
 		doc = nextDoc
-		linkList, errExtract := extractLinks(doc)
+		linkList, normalizedLinkList, errExtract := extractLinks(doc, baseURL)
 		if errExtract != nil {
 			result.Error = errExtract.Error()
 			chanResult <- newScrapeResultandClient(result, pc)
 			return
 		}
 		result.Links = linkList
+		result.NormalizedLinks = normalizedLinkList
 
 		structure, errExtractStructure := ExtractStructure(doc)
 		if errExtractStructure != nil {
@@ -151,13 +153,27 @@ func scrape(
 	return
 }
 
-func extractLinks(doc *goquery.Document) (linkList vo.LinkList, err error) {
+func extractLinks(doc *goquery.Document, baseURL *url.URL) (linkList, normalizedLinkList vo.LinkList, err error) {
 	linkList = vo.LinkList{}
+	firstCanonical := doc.Find("link[rel=canonical]").First()
+	if firstCanonical != nil {
+		canonicalHref, existsCanonicalHref := firstCanonical.Attr("href")
+		if existsCanonicalHref {
+			linkList[canonicalHref]++
+		}
+	}
 	doc.Find("a").Each(func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
 		if exists && href != "" {
 			linkList[href]++
 		}
 	})
+	normalizedLinkList = vo.LinkList{}
+	for l, c := range linkList {
+		nl, errNormalize := NormalizeLink(baseURL, l)
+		if errNormalize == nil {
+			normalizedLinkList[nl.String()] = c
+		}
+	}
 	return
 }
