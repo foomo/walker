@@ -44,7 +44,7 @@ func TestWalker(t *testing.T) {
 		Concurrency:  1,
 		SchemaRoot:   getExampleDir("htmlschema", "example", "schema", "groups"),
 	}
-	chanStatus, errWalk := w.Walk(conf, nil, nil, nil)
+	chanStatus, errWalk := w.Walk(conf, nil, nil, nil, nil)
 	assert.NoError(t, errWalk)
 StatusLoop:
 	for {

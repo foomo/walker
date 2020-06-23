@@ -105,7 +105,7 @@ func main() {
 	fmt.Println(string(yamlConfBytes))
 	fmt.Println("------------------------------------------------------------------")
 
-	s, chanLoopComplete, errS := walker.NewService(conf, nil, nil, nil)
+	s, chanLoopComplete, errS := walker.NewService(conf, nil, nil, nil, nil)
 
 	must("could not start service", errS)
 
