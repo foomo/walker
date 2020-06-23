@@ -20,9 +20,10 @@ func NewService(
 	linkListFilter LinkListFilterFunc,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
+	scrapeResultModifierFunc ScrapeResultModifierFunc,
 ) (s *Service, chanLoopComplete chan vo.Status, err error) {
 	w := NewWalker()
-	chanLoopComplete, errWalk := w.Walk(conf, linkListFilter, scrapeFunc, validationFunc)
+	chanLoopComplete, errWalk := w.Walk(conf, linkListFilter, scrapeFunc, validationFunc, scrapeResultModifierFunc)
 	if errWalk != nil {
 		return nil, nil, errWalk
 	}

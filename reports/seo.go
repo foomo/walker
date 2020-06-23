@@ -43,6 +43,7 @@ func reportSEO(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 	descriptions := duplications{}
 	missingTitles := uniqueList{}
 	missingH1 := uniqueList{}
+	emptyH1 := uniqueList{}
 	missingDescriptions := uniqueList{}
 	printh("SEO duplications")
 	for _, r := range status.Results {
@@ -50,12 +51,14 @@ func reportSEO(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 			continue
 		}
 		if r.Code != http.StatusOK {
+			// println("skipping with code", r.Code, r.TargetURL)
 			continue
 		}
 		finalURL := getFinalURLForScrapeResult(r)
 		normalizedCanonical := normalizeCanonical(r.TargetURL, r.Structure.Canonical)
 		if normalizedCanonical != finalURL {
 			// we are skipping this one
+			// println("skipping normalizedCanonical != finalURL", normalizedCanonical, "!=", finalURL)
 			continue
 		}
 		if strings.Contains(r.ContentType, "html") {
@@ -71,8 +74,12 @@ func reportSEO(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 				} else {
 					titles.add(r.Structure.Title, finalURL)
 				}
-				if heading.Level == 1 && heading.Text != "" {
-					h1s.add(heading.Text, finalURL)
+				if heading.Level == 1 {
+					if heading.Text != "" {
+						h1s.add(heading.Text, finalURL)
+					} else {
+						emptyH1.add(finalURL)
+					}
 					foundH1 = true
 				}
 			}
@@ -105,4 +112,5 @@ func reportSEO(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 	printList("missing titles", missingTitles)
 	printList("missing descriptions", missingDescriptions)
 	printList("missing h1", missingH1)
+	printList("empty h1", emptyH1)
 }

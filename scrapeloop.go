@@ -105,6 +105,7 @@ func (w *Walker) scrapeloop() {
 	var scrapeFunc ScrapeFunc
 	var validationFunc ValidationFunc
 	var linkListFilterFunc LinkListFilterFunc
+	var scrapeResultModifierFunc ScrapeResultModifierFunc
 	ll := linkLimitations{}
 	var jobs map[string]bool
 	var results map[string]vo.ScrapeResult
@@ -252,6 +253,7 @@ func (w *Walker) scrapeloop() {
 			ignoreRobots = st.conf.IgnoreRobots
 			ll.ignoreQueriesWith = st.conf.IgnoreQueriesWith
 			ll.ignoreAllQueries = st.conf.IgnoreAllQueries
+			scrapeResultModifierFunc = st.scrapeResultModifierFunc
 
 			if cp == nil || cp.agent != st.conf.Agent || cp.concurrency != st.conf.Concurrency || cp.useCookies != st.conf.UseCookies {
 				cp = newClientPool(st.conf.Concurrency, st.conf.Agent, st.conf.UseCookies)
@@ -301,6 +303,14 @@ func (w *Walker) scrapeloop() {
 		case scanResult := <-w.chanResult:
 			running--
 			delete(jobs, scanResult.result.TargetURL)
+			if scrapeResultModifierFunc != nil {
+				modifiedScrapeResult, errModify := scrapeResultModifierFunc(scanResult.result)
+				if errModify == nil {
+					scanResult.result = modifiedScrapeResult
+				} else {
+					fmt.Println("cound not modify scrape result", errModify)
+				}
+			}
 			scanResult.poolClient.busy = false
 			scanResult.result.Time = time.Now()
 			statusCodeAsString := strconv.Itoa(scanResult.result.Code)

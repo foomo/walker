@@ -15,11 +15,12 @@ import (
 )
 
 type start struct {
-	conf               config.Config
-	groupValidator     *htmlschema.GroupValidator
-	linkListFilterFunc LinkListFilterFunc
-	validationFunc     ValidationFunc
-	scrapeFunc         ScrapeFunc
+	conf                     config.Config
+	groupValidator           *htmlschema.GroupValidator
+	linkListFilterFunc       LinkListFilterFunc
+	validationFunc           ValidationFunc
+	scrapeFunc               ScrapeFunc
+	scrapeResultModifierFunc ScrapeResultModifierFunc
 }
 
 type started struct {
@@ -44,6 +45,7 @@ func sortPathsByLength(paths []string) []string {
 
 type LinkListFilterFunc func(baseURL, docURL *url.URL, doc *goquery.Document) (ll vo.LinkList, err error)
 type ScrapeFunc func(response *http.Response) (scarepeData interface{}, err error)
+type ScrapeResultModifierFunc func(result vo.ScrapeResult) (modifiedResult vo.ScrapeResult, err error)
 type ValidationFunc func(structure vo.Structure, scrapeData interface{}) (vo.Validations, error)
 
 type Walker struct {
@@ -72,6 +74,7 @@ func (w *Walker) Walk(
 	linkListFilter LinkListFilterFunc,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
+	scrapeResultModifierFunc ScrapeResultModifierFunc,
 ) (chanLoopStatus chan vo.Status, err error) {
 	var groupValidator *htmlschema.GroupValidator
 	if conf.SchemaRoot != "" {
@@ -82,11 +85,12 @@ func (w *Walker) Walk(
 		groupValidator = gv
 	}
 	w.chanStart <- start{
-		groupValidator:     groupValidator,
-		conf:               *conf,
-		scrapeFunc:         scrapeFunc,
-		linkListFilterFunc: linkListFilter,
-		validationFunc:     validationFunc,
+		groupValidator:           groupValidator,
+		conf:                     *conf,
+		scrapeFunc:               scrapeFunc,
+		linkListFilterFunc:       linkListFilter,
+		validationFunc:           validationFunc,
+		scrapeResultModifierFunc: scrapeResultModifierFunc,
 	}
 	st := <-w.chanStarted
 	return st.ChanLoopComplete, st.Err
