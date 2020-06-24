@@ -46,10 +46,15 @@ func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
 		client := &http.Client{
 			Timeout: time.Second * 10,
 			Transport: &http.Transport{
-				Dial: (&net.Dialer{
-					Timeout: 5 * time.Second,
-				}).Dial,
-				TLSHandshakeTimeout: 5 * time.Second,
+				DialContext: (&net.Dialer{
+					Timeout:   5 * time.Second,
+					KeepAlive: 5 * time.Second,
+				}).DialContext,
+				MaxIdleConns:          100,
+				MaxIdleConnsPerHost:   50,
+				IdleConnTimeout:       15 * time.Second,
+				TLSHandshakeTimeout:   5 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
 			},
 
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
