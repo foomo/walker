@@ -75,7 +75,7 @@ func reportSEO(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 					titles.add(r.Structure.Title, finalURL)
 				}
 				if heading.Level == 1 {
-					if heading.Text != "" {
+					if strings.TrimSpace(heading.Text) != "" {
 						h1s.add(heading.Text, finalURL)
 					} else {
 						emptyH1.add(finalURL)
