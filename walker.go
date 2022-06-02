@@ -36,9 +36,7 @@ func (p sortLenStrings) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func sortPathsByLength(paths []string) []string {
 	sls := make(sortLenStrings, len(paths))
-	for i, p := range paths {
-		sls[i] = p
-	}
+	copy(sls, paths)
 	sort.Sort(sls)
 	return []string(sls)
 }

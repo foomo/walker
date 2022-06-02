@@ -54,6 +54,9 @@ func scrape(
 		chanResult <- newScrapeResultandClient(result, pc)
 		return
 	}
+	if baseURL.User != nil {
+		req.URL.User = baseURL.User
+	}
 	req.Header.Set("User-Agent", pc.agent)
 	req = req.WithContext(context.TODO())
 	resp, errGet := pc.client.Do(req)
@@ -62,7 +65,7 @@ func scrape(
 		chanResult <- newScrapeResultandClient(result, pc)
 		return
 	}
-	result.Duration = time.Now().Sub(start)
+	result.Duration = time.Since(start)
 	result.Code = resp.StatusCode
 	result.Status = resp.Status
 	result.Redirects = getRedirectsFromRequest(resp.Request)
@@ -109,6 +112,7 @@ func scrape(
 			return
 		}
 		doc = nextDoc
+
 		linkList, normalizedLinkList, errExtract := extractLinks(doc, baseURL)
 		if errExtract != nil {
 			result.Error = errExtract.Error()
@@ -150,7 +154,6 @@ func scrape(
 	r.doc = doc
 	r.docURL = req.URL
 	chanResult <- r
-	return
 }
 
 func extractLinks(doc *goquery.Document, baseURL *url.URL) (linkList, normalizedLinkList vo.LinkList, err error) {
@@ -162,12 +165,20 @@ func extractLinks(doc *goquery.Document, baseURL *url.URL) (linkList, normalized
 			linkList[canonicalHref]++
 		}
 	}
-	doc.Find("a").Each(func(i int, s *goquery.Selection) {
+	handleA := func(i int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
 		if exists && href != "" {
 			linkList[href]++
 		}
+	}
+	doc.Find("a").Each(handleA)
+	doc.Find("noscript").Each(func(i int, s *goquery.Selection) {
+		doc, errNewDoc := goquery.NewDocumentFromReader(bytes.NewBuffer([]byte(s.Text())))
+		if errNewDoc == nil {
+			doc.Find("a").Each(handleA)
+		}
 	})
+
 	normalizedLinkList = vo.LinkList{}
 	for l, c := range linkList {
 		nl, errNormalize := NormalizeLink(baseURL, l)

@@ -132,9 +132,6 @@ func (s *Service) GetResults(
 	resultMap := s.Walker.GetStatus().Results
 
 	filterOptions = getFilterOptions(resultMap)
-	if filters.Prefix != "" {
-		filters.Prefix = filters.Prefix
-	}
 	filter(resultMap, getFilterChain(filters))
 
 	i := 0
