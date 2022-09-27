@@ -2,6 +2,7 @@ package walker
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -55,6 +56,10 @@ func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
 				IdleConnTimeout:       15 * time.Second,
 				TLSHandshakeTimeout:   5 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,
+				TLSClientConfig: &tls.Config{
+					// disable SSL certificate verification
+					InsecureSkipVerify: true,
+				},
 			},
 
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
