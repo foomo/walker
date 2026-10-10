@@ -106,7 +106,8 @@ func (w *Walker) scrapeloop() {
 		progressGaugeComplete,
 		counterVecStatus,
 		trackValidationScore,
-		trackValidationPenalties := setupMetrics()
+		trackValidationPenalties,
+		cycle := setupMetrics()
 	running := 0
 	concurrency := 0
 	groupHeader := ""
@@ -126,8 +127,26 @@ func (w *Walker) scrapeloop() {
 	var robotsGroup *robotstxt.Group
 	var groupValidator *htmlschema.GroupValidator
 
-	restart := func(startURL *url.URL, configPaths []string) {
+	// scheduling
+	var interval, offset time.Duration
+	var cycleStart, cycleStarted, nextCycle time.Time
+	var waitTimer *time.Timer
+	var chanNextCycle <-chan time.Time
+	deadlineLogged := false
+	stopWaiting := func() {
+		if waitTimer != nil {
+			waitTimer.Stop()
+		}
+		waitTimer = nil
+		chanNextCycle = nil
+	}
+
+	restart := func(startURL *url.URL, configPaths []string, slot time.Time) {
 		scrapeLoopStarted = false
+		stopWaiting()
+		cycleStart = slot
+		cycleStarted = time.Now()
+		deadlineLogged = false
 		summaryVec.Reset()
 		counterVec.Reset()
 		counterVecStatus.Reset()
@@ -188,7 +207,7 @@ func (w *Walker) scrapeloop() {
 		}
 		currentScrapeWindowSeconds := now.Unix() - scrapeWindowFirst
 		scrapeTotalSeconds := now.Unix() - first
-		return vo.Status{
+		status := vo.Status{
 			Results:              resultsCopy,
 			ScrapeSpeed:          float64(scrapeWindowCount) / float64(currentScrapeWindowSeconds),
 			ScrapeSpeedAverage:   float64(totalCount) / float64(scrapeTotalSeconds),
@@ -198,12 +217,25 @@ func (w *Walker) scrapeloop() {
 			ScrapeTotalSeconds:   scrapeTotalSeconds,
 			Jobs:                 jobsCopy,
 		}
+		if interval > 0 {
+			status.CycleStart = cycleStart
+			status.CycleDeadline = cycleStart.Add(interval)
+			status.Waiting = chanNextCycle != nil
+			if status.Waiting {
+				status.NextCycle = nextCycle
+			}
+		}
+		return status
 	}
 
 	for {
 		if scrapeLoopStarted {
 			progressGaugeComplete.Set(float64(len(results)))
 			progressGaugeOpen.Set(float64(len(jobs)))
+			if interval > 0 && !deadlineLogged && len(jobs) > 0 && time.Now().After(cycleStart.Add(interval)) {
+				deadlineLogged = true
+				fmt.Println("ERROR scrape cycle started at", cycleStart, "exceeded interval", interval, "-", len(jobs), "jobs still open, continuing")
+			}
 			if len(jobs) > 0 {
 			JobLoop:
 				for jobURL, jobActive := range jobs {
@@ -228,8 +260,9 @@ func (w *Walker) scrapeloop() {
 		}
 
 		// time to restart
-		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil {
-			fmt.Println("restarting", baseURL, paths)
+		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil && chanNextCycle == nil {
+			cycleDuration := time.Since(cycleStarted)
+			cycle.duration.Set(cycleDuration.Seconds())
 			w.CompleteStatus = &vo.Status{
 				Results: results,
 				Jobs:    jobs,
@@ -243,12 +276,29 @@ func (w *Walker) scrapeloop() {
 				)
 				chanLoopComplete <- *w.CompleteStatus
 			}
-			restart(baseURL, paths)
+			now := time.Now()
+			if interval == 0 {
+				fmt.Println("restarting", baseURL, paths)
+				restart(baseURL, paths, now)
+			} else if next := cycleStart.Add(interval); now.Before(next) {
+				fmt.Println("scrape cycle completed in", cycleDuration, "next cycle at", next)
+				nextCycle = next
+				waitTimer = time.NewTimer(next.Sub(now))
+				chanNextCycle = waitTimer.C
+				cycle.nextStartEpoch.Set(float64(next.Unix()))
+			} else {
+				cycle.overruns.Inc()
+				fmt.Println("ERROR scrape cycle started at", cycleStart, "took", cycleDuration, "exceeding interval", interval, "- restarting immediately")
+				restart(baseURL, paths, cycleSlot(now, interval, offset))
+			}
 		}
 
 		select {
 		case <-time.After(time.Millisecond * 1000):
 			// make sure we do not get stuck
+		case <-chanNextCycle:
+			fmt.Println("starting scheduled scrape cycle", baseURL, paths)
+			restart(baseURL, paths, nextCycle)
 		case st := <-w.chanStart:
 			robotsGroup = nil
 			groupHeader = st.conf.GroupHeader
@@ -265,6 +315,8 @@ func (w *Walker) scrapeloop() {
 			ll.ignoreQueriesWith = st.conf.IgnoreQueriesWith
 			ll.ignoreAllQueries = st.conf.IgnoreAllQueries
 			scrapeResultModifierFunc = st.scrapeResultModifierFunc
+			interval = st.conf.Interval
+			offset = st.conf.Offset
 
 			if cp == nil || cp.agent != st.conf.Agent || cp.concurrency != st.conf.Concurrency || cp.useCookies != st.conf.UseCookies {
 				cp = newClientPool(st.conf.Concurrency, st.conf.Agent, st.conf.UseCookies)
@@ -293,7 +345,7 @@ func (w *Walker) scrapeloop() {
 				}
 			}
 			if errStart == nil {
-				restart(startU, st.conf.Target.Paths)
+				restart(startU, st.conf.Target.Paths, cycleSlot(time.Now(), interval, offset))
 				chanLoopComplete = make(chan vo.Status)
 				w.chanStarted <- started{
 					Err:              errStart,

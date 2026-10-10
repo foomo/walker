@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"strings"
+	"time"
 
 	yaml "gopkg.in/yaml.v3"
 )
@@ -34,6 +35,8 @@ type config struct {
 	GroupHeader       string
 	Agent             string
 	SchemaRoot        string
+	Interval          time.Duration
+	Offset            time.Duration
 }
 
 // type shortConfig struct {
@@ -54,6 +57,11 @@ type Config struct {
 	GroupHeader       string
 	Agent             string
 	SchemaRoot        string
+	// Interval between the starts of full scrape cycles, aligned to the wall
+	// clock - 0 restarts immediately after a cycle completed
+	Interval time.Duration
+	// Offset shifts the cycle boundaries, eg interval 24h offset 3h => daily at 03:00
+	Offset time.Duration
 }
 
 func Get(filename string) (conf *Config, err error) {
@@ -93,6 +101,14 @@ func Load(yamlBytes []byte) (conf *Config, err error) {
 		GroupHeader:       cnf.GroupHeader,
 		Agent:             cnf.Agent,
 		SchemaRoot:        cnf.SchemaRoot,
+		Interval:          cnf.Interval,
+		Offset:            cnf.Offset,
+	}
+	if conf.Interval < 0 {
+		return nil, errors.New("interval must not be negative")
+	}
+	if conf.Offset < 0 || (conf.Offset > 0 && conf.Offset >= conf.Interval) {
+		return nil, errors.New("offset must be >= 0 and smaller than interval")
 	}
 
 	switch cnf.Target.(type) {

@@ -27,6 +27,14 @@ func (w *Walker) PrintStatus(writer io.Writer, status vo.Status) {
 		", scapespeed: ", status.ScrapeSpeedAverage, "requests/s",
 	)
 
+	if !status.CycleStart.IsZero() {
+		if status.Waiting {
+			headline(writer, " cycle: started", status.CycleStart, ", completed - waiting for next cycle at", status.NextCycle)
+		} else {
+			headline(writer, " cycle: started", status.CycleStart, ", deadline", status.CycleDeadline)
+		}
+	}
+
 	reports.ReportSummaryBody(status, writer, nil)
 
 	headline(writer, "currently scanning")

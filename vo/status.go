@@ -1,5 +1,7 @@
 package vo
 
+import "time"
+
 type Status struct {
 	Results              map[string]ScrapeResult
 	Jobs                 map[string]bool
@@ -9,4 +11,9 @@ type Status struct {
 	ScrapeWindowSeconds  int64
 	ScrapeTotalRequests  int64
 	ScrapeTotalSeconds   int64
+	// scheduling - only set when an interval is configured
+	CycleStart    time.Time
+	CycleDeadline time.Time
+	Waiting       bool
+	NextCycle     time.Time
 }

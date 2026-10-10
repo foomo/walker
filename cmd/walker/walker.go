@@ -114,6 +114,9 @@ func main() {
 			select {
 			case completeStatus := <-chanLoopComplete:
 				fmt.Println("a loop was completed, I walked around", len(completeStatus.Results), "docs")
+				if conf.Interval > 0 {
+					fmt.Println("next loop is scheduled at", s.Walker.GetStatus().NextCycle)
+				}
 			}
 		}
 	}()

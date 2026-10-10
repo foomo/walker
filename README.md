@@ -28,8 +28,17 @@ ignoreallqueries: true
 # what paths (that would be a prefixes)
 ignore:
   - /foomo
+# run a full scrape cycle on a wall clock aligned schedule (default 0 = restart right after completion)
+# 1h => every full hour, 24h => at midnight (local time)
+interval: 1h
+# shift the schedule, eg interval: 24h and offset: 3h => daily at 03:00
+offset: 0s
 ...
 ```
+
+## scheduling
+
+With an `interval`, walker idles after a complete scrape cycle until the next boundary. If a cycle does not finish within its interval, walker logs an error and still completes the cycle. It then starts the next cycle immediately, which ends on the following regular boundary, so the schedule resyncs. Cycle duration, overruns and the next start are exposed as prometheus metrics (`walker_scrape_cycle_*`).
 
 ## error detection
 

@@ -2,6 +2,12 @@ package walker
 
 import "github.com/prometheus/client_golang/prometheus"
 
+type cycleMetrics struct {
+	duration       prometheus.Gauge
+	overruns       prometheus.Counter
+	nextStartEpoch prometheus.Gauge
+}
+
 type trackValidationScore func(group, path string, score int)
 type trackValidationPenalty func(group, path, validationType string, score int)
 
@@ -14,6 +20,7 @@ func setupMetrics() (
 	counterVecStatus *prometheus.CounterVec,
 	trackValidationScore trackValidationScore,
 	trackValidationPenalty trackValidationPenalty,
+	cycle cycleMetrics,
 ) {
 
 	const (
@@ -95,7 +102,25 @@ func setupMetrics() (
 		Help: "status codes for running scrape",
 	}, []string{prometheusLabelStatus})
 
-	prometheus.MustRegister(
+	cycle = cycleMetrics{
+		duration: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "walker_scrape_cycle_duration_seconds",
+			Help: "duration of the last completed scrape cycle",
+		}),
+		overruns: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "walker_scrape_cycle_overruns_total",
+			Help: "number of scrape cycles, that took longer than the configured interval",
+		}),
+		nextStartEpoch: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "walker_scrape_cycle_next_start_timestamp_seconds",
+			Help: "unix timestamp of the next scheduled scrape cycle start",
+		}),
+	}
+
+	for _, c := range []prometheus.Collector{
+		cycle.duration,
+		cycle.overruns,
+		cycle.nextStartEpoch,
 		summaryVec,
 		counterVec,
 		totalCounter,
@@ -104,6 +129,14 @@ func setupMetrics() (
 		progressGaugeComplete,
 		schemaValidationScoreVec,
 		schemaValidationPenaltyVec,
-	)
+	} {
+		// only the first walker in a process exports metrics - previously
+		// a second walker panicked here
+		if err := prometheus.Register(c); err != nil {
+			if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
+				panic(err)
+			}
+		}
+	}
 	return
 }
