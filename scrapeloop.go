@@ -129,10 +129,15 @@ func (w *Walker) scrapeloop() {
 
 	// scheduling
 	var interval, offset time.Duration
-	var cycleStart, cycleStarted, nextCycle time.Time
+	var cycleStart, cycleStarted, nextCycle, completedAt time.Time
 	var waitTimer *time.Timer
 	var chanNextCycle <-chan time.Time
+	var completeStatus *vo.Status
 	deadlineLogged := false
+	cycleCompleted := false
+	isRunning := func() bool {
+		return scrapeLoopStarted && !cycleCompleted
+	}
 	stopWaiting := func() {
 		if waitTimer != nil {
 			waitTimer.Stop()
@@ -146,7 +151,11 @@ func (w *Walker) scrapeloop() {
 		stopWaiting()
 		cycleStart = slot
 		cycleStarted = time.Now()
+		cycleCompleted = false
+		completedAt = time.Time{}
+		nextCycle = time.Time{}
 		deadlineLogged = false
+		cycle.running.Set(1)
 		summaryVec.Reset()
 		counterVec.Reset()
 		counterVecStatus.Reset()
@@ -186,7 +195,11 @@ func (w *Walker) scrapeloop() {
 		scrapeWindowSeconds := 60
 		scrapeWindow := time.Second * time.Duration(scrapeWindowSeconds)
 		scrapeWindowCount := int64(0)
+		// a completed cycle is frozen at its end - speeds must not decay while waiting
 		now := time.Now()
+		if cycleCompleted {
+			now = completedAt
+		}
 
 		first := now.Unix()
 		scrapeWindowFirst := now.Unix()
@@ -209,21 +222,21 @@ func (w *Walker) scrapeloop() {
 		scrapeTotalSeconds := now.Unix() - first
 		status := vo.Status{
 			Results:              resultsCopy,
-			ScrapeSpeed:          float64(scrapeWindowCount) / float64(currentScrapeWindowSeconds),
-			ScrapeSpeedAverage:   float64(totalCount) / float64(scrapeTotalSeconds),
+			ScrapeSpeed:          perSecond(scrapeWindowCount, currentScrapeWindowSeconds),
+			ScrapeSpeedAverage:   perSecond(totalCount, scrapeTotalSeconds),
 			ScrapeWindowRequests: scrapeWindowCount,
 			ScrapeWindowSeconds:  currentScrapeWindowSeconds,
 			ScrapeTotalRequests:  totalCount,
 			ScrapeTotalSeconds:   scrapeTotalSeconds,
 			Jobs:                 jobsCopy,
+			Running:              isRunning(),
+			Started:              cycleStarted,
+			Completed:            completedAt,
 		}
 		if interval > 0 {
 			status.CycleStart = cycleStart
 			status.CycleDeadline = cycleStart.Add(interval)
-			status.Waiting = chanNextCycle != nil
-			if status.Waiting {
-				status.NextCycle = nextCycle
-			}
+			status.NextCycle = nextCycle
 		}
 		return status
 	}
@@ -260,36 +273,45 @@ func (w *Walker) scrapeloop() {
 		}
 
 		// time to restart
-		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil && chanNextCycle == nil {
-			cycleDuration := time.Since(cycleStarted)
+		if results != nil && len(jobs) == 0 && running == 0 && baseURL != nil && !cycleCompleted {
+			cycleCompleted = true
+			completedAt = time.Now()
+			cycleDuration := completedAt.Sub(cycleStarted)
+			cycle.running.Set(0)
 			cycle.duration.Set(cycleDuration.Seconds())
-			w.CompleteStatus = &vo.Status{
-				Results: results,
-				Jobs:    jobs,
+			overrun := false
+			if interval > 0 {
+				nextCycle = cycleStart.Add(interval)
+				if !completedAt.Before(nextCycle) {
+					// the next cycle starts right away
+					overrun = true
+					nextCycle = completedAt
+				}
+				cycle.nextStartEpoch.Set(float64(nextCycle.Unix()))
 			}
+			status := getStatus()
+			completeStatus = &status
+			w.CompleteStatus = completeStatus
 			if chanLoopComplete != nil {
 				go reportSchemaValidationMetrics(
-					*w.CompleteStatus,
+					status,
 					paths,
 					trackValidationPenalties,
 					trackValidationScore,
 				)
-				chanLoopComplete <- *w.CompleteStatus
+				chanLoopComplete <- status
 			}
-			now := time.Now()
 			if interval == 0 {
 				fmt.Println("restarting", baseURL, paths)
-				restart(baseURL, paths, now)
-			} else if next := cycleStart.Add(interval); now.Before(next) {
-				fmt.Println("scrape cycle completed in", cycleDuration, "next cycle at", next)
-				nextCycle = next
-				waitTimer = time.NewTimer(next.Sub(now))
+				restart(baseURL, paths, completedAt)
+			} else if !overrun {
+				fmt.Println("scrape cycle completed in", cycleDuration, "next cycle at", nextCycle)
+				waitTimer = time.NewTimer(nextCycle.Sub(completedAt))
 				chanNextCycle = waitTimer.C
-				cycle.nextStartEpoch.Set(float64(next.Unix()))
 			} else {
 				cycle.overruns.Inc()
 				fmt.Println("ERROR scrape cycle started at", cycleStart, "took", cycleDuration, "exceeding interval", interval, "- restarting immediately")
-				restart(baseURL, paths, cycleSlot(now, interval, offset))
+				restart(baseURL, paths, cycleSlot(completedAt, interval, offset))
 			}
 		}
 
@@ -360,6 +382,13 @@ func (w *Walker) scrapeloop() {
 
 		case <-w.chanStatus:
 			w.chanStatus <- getStatus()
+		case <-w.chanStatuses:
+			st := statuses{complete: completeStatus}
+			if isRunning() {
+				runningStatus := getStatus()
+				st.running = &runningStatus
+			}
+			w.chanStatuses <- st
 		case <-w.chanStop:
 			w.chanStop <- getStatus()
 			return
@@ -420,4 +449,11 @@ func (w *Walker) scrapeloop() {
 			}
 		}
 	}
+}
+
+func perSecond(count, seconds int64) float64 {
+	if seconds <= 0 {
+		return 0
+	}
+	return float64(count) / float64(seconds)
 }

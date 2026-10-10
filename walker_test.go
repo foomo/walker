@@ -116,11 +116,22 @@ func TestWalkerSchedule(t *testing.T) {
 	chanLoopComplete, errWalk := w.Walk(scheduleTestConf(testServer.URL, interval), nil, nil, nil, nil)
 	assert.NoError(t, errWalk)
 
-	waitForLoop(t, chanLoopComplete, 2*interval)
+	completed := waitForLoop(t, chanLoopComplete, 2*interval)
+	assert.False(t, completed.Running)
+	assert.False(t, completed.Completed.IsZero())
 	status := w.GetStatus()
-	assert.True(t, status.Waiting, "should idle until the next boundary")
+	assert.False(t, status.Running, "should idle until the next boundary")
 	assert.True(t, status.NextCycle.Equal(cycleSlot(status.NextCycle, interval, 0)), "next cycle must be aligned")
 	assert.NotEmpty(t, status.Results, "completed results stay visible while waiting")
+
+	complete, running := w.GetStatuses()
+	assert.Nil(t, running, "no running status while waiting")
+	if assert.NotNil(t, complete) {
+		assert.Equal(t, status.NextCycle, complete.NextCycle)
+	}
+	// a completed cycle is frozen - speeds must not decay while waiting
+	time.Sleep(1100 * time.Millisecond)
+	assert.Equal(t, status.ScrapeTotalSeconds, w.GetStatus().ScrapeTotalSeconds)
 
 	waitForLoop(t, chanLoopComplete, 3*interval)
 	assert.True(t, time.Now().After(status.NextCycle), "second cycle must not start before its slot")
@@ -141,7 +152,7 @@ func TestWalkerScheduleOverrun(t *testing.T) {
 
 	waitForLoop(t, chanLoopComplete, 15*time.Second)
 	status := w.GetStatus()
-	assert.False(t, status.Waiting, "an overrun cycle must restart immediately")
+	assert.True(t, status.Running, "an overrun cycle must restart immediately")
 	assert.True(t, status.CycleStart.Equal(cycleSlot(status.CycleStart, interval, 0)), "restarted cycle must resync to the schedule")
 	assert.True(t, status.CycleDeadline.After(time.Now().Add(-interval)))
 }

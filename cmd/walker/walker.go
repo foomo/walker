@@ -76,8 +76,8 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, pathReports) {
-		runningStatus := s.s.Walker.GetStatus()
-		s.reportHandler(w, r, s.s.Walker.CompleteStatus, &runningStatus)
+		completeStatus, runningStatus := s.s.Walker.GetStatuses()
+		s.reportHandler(w, r, completeStatus, runningStatus)
 		return
 	}
 	http.NotFound(w, r)
@@ -114,8 +114,8 @@ func main() {
 			select {
 			case completeStatus := <-chanLoopComplete:
 				fmt.Println("a loop was completed, I walked around", len(completeStatus.Results), "docs")
-				if conf.Interval > 0 {
-					fmt.Println("next loop is scheduled at", s.Walker.GetStatus().NextCycle)
+				if !completeStatus.NextCycle.IsZero() {
+					fmt.Println("next loop is scheduled at", completeStatus.NextCycle)
 				}
 			}
 		}

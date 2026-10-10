@@ -3,6 +3,7 @@ package walker
 import "github.com/prometheus/client_golang/prometheus"
 
 type cycleMetrics struct {
+	running        prometheus.Gauge
 	duration       prometheus.Gauge
 	overruns       prometheus.Counter
 	nextStartEpoch prometheus.Gauge
@@ -103,6 +104,10 @@ func setupMetrics() (
 	}, []string{prometheusLabelStatus})
 
 	cycle = cycleMetrics{
+		running: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "walker_scrape_cycle_running",
+			Help: "1 while a scrape cycle is in progress, 0 while waiting for the next one",
+		}),
 		duration: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "walker_scrape_cycle_duration_seconds",
 			Help: "duration of the last completed scrape cycle",
@@ -118,6 +123,7 @@ func setupMetrics() (
 	}
 
 	for _, c := range []prometheus.Collector{
+		cycle.running,
 		cycle.duration,
 		cycle.overruns,
 		cycle.nextStartEpoch,

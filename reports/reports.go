@@ -147,12 +147,39 @@ func report(
 		if status != nil {
 			println("STATUS", statusName)
 			println("=============================================================================")
+			printCycle(w, *status)
 			r(*status, w, filter)
 			println()
 			println()
-		} else {
-			println("STATUS", statusName, "is nil")
+			continue
 		}
+		switch {
+		case statusName == statusRunning && completeStatus != nil:
+			println("STATUS", statusName, "- no scrape cycle running, last cycle completed at", completeStatus.Completed.Format(time.RFC3339))
+		case statusName == statusRunning:
+			println("STATUS", statusName, "- no scrape cycle running")
+		default:
+			println("STATUS", statusName, "- no scrape cycle has completed yet")
+		}
+		if statusName == statusRunning && completeStatus != nil && !completeStatus.NextCycle.IsZero() {
+			println("next cycle at", completeStatus.NextCycle.Format(time.RFC3339))
+		}
+		println()
+	}
+}
+
+func printCycle(w io.Writer, status vo.Status) {
+	_, println, _ := printers(w)
+	if status.Started.IsZero() {
+		return
+	}
+	if status.Running {
+		println("cycle started at", status.Started.Format(time.RFC3339), "running for", time.Since(status.Started).Round(time.Second))
+	} else {
+		println("cycle started at", status.Started.Format(time.RFC3339), "completed at", status.Completed.Format(time.RFC3339), "took", status.Completed.Sub(status.Started).Round(time.Second))
+	}
+	if !status.CycleDeadline.IsZero() {
+		println("scheduled", status.CycleStart.Format(time.RFC3339), "deadline", status.CycleDeadline.Format(time.RFC3339))
 	}
 }
 

@@ -27,12 +27,15 @@ func (w *Walker) PrintStatus(writer io.Writer, status vo.Status) {
 		", scapespeed: ", status.ScrapeSpeedAverage, "requests/s",
 	)
 
-	if !status.CycleStart.IsZero() {
-		if status.Waiting {
-			headline(writer, " cycle: started", status.CycleStart, ", completed - waiting for next cycle at", status.NextCycle)
-		} else {
-			headline(writer, " cycle: started", status.CycleStart, ", deadline", status.CycleDeadline)
-		}
+	switch {
+	case status.Running && !status.CycleDeadline.IsZero():
+		headline(writer, " cycle: running since", status.Started, ", deadline", status.CycleDeadline)
+	case status.Running:
+		headline(writer, " cycle: running since", status.Started)
+	case !status.Completed.IsZero() && !status.NextCycle.IsZero():
+		headline(writer, " cycle: completed at", status.Completed, "in", status.Completed.Sub(status.Started), ", waiting for next cycle at", status.NextCycle)
+	case !status.Completed.IsZero():
+		headline(writer, " cycle: completed at", status.Completed, "in", status.Completed.Sub(status.Started))
 	}
 
 	reports.ReportSummaryBody(status, writer, nil)

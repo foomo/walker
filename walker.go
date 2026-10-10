@@ -23,6 +23,11 @@ type start struct {
 	scrapeResultModifierFunc ScrapeResultModifierFunc
 }
 
+type statuses struct {
+	complete *vo.Status
+	running  *vo.Status
+}
+
 type started struct {
 	Err              error
 	ChanLoopComplete chan vo.Status
@@ -47,21 +52,24 @@ type ScrapeResultModifierFunc func(result vo.ScrapeResult) (modifiedResult vo.Sc
 type ValidationFunc func(structure vo.Structure, scrapeData interface{}) (vo.Validations, error)
 
 type Walker struct {
-	chanResult     chan scrapeResultAndClient
-	chanStart      chan start
-	chanStatus     chan vo.Status
-	chanStop       chan vo.Status
-	chanStarted    chan started
+	chanResult   chan scrapeResultAndClient
+	chanStart    chan start
+	chanStatus   chan vo.Status
+	chanStop     chan vo.Status
+	chanStarted  chan started
+	chanStatuses chan statuses
+	// Deprecated: written concurrently by the scrape loop - use GetStatuses
 	CompleteStatus *vo.Status
 }
 
 func NewWalker() *Walker {
 	w := &Walker{
-		chanResult:  make(chan scrapeResultAndClient),
-		chanStart:   make(chan start),
-		chanStop:    make(chan vo.Status),
-		chanStatus:  make(chan vo.Status),
-		chanStarted: make(chan started),
+		chanResult:   make(chan scrapeResultAndClient),
+		chanStart:    make(chan start),
+		chanStop:     make(chan vo.Status),
+		chanStatus:   make(chan vo.Status),
+		chanStarted:  make(chan started),
+		chanStatuses: make(chan statuses),
 	}
 	go w.scrapeloop()
 	return w
@@ -99,9 +107,20 @@ func (w *Walker) Stop() vo.Status {
 	return <-w.chanStop
 }
 
+// GetStatus returns the status of the current cycle - once a cycle has
+// completed and walker waits for the next one, it is that completed cycle
+// with Running == false
 func (w *Walker) GetStatus() vo.Status {
 	w.chanStatus <- vo.Status{}
 	return <-w.chanStatus
+}
+
+// GetStatuses returns the last completed cycle and the cycle in progress,
+// either one is nil if there is none
+func (w *Walker) GetStatuses() (complete, running *vo.Status) {
+	w.chanStatuses <- statuses{}
+	st := <-w.chanStatuses
+	return st.complete, st.running
 }
 
 func line(w io.Writer) {
@@ -117,7 +136,7 @@ func headline(w io.Writer, v ...interface{}) {
 func (wlkr *Walker) GetReportHandler(basePath string) http.HandlerFunc {
 	h := reports.GetReportHandler(basePath)
 	return func(w http.ResponseWriter, r *http.Request) {
-		runningStatus := wlkr.GetStatus()
-		h(w, r, wlkr.CompleteStatus, &runningStatus)
+		completeStatus, runningStatus := wlkr.GetStatuses()
+		h(w, r, completeStatus, runningStatus)
 	}
 }
