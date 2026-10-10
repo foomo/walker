@@ -79,6 +79,7 @@ func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
 				return nil
 			},
 		}
+		client.Jar = nil
 		if useCookies {
 			cookieJar, _ := cookiejar.New(nil)
 			client.Jar = cookieJar
