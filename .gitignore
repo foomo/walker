@@ -3,3 +3,5 @@
 /frontend/.next
 /frontend/node_modules
 /cmd/walker/*.yaml
+xcuserdata/
+DerivedData/

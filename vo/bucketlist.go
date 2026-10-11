@@ -10,6 +10,17 @@ type Bucket struct {
 
 type BucketList []Bucket
 
+// Index returns the bucket for d with [From, To) semantics - anything beyond
+// the last bucket is counted in the last one
+func (l BucketList) Index(d time.Duration) int {
+	for i, bucket := range l {
+		if d >= bucket.From && d < bucket.To {
+			return i
+		}
+	}
+	return len(l) - 1
+}
+
 func GetBucketList() BucketList {
 	return BucketList{
 		Bucket{

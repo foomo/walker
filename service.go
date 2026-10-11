@@ -1,7 +1,6 @@
 package walker
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -48,10 +47,26 @@ func filter(resultMap map[string]vo.ScrapeResult, filterChain filterChain) {
 type filterFunc func(result vo.ScrapeResult) bool
 type filterChain []filterFunc
 
+const (
+	ScrapeCurrent  = "current"
+	ScrapeComplete = "complete"
+)
+
 type Filters struct {
+	// Scrape selects ScrapeCurrent (default) or ScrapeComplete
+	Scrape string
+	// Prefix filters by the start of the target url - if it is the Prefix of a
+	// folder, it matches the folder and everything below it (see vo.InFolder)
 	Prefix string
+	// Path matches results, whose path contains it - case insensitive,
+	// without scheme, host and query (see vo.URLPath)
+	Path   string
 	Status []int
+	// Groups matches any of the groups - "" is the group of results without one
+	Groups []string
 	Errors []string
+	// MinDur and MaxDur select durations in [MinDur, MaxDur) - like a
+	// performance bucket - 0 is not set
 	MinDur time.Duration
 	MaxDur time.Duration
 }
@@ -61,23 +76,55 @@ type StatusStats struct {
 	Count int
 }
 
-type FilterOptions struct {
-	Status []StatusStats
-	MinDur time.Duration
-	MaxDur time.Duration
+type GroupStats struct {
+	Group string
+	Count int
 }
 
-func getFilterChain(filters Filters) filterChain {
+type FilterOptions struct {
+	Status []StatusStats
+	Groups []GroupStats
+	// Buckets are the performance buckets with their number of pages
+	Buckets []vo.PerformanceBucket
+	MinDur  time.Duration
+	MaxDur  time.Duration
+}
+
+// getFilterChain - prefixIsFolder switches the prefix filter to vo.InFolder,
+// so that "https://example.com/shop" does not match "https://example.com/shopping"
+func getFilterChain(filters Filters, prefixIsFolder bool) filterChain {
 	chain := filterChain{}
 	if filters.Prefix != "" {
+		if prefixIsFolder {
+			chain = append(chain, func(result vo.ScrapeResult) bool {
+				return vo.InFolder(result.TargetURL, filters.Prefix)
+			})
+		} else {
+			chain = append(chain, func(result vo.ScrapeResult) bool {
+				return strings.HasPrefix(result.TargetURL, filters.Prefix)
+			})
+		}
+	}
+	if filters.Path != "" {
+		needle := strings.ToLower(filters.Path)
 		chain = append(chain, func(result vo.ScrapeResult) bool {
-			return strings.HasPrefix(result.TargetURL, filters.Prefix)
+			return strings.Contains(strings.ToLower(vo.URLPath(result.TargetURL)), needle)
 		})
 	}
 	if len(filters.Status) > 0 {
 		chain = append(chain, func(result vo.ScrapeResult) bool {
 			for _, status := range filters.Status {
 				if result.Code == status {
+					return true
+				}
+			}
+			return false
+		})
+	}
+	if len(filters.Groups) > 0 {
+		chain = append(chain, func(result vo.ScrapeResult) bool {
+			for _, group := range filters.Groups {
+				if result.Group == group {
 					return true
 				}
 			}
@@ -91,7 +138,7 @@ func getFilterChain(filters Filters) filterChain {
 	}
 	if filters.MinDur > 0 {
 		chain = append(chain, func(result vo.ScrapeResult) bool {
-			return result.Duration > filters.MinDur
+			return result.Duration >= filters.MinDur
 		})
 	}
 	return chain
@@ -99,10 +146,18 @@ func getFilterChain(filters Filters) filterChain {
 
 func getFilterOptions(resultMap map[string]vo.ScrapeResult) FilterOptions {
 	statusMap := map[int]int{}
+	groupMap := map[string]int{}
+	bucketList := vo.GetBucketList()
+	buckets := make([]vo.PerformanceBucket, len(bucketList))
+	for i, bucket := range bucketList {
+		buckets[i] = vo.PerformanceBucket{Name: bucket.Name, From: bucket.From, To: bucket.To}
+	}
 	minDur := time.Duration(1000000000000000000)
 	maxDur := time.Duration(0)
 	for _, result := range resultMap {
 		statusMap[result.Code]++
+		groupMap[result.Group]++
+		buckets[bucketList.Index(result.Duration)].Pages++
 		if result.Duration > maxDur {
 			maxDur = result.Duration
 		}
@@ -117,22 +172,36 @@ func getFilterOptions(resultMap map[string]vo.ScrapeResult) FilterOptions {
 			Count: count,
 		})
 	}
+	groupStats := []GroupStats{}
+	for group, count := range groupMap {
+		groupStats = append(groupStats, GroupStats{
+			Group: group,
+			Count: count,
+		})
+	}
+	sort.Slice(groupStats, func(i, j int) bool { return groupStats[i].Group < groupStats[j].Group })
 	return FilterOptions{
-		Status: statusStats,
-		MinDur: minDur,
-		MaxDur: maxDur,
+		Status:  statusStats,
+		Groups:  groupStats,
+		Buckets: buckets,
+		MinDur:  minDur,
+		MaxDur:  maxDur,
 	}
 }
 
+// GetResults returns a page of the filtered results of ScrapeCurrent (default)
+// or ScrapeComplete. The folders are the path tree of all results of the
+// same scrape - unfiltered and from the same snapshot as the page, so that
+// the tree and the results always correspond.
 func (s *Service) GetResults(
 	filters Filters,
 	page int,
 	pageSize int,
-) (filterOptions FilterOptions, results []vo.ScrapeResult, numPages int) {
-	resultMap := s.Walker.GetStatus().Results
-
+) (filterOptions FilterOptions, results []vo.ScrapeResult, numPages int, folders []vo.Folder) {
+	resultMap := s.scrapeResults(filters.Scrape)
 	filterOptions = getFilterOptions(resultMap)
-	filter(resultMap, getFilterChain(filters))
+	folders = getFolders(resultMap)
+	filter(resultMap, getFilterChain(filters, containsFolder(folders, filters.Prefix)))
 
 	i := 0
 	results = make([]vo.ScrapeResult, len(resultMap))
@@ -146,22 +215,115 @@ func (s *Service) GetResults(
 	for index, url := range urls {
 		results[index] = resultMap[url]
 	}
-	// paging is missing
-	numPages = len(results) / pageSize
-	min := 0
-	max := len(results)
-	start := page * pageSize
-	end := start + pageSize
+	results, numPages = paginate(results, page, pageSize)
+	return
+}
 
-	if start < min {
-		start = min
+// scrapeResults returns a copy of the results of ScrapeCurrent (default) or ScrapeComplete
+func (s *Service) scrapeResults(scrape string) map[string]vo.ScrapeResult {
+	if scrape != ScrapeComplete {
+		return s.Walker.GetStatus().Results
 	}
-	if end > max {
-		end = max
+	complete, _ := s.Walker.GetStatuses()
+	if complete == nil {
+		return map[string]vo.ScrapeResult{}
 	}
-	fmt.Println("slice", start, end)
-	if end > start {
-		results = results[start:end]
+	// the complete status is shared - callers may modify the copy
+	results := make(map[string]vo.ScrapeResult, len(complete.Results))
+	for targetURL, result := range complete.Results {
+		results[targetURL] = result
+	}
+	return results
+}
+
+// containsFolder reports, if prefix is the Prefix of a folder in the tree
+func containsFolder(folders []vo.Folder, prefix string) bool {
+	for _, f := range folders {
+		if f.Prefix == prefix || (vo.InFolder(prefix, f.Prefix) && containsFolder(f.Folders, prefix)) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetBrokenLinks returns the broken pages of ScrapeCurrent (default) or
+// ScrapeComplete - status >= 400 or failed - and the pages linking to them
+func (s *Service) GetBrokenLinks(scrape string) []vo.BrokenLink {
+	return vo.BrokenLinks(s.scrapeResults(scrape))
+}
+
+// GetResult finds the result of ScrapeCurrent (default) or ScrapeComplete for
+// a url as a browser sees it: an exact match first, then ignoring the fragment
+// and credentials, then a result whose redirects end at the url - nil, if the
+// url was not scraped
+func (s *Service) GetResult(scrape string, targetURL string) *vo.ScrapeResult {
+	return findResult(s.scrapeResults(scrape), targetURL)
+}
+
+func findResult(results map[string]vo.ScrapeResult, targetURL string) *vo.ScrapeResult {
+	if r, ok := results[targetURL]; ok {
+		return &r
+	}
+	key := comparableURL(targetURL)
+	var redirected *vo.ScrapeResult
+	for _, r := range results {
+		if comparableURL(r.TargetURL) == key {
+			return &r
+		}
+		if redirected == nil && len(r.Redirects) > 0 && comparableURL(r.Redirects[len(r.Redirects)-1].URL) == key {
+			redirected = &r
+		}
+	}
+	return redirected
+}
+
+// comparableURL strips the fragment and credentials - a browser shows neither
+// the way walker stores them
+func comparableURL(u string) string {
+	if i := strings.Index(u, "#"); i >= 0 {
+		u = u[:i]
+	}
+	if schemeEnd := strings.Index(u, "://"); schemeEnd >= 0 {
+		hostStart := schemeEnd + 3
+		hostEnd := len(u)
+		if i := strings.IndexAny(u[hostStart:], "/?"); i >= 0 {
+			hostEnd = hostStart + i
+		}
+		if at := strings.LastIndex(u[hostStart:hostEnd], "@"); at >= 0 {
+			u = u[:hostStart] + u[hostStart+at+1:]
+		}
+	}
+	return u
+}
+
+// getFolders returns the folder tree of the results - a Folder.Prefix works
+// as Filters.Prefix
+func getFolders(results map[string]vo.ScrapeResult) []vo.Folder {
+	return vo.Folders(results)
+}
+
+// paginate returns the given page - pageSize <= 0 returns everything as one page
+func paginate(results []vo.ScrapeResult, page, pageSize int) (pageResults []vo.ScrapeResult, numPages int) {
+	if pageSize <= 0 {
+		return results, 1
+	}
+	numPages = (len(results) + pageSize - 1) / pageSize
+	start := min(max(page, 0)*pageSize, len(results))
+	end := min(start+pageSize, len(results))
+	return results[start:end], numPages
+}
+
+// GetScrapes returns summaries of the last completed scrape and the one in
+// progress - either one is nil if there is none
+func (s *Service) GetScrapes() (complete, current *vo.ScrapeSummary) {
+	completeStatus, runningStatus := s.Walker.GetStatuses()
+	if completeStatus != nil {
+		summary := completeStatus.Summary()
+		complete = &summary
+	}
+	if runningStatus != nil {
+		summary := runningStatus.Summary()
+		current = &summary
 	}
 	return
 }

@@ -99,15 +99,7 @@ func newClientPool(concurrency int, agent string, useCookies bool) *clientPool {
 }
 
 func (w *Walker) scrapeloop() {
-	summaryVec,
-		counterVec,
-		totalCounter,
-		progressGaugeOpen,
-		progressGaugeComplete,
-		counterVecStatus,
-		trackValidationScore,
-		trackValidationPenalties,
-		cycle := setupMetrics()
+	defer close(w.chanDone)
 	running := 0
 	concurrency := 0
 	groupHeader := ""
@@ -155,10 +147,6 @@ func (w *Walker) scrapeloop() {
 		completedAt = time.Time{}
 		nextCycle = time.Time{}
 		deadlineLogged = false
-		cycle.running.Set(1)
-		summaryVec.Reset()
-		counterVec.Reset()
-		counterVecStatus.Reset()
 		baseURL = startURL
 		paths = configPaths
 		running = 0
@@ -232,6 +220,7 @@ func (w *Walker) scrapeloop() {
 			Running:              isRunning(),
 			Started:              cycleStarted,
 			Completed:            completedAt,
+			Paths:                paths,
 		}
 		if interval > 0 {
 			status.CycleStart = cycleStart
@@ -243,8 +232,6 @@ func (w *Walker) scrapeloop() {
 
 	for {
 		if scrapeLoopStarted {
-			progressGaugeComplete.Set(float64(len(results)))
-			progressGaugeOpen.Set(float64(len(jobs)))
 			if interval > 0 && !deadlineLogged && len(jobs) > 0 && time.Now().After(cycleStart.Add(interval)) {
 				deadlineLogged = true
 				fmt.Println("ERROR scrape cycle started at", cycleStart, "exceeded interval", interval, "-", len(jobs), "jobs still open, continuing")
@@ -277,8 +264,7 @@ func (w *Walker) scrapeloop() {
 			cycleCompleted = true
 			completedAt = time.Now()
 			cycleDuration := completedAt.Sub(cycleStarted)
-			cycle.running.Set(0)
-			cycle.duration.Set(cycleDuration.Seconds())
+			w.metrics.scrapesComplete.Inc()
 			overrun := false
 			if interval > 0 {
 				nextCycle = cycleStart.Add(interval)
@@ -287,19 +273,11 @@ func (w *Walker) scrapeloop() {
 					overrun = true
 					nextCycle = completedAt
 				}
-				cycle.nextStartEpoch.Set(float64(nextCycle.Unix()))
 			}
 			status := getStatus()
 			completeStatus = &status
-			w.CompleteStatus = completeStatus
 			if chanLoopComplete != nil {
-				go reportSchemaValidationMetrics(
-					status,
-					paths,
-					trackValidationPenalties,
-					trackValidationScore,
-				)
-				chanLoopComplete <- status
+				publishLatest(chanLoopComplete, status)
 			}
 			if interval == 0 {
 				fmt.Println("restarting", baseURL, paths)
@@ -309,7 +287,7 @@ func (w *Walker) scrapeloop() {
 				waitTimer = time.NewTimer(nextCycle.Sub(completedAt))
 				chanNextCycle = waitTimer.C
 			} else {
-				cycle.overruns.Inc()
+				w.metrics.overruns.Inc()
 				fmt.Println("ERROR scrape cycle started at", cycleStart, "took", cycleDuration, "exceeding interval", interval, "- restarting immediately")
 				restart(baseURL, paths, cycleSlot(completedAt, interval, offset))
 			}
@@ -368,7 +346,7 @@ func (w *Walker) scrapeloop() {
 			}
 			if errStart == nil {
 				restart(startU, st.conf.Target.Paths, cycleSlot(time.Now(), interval, offset))
-				chanLoopComplete = make(chan vo.Status)
+				chanLoopComplete = make(chan vo.Status, 1)
 				w.chanStarted <- started{
 					Err:              errStart,
 					ChanLoopComplete: chanLoopComplete,
@@ -405,13 +383,8 @@ func (w *Walker) scrapeloop() {
 			}
 			scanResult.poolClient.busy = false
 			scanResult.result.Time = time.Now()
-			statusCodeAsString := strconv.Itoa(scanResult.result.Code)
-			counterVecStatus.WithLabelValues(statusCodeAsString).Inc()
 			results[scanResult.result.TargetURL] = scanResult.result
-
-			summaryVec.WithLabelValues(scanResult.result.Group).Observe(scanResult.result.Duration.Seconds())
-			counterVec.WithLabelValues(scanResult.result.Group, statusCodeAsString).Inc()
-			totalCounter.Inc()
+			w.metrics.requests.WithLabelValues(scanResult.result.Group, strconv.Itoa(scanResult.result.Code)).Inc()
 
 			var linksToScrape vo.LinkList
 
@@ -448,6 +421,21 @@ func (w *Walker) scrapeloop() {
 				}
 			}
 		}
+	}
+}
+
+// publishLatest never blocks the scrape loop - if nobody has received the
+// previous status from the buffered channel yet, it is replaced by the latest
+// one. The scrape loop is the only sender, so the second send can not block.
+func publishLatest(ch chan vo.Status, status vo.Status) {
+	select {
+	case ch <- status:
+	default:
+		select {
+		case <-ch:
+		default:
+		}
+		ch <- status
 	}
 }
 

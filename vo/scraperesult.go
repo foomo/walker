@@ -31,7 +31,7 @@ type ScrapeResult struct {
 	Duration         time.Duration
 	Time             time.Time
 	Structure        Structure
-	Validations      []Validation
+	Validations      []ResultValidation
 	Data             interface{}
 	Group            string
 }

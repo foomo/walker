@@ -311,47 +311,30 @@ func groupedBucketListStatus(
 	writer io.Writer,
 	results map[string]vo.ScrapeResult,
 ) {
-	max := int64(0)
-	min := ^int64(0)
-	groups := map[string]int64{}
-	for _, r := range results {
-		groups[r.Group]++
-	}
-	i := 0
-	groupNames := make([]string, len(groups))
-
-	for group := range groups {
-		groupNames[i] = group
-		i++
-	}
-	sort.Strings(groupNames)
-	for _, groupName := range groupNames {
-		fmt.Fprintln(writer, "group: "+groupName)
-		for _, bucket := range vo.GetBucketList() {
-			bucketI := 0
-			for _, result := range results {
-				if result.Group == groupName {
-					ts := int64(result.Time.Unix())
-					if ts > min {
-						min = ts
-					}
-					if ts < max {
-						max = ts
-					}
-					if result.Duration > bucket.From && result.Duration < bucket.To {
-						bucketI++
-					}
-				}
-			}
+	for _, group := range vo.Performance(results) {
+		fmt.Fprintln(writer, "group: "+group.Group)
+		for _, bucket := range group.Buckets {
 			fmt.Fprintln(
 				writer,
-				bucketI,
+				bucket.Pages,
 				"	",
-				math.Round(float64(bucketI)/float64(groups[groupName])*100),
+				math.Round(float64(bucket.Pages)/float64(group.Pages)*100),
 				"%	(", bucket.From, "=>", bucket.To, ")",
 				bucket.Name,
 			)
 		}
+		fmt.Fprintln(writer, "p50", group.P50, "p90", group.P90, "max", group.Max)
 	}
-	fmt.Fprintln(writer, "=>", min, time.Unix(min, 0), max, time.Unix(max, 0))
+	var first, last time.Time
+	for _, r := range results {
+		if first.IsZero() || r.Time.Before(first) {
+			first = r.Time
+		}
+		if r.Time.After(last) {
+			last = r.Time
+		}
+	}
+	if !first.IsZero() {
+		fmt.Fprintln(writer, "=>", first, "-", last)
+	}
 }

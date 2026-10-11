@@ -8,16 +8,17 @@ const (
 	ValidationLevelInfo    ValidationLevel = "info"
 )
 
-type Validation struct {
+// ResultValidation is a finding of a ValidationFunc for a scrape result
+type ResultValidation struct {
 	Level   ValidationLevel
 	Message string
 	Group   string
 }
 
-type Validations []Validation
+type Validations []ResultValidation
 
 func (v *Validations) add(level ValidationLevel, msg string, group string) {
-	*v = append(*v, Validation{Level: level, Group: group, Message: msg})
+	*v = append(*v, ResultValidation{Level: level, Group: group, Message: msg})
 }
 
 func (v *Validations) Error(group, msg string) {

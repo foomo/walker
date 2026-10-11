@@ -58,8 +58,9 @@ type Walker struct {
 	chanStop     chan vo.Status
 	chanStarted  chan started
 	chanStatuses chan statuses
-	// Deprecated: written concurrently by the scrape loop - use GetStatuses
-	CompleteStatus *vo.Status
+	// closed, when the scrape loop has stopped
+	chanDone chan struct{}
+	metrics  *metrics
 }
 
 func NewWalker() *Walker {
@@ -70,11 +71,16 @@ func NewWalker() *Walker {
 		chanStatus:   make(chan vo.Status),
 		chanStarted:  make(chan started),
 		chanStatuses: make(chan statuses),
+		chanDone:     make(chan struct{}),
 	}
+	w.metrics = newMetrics(w.GetStatuses)
 	go w.scrapeloop()
 	return w
 }
 
+// Walk starts walking - the returned channel receives the status of every
+// completed scrape cycle. Receiving is optional: the channel only buffers the
+// latest completed cycle, older ones are dropped, if they were not received.
 func (w *Walker) Walk(
 	conf *config.Config,
 	linkListFilter LinkListFilterFunc,
@@ -116,9 +122,13 @@ func (w *Walker) GetStatus() vo.Status {
 }
 
 // GetStatuses returns the last completed cycle and the cycle in progress,
-// either one is nil if there is none
+// either one is nil if there is none - both are nil, once the walker was stopped
 func (w *Walker) GetStatuses() (complete, running *vo.Status) {
-	w.chanStatuses <- statuses{}
+	select {
+	case w.chanStatuses <- statuses{}:
+	case <-w.chanDone:
+		return nil, nil
+	}
 	st := <-w.chanStatuses
 	return st.complete, st.running
 }

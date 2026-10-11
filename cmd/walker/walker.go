@@ -12,12 +12,12 @@ import (
 	"github.com/foomo/walker/config"
 	"github.com/foomo/walker/reports"
 	"github.com/foomo/walker/vo"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	yaml "gopkg.in/yaml.v3"
 )
 
 type server struct {
 	s             *walker.Service
+	serviceProxy  *walker.ServiceGoTSRPCProxy
 	conf          string
 	reportHandler func(
 		w http.ResponseWriter, r *http.Request,
@@ -26,7 +26,10 @@ type server struct {
 	metricsHandler http.HandlerFunc
 }
 
-const pathReports = "/reports"
+const (
+	pathReports = "/reports"
+	pathService = "/service"
+)
 
 func htmlIndex() []byte {
 	return []byte(
@@ -37,7 +40,7 @@ func htmlIndex() []byte {
 				body {
 					color: black;
 					font-family: 'Courier New', Courier, monospace;
-					
+
 				}
 				table {
 					border-collapse: collapse;
@@ -54,7 +57,7 @@ func htmlIndex() []byte {
 				<li><a href="/status">crawling status</a></li>
 				<li><a href="/metrics">prometheus metrics scraping endpoint</a></li>
 			</ul>
-	
+
 			` + reports.GetReportHandlerMenuHTML(pathReports) + `
 			</body>
 		</html>`)
@@ -75,12 +78,15 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.s.Walker.PrintStatus(w, s.s.Walker.GetStatus())
 		return
 	}
-	if strings.HasPrefix(r.URL.Path, pathReports) {
+	switch {
+	case strings.HasPrefix(r.URL.Path, pathReports):
 		completeStatus, runningStatus := s.s.Walker.GetStatuses()
 		s.reportHandler(w, r, completeStatus, runningStatus)
-		return
+	case strings.HasPrefix(r.URL.Path, pathService+"/"):
+		s.serviceProxy.ServeHTTP(w, r)
+	default:
+		http.NotFound(w, r)
 	}
-	http.NotFound(w, r)
 }
 
 func must(comment string, err error) {
@@ -124,7 +130,8 @@ func main() {
 	log.Fatal(http.ListenAndServe(conf.Addr, &server{
 		conf:           string(yamlConfBytes),
 		s:              s,
+		serviceProxy:   walker.NewDefaultServiceGoTSRPCProxy(s),
 		reportHandler:  reports.GetReportHandler(pathReports),
-		metricsHandler: promhttp.Handler().ServeHTTP,
+		metricsHandler: s.Walker.MetricsHandler().ServeHTTP,
 	}))
 }
