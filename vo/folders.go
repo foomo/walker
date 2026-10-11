@@ -64,22 +64,7 @@ func (n *folderNode) folders() []Folder {
 // host. It works on the raw target urls, so that a folder counts exactly the
 // target urls InFolder(targetURL, folder.Prefix) matches.
 func Folders(results map[string]ScrapeResult) []Folder {
-	root := &folderNode{}
-	// a segment is a folder, if there are pages below it - collect them first,
-	// so that a folder's own page counts, whatever the order of the results
-	for _, r := range results {
-		origin, segments, ok := targetURLSegments(r.TargetURL)
-		if !ok {
-			continue
-		}
-		node := root.child(origin, displayHost(origin), origin)
-		prefix := origin
-		// the last segment is the page itself - after a trailing slash it is empty
-		for _, segment := range segments[:len(segments)-1] {
-			prefix += "/" + segment
-			node = node.child(segment, segment, prefix)
-		}
-	}
+	root := folderTree(results)
 	for _, r := range results {
 		origin, segments, ok := targetURLSegments(r.TargetURL)
 		if !ok {
@@ -97,6 +82,27 @@ func Folders(results map[string]ScrapeResult) []Folder {
 		}
 	}
 	return root.folders()
+}
+
+// folderTree builds the empty folder tree - a segment is a folder, if there
+// are pages below it - so that a folder's own page counts, whatever the order
+// of the results
+func folderTree(results map[string]ScrapeResult) *folderNode {
+	root := &folderNode{}
+	for _, r := range results {
+		origin, segments, ok := targetURLSegments(r.TargetURL)
+		if !ok {
+			continue
+		}
+		node := root.child(origin, displayHost(origin), origin)
+		prefix := origin
+		// the last segment is the page itself - after a trailing slash it is empty
+		for _, segment := range segments[:len(segments)-1] {
+			prefix += "/" + segment
+			node = node.child(segment, segment, prefix)
+		}
+	}
+	return root
 }
 
 // InFolder reports, if a target url is the folder itself or below it:

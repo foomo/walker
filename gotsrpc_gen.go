@@ -8,17 +8,21 @@ import (
 	time "time"
 
 	gotsrpc "github.com/foomo/gotsrpc/v2"
+	github_com_foomo_walker_vo "github.com/foomo/walker/vo"
 )
 
 const (
-	ServiceGoTSRPCProxyGetBrokenLinks = "GetBrokenLinks"
-	ServiceGoTSRPCProxyGetLinkedFrom  = "GetLinkedFrom"
-	ServiceGoTSRPCProxyGetLinks       = "GetLinks"
-	ServiceGoTSRPCProxyGetRedirects   = "GetRedirects"
-	ServiceGoTSRPCProxyGetResult      = "GetResult"
-	ServiceGoTSRPCProxyGetResults     = "GetResults"
-	ServiceGoTSRPCProxyGetScrapes     = "GetScrapes"
-	ServiceGoTSRPCProxyGetStatus      = "GetStatus"
+	ServiceGoTSRPCProxyGetBrokenLinks     = "GetBrokenLinks"
+	ServiceGoTSRPCProxyGetFolderPages     = "GetFolderPages"
+	ServiceGoTSRPCProxyGetGraph           = "GetGraph"
+	ServiceGoTSRPCProxyGetLinkedFrom      = "GetLinkedFrom"
+	ServiceGoTSRPCProxyGetLinks           = "GetLinks"
+	ServiceGoTSRPCProxyGetPageFolderLinks = "GetPageFolderLinks"
+	ServiceGoTSRPCProxyGetRedirects       = "GetRedirects"
+	ServiceGoTSRPCProxyGetResult          = "GetResult"
+	ServiceGoTSRPCProxyGetResults         = "GetResults"
+	ServiceGoTSRPCProxyGetScrapes         = "GetScrapes"
+	ServiceGoTSRPCProxyGetStatus          = "GetStatus"
 )
 
 type ServiceGoTSRPCProxy struct {
@@ -83,6 +87,66 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 		gotsrpc.Monitor(w, r, args, rets, callStats)
 		return
+	case ServiceGoTSRPCProxyGetFolderPages:
+		var (
+			args []any
+			rets []any
+		)
+		var (
+			arg_scrape   string
+			arg_options  github_com_foomo_walker_vo.GraphOptions
+			arg_folder   string
+			arg_maxPages int
+		)
+		args = []any{&arg_scrape, &arg_options, &arg_folder, &arg_maxPages}
+		if err := gotsrpc.LoadArgs(&args, callStats, r); err != nil {
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		var executionStart time.Time
+		if callStatsOk {
+			executionStart = time.Now()
+		}
+		getFolderPagesRet := p.service.GetFolderPages(arg_scrape, arg_options, arg_folder, arg_maxPages)
+		if callStatsOk {
+			callStats.Execution = time.Since(executionStart)
+		}
+		rets = []any{getFolderPagesRet}
+		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		gotsrpc.Monitor(w, r, args, rets, callStats)
+		return
+	case ServiceGoTSRPCProxyGetGraph:
+		var (
+			args []any
+			rets []any
+		)
+		var (
+			arg_scrape  string
+			arg_options github_com_foomo_walker_vo.GraphOptions
+		)
+		args = []any{&arg_scrape, &arg_options}
+		if err := gotsrpc.LoadArgs(&args, callStats, r); err != nil {
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		var executionStart time.Time
+		if callStatsOk {
+			executionStart = time.Now()
+		}
+		getGraphRet := p.service.GetGraph(arg_scrape, arg_options)
+		if callStatsOk {
+			callStats.Execution = time.Since(executionStart)
+		}
+		rets = []any{getGraphRet}
+		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		gotsrpc.Monitor(w, r, args, rets, callStats)
+		return
 	case ServiceGoTSRPCProxyGetLinkedFrom:
 		var (
 			args []any
@@ -135,6 +199,36 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			callStats.Execution = time.Since(executionStart)
 		}
 		rets = []any{getLinksRet}
+		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		gotsrpc.Monitor(w, r, args, rets, callStats)
+		return
+	case ServiceGoTSRPCProxyGetPageFolderLinks:
+		var (
+			args []any
+			rets []any
+		)
+		var (
+			arg_scrape  string
+			arg_options github_com_foomo_walker_vo.GraphOptions
+			arg_page    string
+		)
+		args = []any{&arg_scrape, &arg_options, &arg_page}
+		if err := gotsrpc.LoadArgs(&args, callStats, r); err != nil {
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		var executionStart time.Time
+		if callStatsOk {
+			executionStart = time.Now()
+		}
+		getPageFolderLinksRet := p.service.GetPageFolderLinks(arg_scrape, arg_options, arg_page)
+		if callStatsOk {
+			callStats.Execution = time.Since(executionStart)
+		}
+		rets = []any{getPageFolderLinksRet}
 		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
 			gotsrpc.ErrorCouldNotReply(w)
 			return

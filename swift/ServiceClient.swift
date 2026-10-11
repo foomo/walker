@@ -34,6 +34,58 @@ public struct ServiceClient: Sendable {
         return try await transport.call(endpoint: endpoint, method: "GetBrokenLinks", args: Args(a0: scrape), result: Result.self).r0
     }
 
+    public func getFolderPages(scrape: String, options: GraphOptions, folder: String, maxPages: Int) async throws -> FolderPages {
+        struct Args: Encodable {
+            let a0: String
+            let a1: GraphOptions
+            let a2: String
+            let a3: Int
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.unkeyedContainer()
+                try container.encode(a0)
+                try container.encode(a1)
+                try container.encode(a2)
+                try container.encode(a3)
+            }
+        }
+
+        struct Result: Decodable {
+            let r0: FolderPages
+
+            init(from decoder: Decoder) throws {
+                var container = try decoder.unkeyedContainer()
+                r0 = try container.decode(FolderPages.self)
+            }
+        }
+
+        return try await transport.call(endpoint: endpoint, method: "GetFolderPages", args: Args(a0: scrape, a1: options, a2: folder, a3: maxPages), result: Result.self).r0
+    }
+
+    public func getGraph(scrape: String, options: GraphOptions) async throws -> Graph {
+        struct Args: Encodable {
+            let a0: String
+            let a1: GraphOptions
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.unkeyedContainer()
+                try container.encode(a0)
+                try container.encode(a1)
+            }
+        }
+
+        struct Result: Decodable {
+            let r0: Graph
+
+            init(from decoder: Decoder) throws {
+                var container = try decoder.unkeyedContainer()
+                r0 = try container.decode(Graph.self)
+            }
+        }
+
+        return try await transport.call(endpoint: endpoint, method: "GetGraph", args: Args(a0: scrape, a1: options), result: Result.self).r0
+    }
+
     public func getLinkedFrom(scrape: String, targetURL: String, limit: Int) async throws -> LinkedFromPage {
         struct Args: Encodable {
             let a0: String
@@ -80,6 +132,32 @@ public struct ServiceClient: Sendable {
         }
 
         return try await transport.call(endpoint: endpoint, method: "GetLinks", args: Args(a0: scrape), result: Result.self).r0
+    }
+
+    public func getPageFolderLinks(scrape: String, options: GraphOptions, page: String) async throws -> [FolderLink]? {
+        struct Args: Encodable {
+            let a0: String
+            let a1: GraphOptions
+            let a2: String
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.unkeyedContainer()
+                try container.encode(a0)
+                try container.encode(a1)
+                try container.encode(a2)
+            }
+        }
+
+        struct Result: Decodable {
+            let r0: [FolderLink]?
+
+            init(from decoder: Decoder) throws {
+                var container = try decoder.unkeyedContainer()
+                r0 = try container.decode([FolderLink]?.self)
+            }
+        }
+
+        return try await transport.call(endpoint: endpoint, method: "GetPageFolderLinks", args: Args(a0: scrape, a1: options, a2: page), result: Result.self).r0
     }
 
     public func getRedirects(scrape: String) async throws -> [RedirectChain]? {

@@ -67,6 +67,9 @@ WIP
 - `GetBrokenLinks(scrape)` the broken pages (status >= 400 or failed) with the pages linking to them, the most linked first
 - `GetRedirects(scrape)` the redirecting urls with their hops, where they end, whether they are permanent, and the pages linking to them - the longest chains first
 - `GetLinks(scrape)` every page with the number of pages and links pointing to it and its own links; `GetLinkedFrom(scrape, url, limit)` the pages linking to one url: total, a breakdown by group, and the first `limit` pages with the most links
+- `GetGraph(scrape, options)` the site as a graph of folders down to `Depth`, with edges weighted by links. Links to navigation targets - linked from more than `GlobalShare` of the pages - are left out and listed separately
+- `GetPageFolderLinks(scrape, options, page)` the links of a page to the folder nodes of that graph, without navigation links and links into its own folder
+- `GetFolderPages(scrape, options, folder, max)` the pages a folder node of that graph stands for, the `max` most linked, with the links between them
 - `GetResult(scrape, url)` the result for a url as a browser sees it: exact match, then ignoring the fragment and credentials, then a result redirecting to the url - `null` if it was not scraped
 - `GetStatus()` open / done / pending counts
 
@@ -78,7 +81,7 @@ gotsrpc gotsrpc.yml
 
 ## macOS app
 
-`macos/Walker.xcodeproj` is a native SwiftUI app (macOS 26) for one or more walker servers. It shows the current and the last complete scrape and browses the results. It compiles the generated client from `swift/` directly.
+`macos/Walker.xcodeproj` is a native SwiftUI app (macOS 26) for one or more walker servers. It shows the current and the last complete scrape and browses the results. It compiles the generated client from `swift/` directly. The Graph section shows the site in 3D - laid out by `macos/Packages/GraphLayout` with [Grape](https://github.com/swiftgraphs/Grape)'s force simulation, rendered with RealityKit. Xcode fetches Grape when the project is opened the first time.
 
 ```sh
 go run ./cmd/walker path/to/config.yaml   # serves on :3001 by default

@@ -270,6 +270,24 @@ func (s *Service) GetLinkedFrom(scrape string, targetURL string, limit int) vo.L
 	return vo.LinkedFrom(s.scrapeResults(scrape), targetURL, limit)
 }
 
+// GetGraph returns the folder graph of ScrapeCurrent (default) or
+// ScrapeComplete - navigation links are left out, see vo.GraphOptions
+func (s *Service) GetGraph(scrape string, options vo.GraphOptions) vo.Graph {
+	return vo.BuildGraph(s.scrapeResults(scrape), options)
+}
+
+// GetPageFolderLinks returns the links of a page to the folder nodes of the
+// graph built with the same options
+func (s *Service) GetPageFolderLinks(scrape string, options vo.GraphOptions, page string) []vo.FolderLink {
+	return vo.BuildPageFolderLinks(s.scrapeResults(scrape), options, page)
+}
+
+// GetFolderPages returns the pages of a folder node of the graph built with
+// the same options - at most maxPages, the most linked ones
+func (s *Service) GetFolderPages(scrape string, options vo.GraphOptions, folder string, maxPages int) vo.FolderPages {
+	return vo.BuildFolderPages(s.scrapeResults(scrape), options, folder, maxPages)
+}
+
 // GetResult finds the result of ScrapeCurrent (default) or ScrapeComplete for
 // a url as a browser sees it: an exact match first, then ignoring the fragment
 // and credentials, then a result whose redirects end at the url - nil, if the

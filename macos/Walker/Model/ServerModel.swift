@@ -52,6 +52,8 @@ final class ServerModel {
 
     let server: Server
     @ObservationIgnored private let client: ServiceClient
+    /// graph of the site - kept, while switching sections
+    let graph: GraphModel
 
     private(set) var connection: Connection = .unknown
     private(set) var current: ScrapeSummary?
@@ -108,6 +110,7 @@ final class ServerModel {
     init(server: Server) {
         self.server = server
         client = ServiceClient(transport: URLSessionTransport(baseURL: server.baseURL))
+        graph = GraphModel(client: client)
     }
 
     func refreshScrapes() async {

@@ -13,8 +13,11 @@ import (
 
 type ServiceGoTSRPCClient interface {
 	GetBrokenLinks(ctx go_context.Context, scrape string) (retGetBrokenLinks_0 []github_com_foomo_walker_vo.BrokenLink, clientErr error)
+	GetFolderPages(ctx go_context.Context, scrape string, options github_com_foomo_walker_vo.GraphOptions, folder string, maxPages int) (retGetFolderPages_0 github_com_foomo_walker_vo.FolderPages, clientErr error)
+	GetGraph(ctx go_context.Context, scrape string, options github_com_foomo_walker_vo.GraphOptions) (retGetGraph_0 github_com_foomo_walker_vo.Graph, clientErr error)
 	GetLinkedFrom(ctx go_context.Context, scrape string, targetURL string, limit int) (retGetLinkedFrom_0 github_com_foomo_walker_vo.LinkedFromPage, clientErr error)
 	GetLinks(ctx go_context.Context, scrape string) (retGetLinks_0 []github_com_foomo_walker_vo.PageLinks, clientErr error)
+	GetPageFolderLinks(ctx go_context.Context, scrape string, options github_com_foomo_walker_vo.GraphOptions, page string) (retGetPageFolderLinks_0 []github_com_foomo_walker_vo.FolderLink, clientErr error)
 	GetRedirects(ctx go_context.Context, scrape string) (retGetRedirects_0 []github_com_foomo_walker_vo.RedirectChain, clientErr error)
 	GetResult(ctx go_context.Context, scrape string, targetURL string) (retGetResult_0 *github_com_foomo_walker_vo.ScrapeResult, clientErr error)
 	GetResults(ctx go_context.Context, filters Filters, page int, pageSize int) (filterOptions FilterOptions, results []github_com_foomo_walker_vo.ScrapeResult, numPages int, folders []github_com_foomo_walker_vo.Folder, clientErr error)
@@ -54,6 +57,26 @@ func (tsc *HTTPServiceGoTSRPCClient) GetBrokenLinks(ctx go_context.Context, scra
 	return
 }
 
+func (tsc *HTTPServiceGoTSRPCClient) GetFolderPages(ctx go_context.Context, scrape string, options github_com_foomo_walker_vo.GraphOptions, folder string, maxPages int) (retGetFolderPages_0 github_com_foomo_walker_vo.FolderPages, clientErr error) {
+	rpcArgs := []any{scrape, options, folder, maxPages}
+	rpcReply := []any{&retGetFolderPages_0}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetFolderPages", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetFolderPages")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetGraph(ctx go_context.Context, scrape string, options github_com_foomo_walker_vo.GraphOptions) (retGetGraph_0 github_com_foomo_walker_vo.Graph, clientErr error) {
+	rpcArgs := []any{scrape, options}
+	rpcReply := []any{&retGetGraph_0}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetGraph", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetGraph")
+	}
+	return
+}
+
 func (tsc *HTTPServiceGoTSRPCClient) GetLinkedFrom(ctx go_context.Context, scrape string, targetURL string, limit int) (retGetLinkedFrom_0 github_com_foomo_walker_vo.LinkedFromPage, clientErr error) {
 	rpcArgs := []any{scrape, targetURL, limit}
 	rpcReply := []any{&retGetLinkedFrom_0}
@@ -70,6 +93,16 @@ func (tsc *HTTPServiceGoTSRPCClient) GetLinks(ctx go_context.Context, scrape str
 	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetLinks", rpcArgs, rpcReply)
 	if rpcErr != nil {
 		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetLinks")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetPageFolderLinks(ctx go_context.Context, scrape string, options github_com_foomo_walker_vo.GraphOptions, page string) (retGetPageFolderLinks_0 []github_com_foomo_walker_vo.FolderLink, clientErr error) {
+	rpcArgs := []any{scrape, options, page}
+	rpcReply := []any{&retGetPageFolderLinks_0}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetPageFolderLinks", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetPageFolderLinks")
 	}
 	return
 }

@@ -57,6 +57,145 @@ public struct Folder: Codable, Sendable, Equatable {
     }
 }
 
+// github.com/foomo/walker/vo.FolderLink
+public struct FolderLink: Codable, Sendable, Equatable {
+    public var folder: Int
+    public var links: Int
+
+    public init(folder: Int, links: Int) {
+        self.folder = folder
+        self.links = links
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case folder = "Folder"
+        case links = "Links"
+    }
+}
+
+// github.com/foomo/walker/vo.FolderPages
+public struct FolderPages: Codable, Sendable, Equatable {
+    public var pages: [GraphNode]?
+    public var edges: [GraphEdge]?
+    public var dropped: Int
+
+    public init(pages: [GraphNode]? = nil, edges: [GraphEdge]? = nil, dropped: Int) {
+        self.pages = pages
+        self.edges = edges
+        self.dropped = dropped
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case pages = "Pages"
+        case edges = "Edges"
+        case dropped = "Dropped"
+    }
+}
+
+// github.com/foomo/walker/vo.GlobalLink
+public struct GlobalLink: Codable, Sendable, Equatable {
+    public var url: String
+    public var linkedFrom: Int
+
+    public init(url: String, linkedFrom: Int) {
+        self.url = url
+        self.linkedFrom = linkedFrom
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case url = "URL"
+        case linkedFrom = "LinkedFrom"
+    }
+}
+
+// github.com/foomo/walker/vo.Graph
+public struct Graph: Codable, Sendable, Equatable {
+    public var nodes: [GraphNode]?
+    public var edges: [GraphEdge]?
+    public var global: [GlobalLink]?
+
+    public init(nodes: [GraphNode]? = nil, edges: [GraphEdge]? = nil, global: [GlobalLink]? = nil) {
+        self.nodes = nodes
+        self.edges = edges
+        self.global = global
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case nodes = "Nodes"
+        case edges = "Edges"
+        case global = "Global"
+    }
+}
+
+// github.com/foomo/walker/vo.GraphEdge
+public struct GraphEdge: Codable, Sendable, Equatable {
+    public var from: Int
+    public var to: Int
+    public var links: Int
+
+    public init(from: Int, to: Int, links: Int) {
+        self.from = from
+        self.to = to
+        self.links = links
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case from = "From"
+        case to = "To"
+        case links = "Links"
+    }
+}
+
+// github.com/foomo/walker/vo.GraphNode
+public struct GraphNode: Codable, Sendable, Equatable {
+    public var id: String
+    public var label: String
+    public var pages: Int
+    public var errors: Int
+    public var code: Int
+    public var group: String
+    public var p90: Duration
+    public var linkedFrom: Int
+
+    public init(id: String, label: String, pages: Int, errors: Int, code: Int, group: String, p90: Duration, linkedFrom: Int) {
+        self.id = id
+        self.label = label
+        self.pages = pages
+        self.errors = errors
+        self.code = code
+        self.group = group
+        self.p90 = p90
+        self.linkedFrom = linkedFrom
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id = "ID"
+        case label = "Label"
+        case pages = "Pages"
+        case errors = "Errors"
+        case code = "Code"
+        case group = "Group"
+        case p90 = "P90"
+        case linkedFrom = "LinkedFrom"
+    }
+}
+
+// github.com/foomo/walker/vo.GraphOptions
+public struct GraphOptions: Codable, Sendable, Equatable {
+    public var depth: Int
+    public var globalShare: Double
+
+    public init(depth: Int, globalShare: Double) {
+        self.depth = depth
+        self.globalShare = globalShare
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case depth = "Depth"
+        case globalShare = "GlobalShare"
+    }
+}
+
 // github.com/foomo/walker/vo.GroupPerformance
 public struct GroupPerformance: Codable, Sendable, Equatable {
     public var group: String
