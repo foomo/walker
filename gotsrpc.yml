@@ -1,0 +1,30 @@
+module:
+  name: github.com/foomo/walker
+  path: ./
+
+swift:
+  runtime: ./swift/GotsRPC.swift
+
+targets:
+  basic:
+    services:
+      /service: Service
+    package: github.com/foomo/walker
+    swift:
+      out: ./swift/ServiceClient.swift
+    tsrpc:
+      - Service
+
+mappings:
+  github.com/foomo/walker/vo:
+    swift:
+      out: ./swift/VO.swift
+  github.com/foomo/walker:
+    swift:
+      out: ./swift/VoWalker.swift
+  github.com/foomo/walker/htmlschema:
+    swift:
+      out: ./swift/VoSchema.swift
+  time:
+    swift:
+      out: ./swift/VoTime.swift
