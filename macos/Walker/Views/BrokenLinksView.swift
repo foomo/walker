@@ -117,21 +117,10 @@ struct BrokenLinkRow: View {
     }
 }
 
-/// BrokenLinkInspector shows a broken page and the pages linking to it - a
-/// linking page opens below with its preview, the broken links outlined.
+/// BrokenLinkInspector shows a broken page and the pages linking to it.
 struct BrokenLinkInspector: View {
     let link: BrokenLink
     let lookup: ResultLookup
-
-    @State private var source: String?
-    @State private var sourcePage = SourcePage.none
-
-    enum SourcePage {
-        case none
-        case loading
-        case loaded(ScrapeResult)
-        case missing(String)
-    }
 
     var body: some View {
         Form {
@@ -152,13 +141,51 @@ struct BrokenLinkInspector: View {
                 LabeledContent("Group", value: link.group.isEmpty ? "–" : link.group)
                 LabeledContent("Linked from", value: "\(link.linkedFrom?.count ?? 0) pages, \(link.links) links")
             }
+            LinkingPages(target: link.targetURL, sources: link.linkedFrom ?? [], lookup: lookup)
+        }
+        .formStyle(.grouped)
+        .textSelection(.enabled)
+    }
+}
 
+/// LinkingPages lists the pages linking to a url - a linking page opens below
+/// with its preview, the links to the url outlined.
+struct LinkingPages: View {
+    let target: String
+    let sources: [LinkSource]
+    let lookup: ResultLookup
+    /// total linking pages - more than sources, if the server cut the list
+    var total: Int?
+    /// groups break the linking pages down
+    var groups: [LinkGroup] = []
+    /// loadMore asks the server for more pages - nil, if sources are complete
+    var loadMore: (() -> Void)?
+
+    /// rows shown - thousands of rows make the form slow
+    @State private var shown = 20
+    @State private var source: String?
+    @State private var sourcePage = SourcePage.none
+
+    enum SourcePage {
+        case none
+        case loading
+        case loaded(ScrapeResult)
+        case missing(String)
+    }
+
+    var body: some View {
+        Group {
             Section("Linked from") {
-                if (link.linkedFrom ?? []).isEmpty {
+                if sources.isEmpty {
                     Text("No scraped page links here - it may be linked from outside, or was a start path.")
                         .foregroundStyle(.secondary)
                 }
-                ForEach(link.linkedFrom ?? [], id: \.targetURL) { linkSource in
+                if groups.count > 1 || (groups.count == 1 && !groups[0].group.isEmpty) {
+                    Text(groups.map { "\($0.group.isEmpty ? "No group" : $0.group) \($0.pages.formatted())" }.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(sources.prefix(shown), id: \.targetURL) { linkSource in
                     Button {
                         source = linkSource.targetURL
                     } label: {
@@ -176,7 +203,17 @@ struct BrokenLinkInspector: View {
                         .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .help("Show \(linkSource.targetURL) with the broken link outlined")
+                    .help("Show \(linkSource.targetURL) with the link outlined")
+                }
+                let all = total ?? sources.count
+                if shown < all {
+                    Button("Show more (\(min(shown, sources.count).formatted()) of \(all.formatted()))") {
+                        shown += 50
+                        if shown > sources.count {
+                            loadMore?()
+                        }
+                    }
+                    .buttonStyle(.link)
                 }
             }
 
@@ -190,7 +227,7 @@ struct BrokenLinkInspector: View {
                         .frame(maxWidth: .infinity)
                 }
             case let .loaded(page):
-                BrowsableResult(start: page, lookup: lookup, highlight: link.targetURL)
+                BrowsableResult(start: page, lookup: lookup, highlight: target)
                     .id(page.targetURL)
             case let .missing(url):
                 Section("Linking page") {
@@ -199,8 +236,6 @@ struct BrokenLinkInspector: View {
                 }
             }
         }
-        .formStyle(.grouped)
-        .textSelection(.enabled)
         .task(id: source) {
             guard let source else { return }
             sourcePage = .loading

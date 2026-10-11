@@ -13,6 +13,9 @@ import (
 
 type ServiceGoTSRPCClient interface {
 	GetBrokenLinks(ctx go_context.Context, scrape string) (retGetBrokenLinks_0 []github_com_foomo_walker_vo.BrokenLink, clientErr error)
+	GetLinkedFrom(ctx go_context.Context, scrape string, targetURL string, limit int) (retGetLinkedFrom_0 github_com_foomo_walker_vo.LinkedFromPage, clientErr error)
+	GetLinks(ctx go_context.Context, scrape string) (retGetLinks_0 []github_com_foomo_walker_vo.PageLinks, clientErr error)
+	GetRedirects(ctx go_context.Context, scrape string) (retGetRedirects_0 []github_com_foomo_walker_vo.RedirectChain, clientErr error)
 	GetResult(ctx go_context.Context, scrape string, targetURL string) (retGetResult_0 *github_com_foomo_walker_vo.ScrapeResult, clientErr error)
 	GetResults(ctx go_context.Context, filters Filters, page int, pageSize int) (filterOptions FilterOptions, results []github_com_foomo_walker_vo.ScrapeResult, numPages int, folders []github_com_foomo_walker_vo.Folder, clientErr error)
 	GetScrapes(ctx go_context.Context) (complete *github_com_foomo_walker_vo.ScrapeSummary, current *github_com_foomo_walker_vo.ScrapeSummary, clientErr error)
@@ -47,6 +50,36 @@ func (tsc *HTTPServiceGoTSRPCClient) GetBrokenLinks(ctx go_context.Context, scra
 	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetBrokenLinks", rpcArgs, rpcReply)
 	if rpcErr != nil {
 		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetBrokenLinks")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetLinkedFrom(ctx go_context.Context, scrape string, targetURL string, limit int) (retGetLinkedFrom_0 github_com_foomo_walker_vo.LinkedFromPage, clientErr error) {
+	rpcArgs := []any{scrape, targetURL, limit}
+	rpcReply := []any{&retGetLinkedFrom_0}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetLinkedFrom", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetLinkedFrom")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetLinks(ctx go_context.Context, scrape string) (retGetLinks_0 []github_com_foomo_walker_vo.PageLinks, clientErr error) {
+	rpcArgs := []any{scrape}
+	rpcReply := []any{&retGetLinks_0}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetLinks", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetLinks")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetRedirects(ctx go_context.Context, scrape string) (retGetRedirects_0 []github_com_foomo_walker_vo.RedirectChain, clientErr error) {
+	rpcArgs := []any{scrape}
+	rpcReply := []any{&retGetRedirects_0}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetRedirects", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetRedirects")
 	}
 	return
 }

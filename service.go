@@ -252,6 +252,24 @@ func (s *Service) GetBrokenLinks(scrape string) []vo.BrokenLink {
 	return vo.BrokenLinks(s.scrapeResults(scrape))
 }
 
+// GetRedirects returns the redirecting urls of ScrapeCurrent (default) or
+// ScrapeComplete with their chains and the pages linking to them
+func (s *Service) GetRedirects(scrape string) []vo.RedirectChain {
+	return vo.Redirects(s.scrapeResults(scrape))
+}
+
+// GetLinks returns the link counts of every page of ScrapeCurrent (default)
+// or ScrapeComplete - GetLinkedFrom has the linking pages of one url
+func (s *Service) GetLinks(scrape string) []vo.PageLinks {
+	return vo.Links(s.scrapeResults(scrape))
+}
+
+// GetLinkedFrom returns the pages of ScrapeCurrent (default) or ScrapeComplete
+// linking to a url - the totals and groups of all, but at most limit pages
+func (s *Service) GetLinkedFrom(scrape string, targetURL string, limit int) vo.LinkedFromPage {
+	return vo.LinkedFrom(s.scrapeResults(scrape), targetURL, limit)
+}
+
 // GetResult finds the result of ScrapeCurrent (default) or ScrapeComplete for
 // a url as a browser sees it: an exact match first, then ignoring the fragment
 // and credentials, then a result whose redirects end at the url - nil, if the

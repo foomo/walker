@@ -34,6 +34,76 @@ public struct ServiceClient: Sendable {
         return try await transport.call(endpoint: endpoint, method: "GetBrokenLinks", args: Args(a0: scrape), result: Result.self).r0
     }
 
+    public func getLinkedFrom(scrape: String, targetURL: String, limit: Int) async throws -> LinkedFromPage {
+        struct Args: Encodable {
+            let a0: String
+            let a1: String
+            let a2: Int
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.unkeyedContainer()
+                try container.encode(a0)
+                try container.encode(a1)
+                try container.encode(a2)
+            }
+        }
+
+        struct Result: Decodable {
+            let r0: LinkedFromPage
+
+            init(from decoder: Decoder) throws {
+                var container = try decoder.unkeyedContainer()
+                r0 = try container.decode(LinkedFromPage.self)
+            }
+        }
+
+        return try await transport.call(endpoint: endpoint, method: "GetLinkedFrom", args: Args(a0: scrape, a1: targetURL, a2: limit), result: Result.self).r0
+    }
+
+    public func getLinks(scrape: String) async throws -> [PageLinks]? {
+        struct Args: Encodable {
+            let a0: String
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.unkeyedContainer()
+                try container.encode(a0)
+            }
+        }
+
+        struct Result: Decodable {
+            let r0: [PageLinks]?
+
+            init(from decoder: Decoder) throws {
+                var container = try decoder.unkeyedContainer()
+                r0 = try container.decode([PageLinks]?.self)
+            }
+        }
+
+        return try await transport.call(endpoint: endpoint, method: "GetLinks", args: Args(a0: scrape), result: Result.self).r0
+    }
+
+    public func getRedirects(scrape: String) async throws -> [RedirectChain]? {
+        struct Args: Encodable {
+            let a0: String
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.unkeyedContainer()
+                try container.encode(a0)
+            }
+        }
+
+        struct Result: Decodable {
+            let r0: [RedirectChain]?
+
+            init(from decoder: Decoder) throws {
+                var container = try decoder.unkeyedContainer()
+                r0 = try container.decode([RedirectChain]?.self)
+            }
+        }
+
+        return try await transport.call(endpoint: endpoint, method: "GetRedirects", args: Args(a0: scrape), result: Result.self).r0
+    }
+
     public func getResult(scrape: String, targetURL: String) async throws -> ScrapeResult? {
         struct Args: Encodable {
             let a0: String

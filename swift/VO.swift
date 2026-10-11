@@ -101,6 +101,22 @@ public struct Heading: Codable, Sendable, Equatable {
     }
 }
 
+// github.com/foomo/walker/vo.LinkGroup
+public struct LinkGroup: Codable, Sendable, Equatable {
+    public var group: String
+    public var pages: Int
+
+    public init(group: String, pages: Int) {
+        self.group = group
+        self.pages = pages
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case group = "Group"
+        case pages = "Pages"
+    }
+}
+
 // github.com/foomo/walker/vo.LinkList
 public typealias LinkList = [String: Int]
 
@@ -139,6 +155,59 @@ public struct LinkedData: Codable, Sendable, Equatable {
     }
 }
 
+// github.com/foomo/walker/vo.LinkedFromPage
+public struct LinkedFromPage: Codable, Sendable, Equatable {
+    public var total: Int
+    public var links: Int
+    public var groups: [LinkGroup]?
+    public var sources: [LinkSource]?
+
+    public init(total: Int, links: Int, groups: [LinkGroup]? = nil, sources: [LinkSource]? = nil) {
+        self.total = total
+        self.links = links
+        self.groups = groups
+        self.sources = sources
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case total = "Total"
+        case links = "Links"
+        case groups = "Groups"
+        case sources = "Sources"
+    }
+}
+
+// github.com/foomo/walker/vo.PageLinks
+public struct PageLinks: Codable, Sendable, Equatable {
+    public var targetURL: String
+    public var code: Int
+    public var group: String
+    public var title: String
+    public var linkedFrom: Int
+    public var links: Int
+    public var linksTo: Int
+
+    public init(targetURL: String, code: Int, group: String, title: String, linkedFrom: Int, links: Int, linksTo: Int) {
+        self.targetURL = targetURL
+        self.code = code
+        self.group = group
+        self.title = title
+        self.linkedFrom = linkedFrom
+        self.links = links
+        self.linksTo = linksTo
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case targetURL = "TargetURL"
+        case code = "Code"
+        case group = "Group"
+        case title = "Title"
+        case linkedFrom = "LinkedFrom"
+        case links = "Links"
+        case linksTo = "LinksTo"
+    }
+}
+
 // github.com/foomo/walker/vo.PerformanceBucket
 public struct PerformanceBucket: Codable, Sendable, Equatable {
     public var name: String
@@ -174,6 +243,40 @@ public struct Redirect: Codable, Sendable, Equatable {
     enum CodingKeys: String, CodingKey {
         case code = "Code"
         case url = "URL"
+    }
+}
+
+// github.com/foomo/walker/vo.RedirectChain
+public struct RedirectChain: Codable, Sendable, Equatable {
+    public var targetURL: String
+    public var group: String
+    public var hops: [Redirect]?
+    public var finalURL: String
+    public var finalCode: Int
+    public var permanent: Bool
+    public var linkedFrom: [LinkSource]?
+    public var links: Int
+
+    public init(targetURL: String, group: String, hops: [Redirect]? = nil, finalURL: String, finalCode: Int, permanent: Bool, linkedFrom: [LinkSource]? = nil, links: Int) {
+        self.targetURL = targetURL
+        self.group = group
+        self.hops = hops
+        self.finalURL = finalURL
+        self.finalCode = finalCode
+        self.permanent = permanent
+        self.linkedFrom = linkedFrom
+        self.links = links
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case targetURL = "TargetURL"
+        case group = "Group"
+        case hops = "Hops"
+        case finalURL = "FinalURL"
+        case finalCode = "FinalCode"
+        case permanent = "Permanent"
+        case linkedFrom = "LinkedFrom"
+        case links = "Links"
     }
 }
 

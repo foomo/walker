@@ -153,6 +153,56 @@ final class ServerModel {
         }
     }
 
+    /// redirects of the selected scrape - see loadRedirects
+    private(set) var redirects: [RedirectChain] = []
+    private(set) var redirectsError: String?
+    private(set) var isLoadingRedirects = false
+
+    func loadRedirects() async {
+        isLoadingRedirects = true
+        defer { isLoadingRedirects = false }
+        do {
+            let redirects = try await client.getRedirects(scrape: scrape.rawValue) ?? []
+            guard !Task.isCancelled else { return }
+            self.redirects = redirects
+            redirectsError = nil
+            connection = .online
+        } catch is CancellationError {
+            return
+        } catch {
+            redirectsError = error.localizedDescription
+            connection = .offline(error.localizedDescription)
+        }
+    }
+
+    /// links are the link counts of every page of the selected scrape
+    private(set) var links: [PageLinks] = []
+    private(set) var linksError: String?
+    private(set) var isLoadingLinks = false
+
+    func loadLinks() async {
+        isLoadingLinks = true
+        defer { isLoadingLinks = false }
+        do {
+            let links = try await client.getLinks(scrape: scrape.rawValue) ?? []
+            guard !Task.isCancelled else { return }
+            self.links = links
+            linksError = nil
+            connection = .online
+        } catch is CancellationError {
+            return
+        } catch {
+            linksError = error.localizedDescription
+            connection = .offline(error.localizedDescription)
+        }
+    }
+
+    /// linkedFrom returns the pages of the selected scrape linking to a url -
+    /// totals and groups of all, but at most limit pages
+    func linkedFrom(_ url: String, limit: Int) async throws -> LinkedFromPage {
+        try await client.getLinkedFrom(scrape: scrape.rawValue, targetURL: url, limit: limit)
+    }
+
     /// isAvailable - the last complete scrape only exists, once one completed;
     /// the current one is always selectable, while walker idles it is empty
     func isAvailable(_ scrape: Scrape) -> Bool {

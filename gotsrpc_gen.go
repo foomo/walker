@@ -12,6 +12,9 @@ import (
 
 const (
 	ServiceGoTSRPCProxyGetBrokenLinks = "GetBrokenLinks"
+	ServiceGoTSRPCProxyGetLinkedFrom  = "GetLinkedFrom"
+	ServiceGoTSRPCProxyGetLinks       = "GetLinks"
+	ServiceGoTSRPCProxyGetRedirects   = "GetRedirects"
 	ServiceGoTSRPCProxyGetResult      = "GetResult"
 	ServiceGoTSRPCProxyGetResults     = "GetResults"
 	ServiceGoTSRPCProxyGetScrapes     = "GetScrapes"
@@ -74,6 +77,92 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			callStats.Execution = time.Since(executionStart)
 		}
 		rets = []any{getBrokenLinksRet}
+		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		gotsrpc.Monitor(w, r, args, rets, callStats)
+		return
+	case ServiceGoTSRPCProxyGetLinkedFrom:
+		var (
+			args []any
+			rets []any
+		)
+		var (
+			arg_scrape    string
+			arg_targetURL string
+			arg_limit     int
+		)
+		args = []any{&arg_scrape, &arg_targetURL, &arg_limit}
+		if err := gotsrpc.LoadArgs(&args, callStats, r); err != nil {
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		var executionStart time.Time
+		if callStatsOk {
+			executionStart = time.Now()
+		}
+		getLinkedFromRet := p.service.GetLinkedFrom(arg_scrape, arg_targetURL, arg_limit)
+		if callStatsOk {
+			callStats.Execution = time.Since(executionStart)
+		}
+		rets = []any{getLinkedFromRet}
+		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		gotsrpc.Monitor(w, r, args, rets, callStats)
+		return
+	case ServiceGoTSRPCProxyGetLinks:
+		var (
+			args []any
+			rets []any
+		)
+		var (
+			arg_scrape string
+		)
+		args = []any{&arg_scrape}
+		if err := gotsrpc.LoadArgs(&args, callStats, r); err != nil {
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		var executionStart time.Time
+		if callStatsOk {
+			executionStart = time.Now()
+		}
+		getLinksRet := p.service.GetLinks(arg_scrape)
+		if callStatsOk {
+			callStats.Execution = time.Since(executionStart)
+		}
+		rets = []any{getLinksRet}
+		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		gotsrpc.Monitor(w, r, args, rets, callStats)
+		return
+	case ServiceGoTSRPCProxyGetRedirects:
+		var (
+			args []any
+			rets []any
+		)
+		var (
+			arg_scrape string
+		)
+		args = []any{&arg_scrape}
+		if err := gotsrpc.LoadArgs(&args, callStats, r); err != nil {
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		var executionStart time.Time
+		if callStatsOk {
+			executionStart = time.Now()
+		}
+		getRedirectsRet := p.service.GetRedirects(arg_scrape)
+		if callStatsOk {
+			callStats.Execution = time.Since(executionStart)
+		}
+		rets = []any{getRedirectsRet}
 		if err := gotsrpc.Reply(rets, callStats, r, w); err != nil {
 			gotsrpc.ErrorCouldNotReply(w)
 			return

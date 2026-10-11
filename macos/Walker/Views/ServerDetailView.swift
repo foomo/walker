@@ -10,6 +10,8 @@ struct ServerDetailView: View {
         case overview = "Overview"
         case results = "Results"
         case brokenLinks = "Broken Links"
+        case redirects = "Redirects"
+        case links = "Links"
         case performance = "Performance"
 
         var id: Self { self }
@@ -24,6 +26,10 @@ struct ServerDetailView: View {
                 ResultsView(model: model)
             case .brokenLinks:
                 BrokenLinksView(model: model)
+            case .redirects:
+                RedirectsView(model: model)
+            case .links:
+                LinksView(model: model)
             case .performance:
                 PerformanceView(model: model)
             }
