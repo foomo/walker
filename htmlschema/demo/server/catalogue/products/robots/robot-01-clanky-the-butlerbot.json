@@ -1,0 +1,35 @@
+{
+  "ID": "robot-01",
+  "Name": "Clanky the Butlerbot",
+  "Description": "Serves tea at exactly 4 pm, polishes the silverware to a mirror shine and sighs dramatically whenever you forget a coaster.",
+  "Price": 129900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Household",
+      "Features": [
+        {
+          "Label": "Tea service",
+          "Description": "Earl Grey, always at the perfect temperature"
+        },
+        {
+          "Label": "Silverware",
+          "Description": "Polishes until you can see your regrets"
+        }
+      ]
+    },
+    {
+      "Label": "Personality",
+      "Features": [
+        {
+          "Label": "Sighing",
+          "Description": "Three levels of dramatic disappointment"
+        },
+        {
+          "Label": "Small talk",
+          "Description": "Exclusively about the weather in 1897"
+        }
+      ]
+    }
+  ]
+}

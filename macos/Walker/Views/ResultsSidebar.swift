@@ -4,10 +4,10 @@ import SwiftUI
 /// folder sets the prefix, status and group rows toggle their filter - all of
 /// them combine.
 struct ResultsSidebar: View {
-    let folders: [Folder]
-    let statusOptions: [StatusStats]
-    let groupOptions: [GroupStats]
-    let bucketOptions: [PerformanceBucket]
+    let folders: [WalkerVO.Folder]
+    let statusOptions: [Walker.StatusStats]
+    let groupOptions: [Walker.GroupStats]
+    let bucketOptions: [WalkerVO.PerformanceBucket]
     @Binding var prefix: String
     @Binding var status: Int?
     @Binding var group: String?
@@ -114,7 +114,7 @@ struct FilterRow: View {
 }
 
 struct FolderLabel: View {
-    let folder: Folder
+    let folder: WalkerVO.Folder
     let isHost: Bool
 
     var body: some View {

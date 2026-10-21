@@ -1,0 +1,35 @@
+{
+  "ID": "car-01",
+  "Name": "Turbo Turtle",
+  "Description": "The slowest sports car in the world, built for people who want to look fast while enjoying every single moment of the scenic route.",
+  "Price": 2499000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Performance",
+      "Features": [
+        {
+          "Label": "Top speed",
+          "Description": "A relaxed thirty kilometres per hour"
+        },
+        {
+          "Label": "Acceleration",
+          "Description": "Zero to thirty by lunchtime"
+        }
+      ]
+    },
+    {
+      "Label": "Comfort",
+      "Features": [
+        {
+          "Label": "Shell roof",
+          "Description": "Waterproof and surprisingly stylish"
+        },
+        {
+          "Label": "Seats",
+          "Description": "Heated, cooled and very patient"
+        }
+      ]
+    }
+  ]
+}

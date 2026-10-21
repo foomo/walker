@@ -4,9 +4,9 @@ import SwiftUI
 /// linked first - and where they are linked from.
 struct BrokenLinksView: View {
     let model: ServerModel
-    @State private var selection: BrokenLink.ID?
+    @State private var selection: WalkerVO.BrokenLink.ID?
 
-    private var selected: BrokenLink? {
+    private var selected: WalkerVO.BrokenLink? {
         model.brokenLinks.first { $0.id == selection }
     }
 
@@ -70,14 +70,14 @@ struct BrokenLinksView: View {
     }
 }
 
-extension BrokenLink: Identifiable {
+extension WalkerVO.BrokenLink: Identifiable {
     public var id: String { targetURL }
 }
 
 /// BrokenLinkRow - status and the number of linking pages on the left, path,
 /// group and the error on the right, like the result rows.
 struct BrokenLinkRow: View {
-    let link: BrokenLink
+    let link: WalkerVO.BrokenLink
 
     private var linkedFrom: Int { link.linkedFrom?.count ?? 0 }
 
@@ -119,7 +119,7 @@ struct BrokenLinkRow: View {
 
 /// BrokenLinkInspector shows a broken page and the pages linking to it.
 struct BrokenLinkInspector: View {
-    let link: BrokenLink
+    let link: WalkerVO.BrokenLink
     let lookup: ResultLookup
 
     var body: some View {
@@ -152,12 +152,12 @@ struct BrokenLinkInspector: View {
 /// with its preview, the links to the url outlined.
 struct LinkingPages: View {
     let target: String
-    let sources: [LinkSource]
+    let sources: [WalkerVO.LinkSource]
     let lookup: ResultLookup
     /// total linking pages - more than sources, if the server cut the list
     var total: Int?
     /// groups break the linking pages down
-    var groups: [LinkGroup] = []
+    var groups: [WalkerVO.LinkGroup] = []
     /// loadMore asks the server for more pages - nil, if sources are complete
     var loadMore: (() -> Void)?
 
@@ -169,7 +169,7 @@ struct LinkingPages: View {
     enum SourcePage {
         case none
         case loading
-        case loaded(ScrapeResult)
+        case loaded(WalkerVO.ScrapeResult)
         case missing(String)
     }
 

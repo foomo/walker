@@ -4,14 +4,39 @@ import SwiftUI
 struct OverviewView: View {
     let model: ServerModel
 
+    @Environment(LocalWalkers.self) private var walkers
+    @State private var confirmsRestart = false
+    @State private var isRestarting = false
+
     var body: some View {
+        if model.server.isLocal {
+            // a local server: its scrapes above the log of its walker, its config beside them
+            HSplitView {
+                VSplitView {
+                    scrapes
+                        .frame(minHeight: 200, maxHeight: .infinity)
+                    LocalWalkerLogPane(server: model.server)
+                        .frame(minHeight: 100, idealHeight: 240, maxHeight: .infinity)
+                }
+                .frame(minWidth: 360, idealWidth: 520, maxWidth: .infinity)
+                LocalConfigForm(server: model.server)
+                    .frame(minWidth: 380, idealWidth: 480, maxWidth: .infinity)
+            }
+        } else {
+            scrapes
+        }
+    }
+
+    private var scrapes: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if case let .offline(message) = model.connection {
+                // a stopped local walker is not offline - the config says why it is not running
+                if case let .offline(message) = model.connection, !model.server.isLocal || walkers.isActive(model.server.id) {
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                         .padding(.horizontal)
                 }
+                restartBar
                 ScrapeCard(title: "Current scrape", systemImage: "arrow.trianglehead.2.clockwise", summary: model.current) {
                     if let next = model.complete?.nextCycle {
                         Text("Idle – the next scrape starts \(next, style: .relative)")
@@ -28,11 +53,53 @@ struct OverviewView: View {
     }
 }
 
+extension OverviewView {
+    /// restartBar forces a new scrape cycle - a running one is aborted, after a question
+    var restartBar: some View {
+        HStack {
+            if let error = model.restartError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            }
+            Spacer()
+            if isRestarting {
+                ProgressView()
+                    .controlSize(.small)
+            }
+            Button("New Scrape", systemImage: "arrow.clockwise") {
+                if model.current?.running == true {
+                    confirmsRestart = true
+                } else {
+                    restart()
+                }
+            }
+            .disabled(model.connection != .online || isRestarting)
+            .help("Start a new scrape cycle now - a running one is aborted, the last complete scrape stays")
+            .confirmationDialog("Abort the running scrape?", isPresented: $confirmsRestart) {
+                Button("Abort and Start New Scrape", role: .destructive) {
+                    restart()
+                }
+            } message: {
+                Text("\(model.current?.pages.formatted() ?? "0") pages of the running scrape are dropped. The last complete scrape stays.")
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func restart() {
+        isRestarting = true
+        Task {
+            await model.restartScrape()
+            isRestarting = false
+        }
+    }
+}
+
 /// ScrapeCard shows the same facts for the current and the last complete scrape.
 struct ScrapeCard<Empty: View>: View {
     let title: String
     let systemImage: String
-    let summary: ScrapeSummary?
+    let summary: WalkerVO.ScrapeSummary?
     @ViewBuilder var empty: Empty
 
     var body: some View {
@@ -55,7 +122,7 @@ struct ScrapeCard<Empty: View>: View {
 }
 
 struct ScrapeSummaryView: View {
-    let summary: ScrapeSummary
+    let summary: WalkerVO.ScrapeSummary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -104,7 +171,7 @@ struct ScrapeSummaryView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        if let within = summary.share(within: Duration(rawValue: 200_000_000)) {
+                        if let within = summary.share(within: GoTime.Duration(rawValue: 200_000_000)) {
                             Text("\(within, format: .percent.precision(.fractionLength(0))) within 200 ms")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)

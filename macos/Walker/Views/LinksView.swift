@@ -4,7 +4,7 @@ import SwiftUI
 /// often every page is linked - the least linked end shows the orphans.
 struct LinksView: View {
     let model: ServerModel
-    @State private var selection: PageLinks.ID?
+    @State private var selection: WalkerVO.PageLinks.ID?
     @AppStorage("linksOrder") private var order = Order.mostLinked
 
     enum Order: String, CaseIterable, Identifiable {
@@ -14,7 +14,7 @@ struct LinksView: View {
         var id: Self { self }
     }
 
-    private var sorted: [PageLinks] {
+    private var sorted: [WalkerVO.PageLinks] {
         model.links.sorted { a, b in
             if a.linkedFrom != b.linkedFrom {
                 return order == .mostLinked ? a.linkedFrom > b.linkedFrom : a.linkedFrom < b.linkedFrom
@@ -95,14 +95,14 @@ struct LinksView: View {
     }
 }
 
-extension PageLinks: Identifiable {
+extension WalkerVO.PageLinks: Identifiable {
     public var id: String { targetURL }
 }
 
 /// PageLinksRow - linking pages and the status on the left, path, title and
 /// the link counts on the right.
 struct PageLinksRow: View {
-    let page: PageLinks
+    let page: WalkerVO.PageLinks
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -145,8 +145,8 @@ struct PageLinksInspector: View {
     let url: String
     let model: ServerModel
 
-    @State private var page: ScrapeResult?
-    @State private var linkedFrom: LinkedFromPage?
+    @State private var page: WalkerVO.ScrapeResult?
+    @State private var linkedFrom: WalkerVO.LinkedFromPage?
     @State private var limit = 20
     @State private var error: String?
 

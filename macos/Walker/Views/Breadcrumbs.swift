@@ -42,7 +42,7 @@ struct FilterChip: Identifiable {
 /// up - and the active filters.
 struct Breadcrumbs: View {
     let crumbs: [Crumb]
-    let folder: Folder?
+    let folder: WalkerVO.Folder?
     let chips: [FilterChip]
     @Binding var prefix: String
 
@@ -154,9 +154,9 @@ struct Breadcrumbs: View {
     }
 }
 
-extension Array where Element == Folder {
+extension Array where Element == WalkerVO.Folder {
     /// folder finds the folder with the prefix anywhere in the tree
-    func folder(withPrefix prefix: String) -> Folder? {
+    func folder(withPrefix prefix: String) -> WalkerVO.Folder? {
         for folder in self {
             if folder.prefix == prefix {
                 return folder

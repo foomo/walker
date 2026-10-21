@@ -20,7 +20,7 @@ ignoreallqueries: true
 depth: 4
 paging: false
 agent: foomo-walker
-address: ":3001"
+addr: ":3001"
 schemaroot: htmlschema/example/schema/bestbytes
 ...
 `

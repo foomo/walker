@@ -1,0 +1,35 @@
+{
+  "ID": "car-10",
+  "Name": "Grandma's Rocket",
+  "Description": "Looks like a sensible hatchback, drives like a rocket, and still smells faintly of peppermint candy and freshly knitted wool.",
+  "Price": 2799000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Secret power",
+      "Features": [
+        {
+          "Label": "Rocket mode",
+          "Description": "Activated by the knitting needle switch"
+        },
+        {
+          "Label": "Top speed",
+          "Description": "Classified, but very impressive"
+        }
+      ]
+    },
+    {
+      "Label": "Cozy",
+      "Features": [
+        {
+          "Label": "Scent",
+          "Description": "Peppermint and wool, permanently"
+        },
+        {
+          "Label": "Blanket",
+          "Description": "Hand knitted, in every seat"
+        }
+      ]
+    }
+  ]
+}

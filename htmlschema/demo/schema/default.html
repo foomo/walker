@@ -1,0 +1,17 @@
+<!--
+    fallback for pages without a group, e.g. the 404 page
+-->
+<html val:attr-lang="one-of:en|de">
+    <head>
+        <title val:score="10" val:min-length="10" val:max-length="60" />
+        <val:include path="/partials/head" />
+    </head>
+    <body>
+        <val:include path="/partials/page-baseline" />
+        <val:comp path="/partials/site-header" />
+        <main>
+            <h1 val:score="10" />
+        </main>
+        <val:comp path="/partials/site-footer" />
+    </body>
+</html>

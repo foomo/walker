@@ -1,0 +1,47 @@
+{{define "index"}}{{template "head" .}}
+<main>
+    <h1>Welcome to the htmlschema demo shop</h1>
+    <p class="lead">
+        Funny robots and unusual cars - and a small website that shows how an
+        SEO specification becomes an executable schema. Every page group of this
+        shop is described by an htmlschema file, and walker validates and scores
+        every page against it.
+    </p>
+    <section aria-labelledby="categories">
+        <h2 id="categories">Categories</h2>
+        <div class="tiles">
+            {{- range .Directory.Categories}}
+            <article class="tile" data-component="category-tile">
+                <a href="/category/{{.ID}}">
+                    <img
+                        src="{{categoryImage .}}"
+                        alt="{{.Name}} in our shop"
+                        width="200"
+                        height="200"
+                    />
+                    <h3>{{.Name}}</h3>
+                </a>
+                <p>{{.Description}}</p>
+            </article>
+            {{- end}}
+        </div>
+    </section>
+    <section aria-labelledby="about">
+        <h2 id="about">How this demo works</h2>
+        <p>
+            Every page sends its group in the
+            <code>x-next-js-app</code> response header: <code>index</code>,
+            <code>category</code> or <code>product</code>. The schemas for these
+            groups live in <code>htmlschema/demo/schema</code>, together with
+            components for the <b>category</b> and <b>product</b> tiles and the
+            feature sections of a product.
+        </p>
+        <p>
+            Most products are in great shape, a few have deliberate SEO flaws,
+            so you can see findings, penalties and lower scores: Tiny Tim,
+            Lazybot Deluxe, the station wagon with the very long name and the
+            Crypto Cruiser.
+        </p>
+    </section>
+</main>
+{{template "footer" .}}{{end}}

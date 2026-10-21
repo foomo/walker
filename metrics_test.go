@@ -15,9 +15,17 @@ import (
 func testStatus(running bool, started time.Time) *vo.Status {
 	status := &vo.Status{
 		Results: map[string]vo.ScrapeResult{
-			"http://example.com/":        {TargetURL: "http://example.com/", Group: "content", Code: 200, Duration: 40 * time.Millisecond},
-			"http://example.com/shop/a":  {TargetURL: "http://example.com/shop/a", Group: "product", Code: 200, Duration: 150 * time.Millisecond, ValidationReport: &htmlschema.Report{Score: 10, Validations: []*htmlschema.Validation{{Type: htmlschema.ValidationTypeContentLength, Penalty: 4}}}},
-			"http://example.com/shop/b":  {TargetURL: "http://example.com/shop/b", Group: "product", Code: 200, Duration: 2 * time.Second, ValidationReport: &htmlschema.Report{Score: 20}},
+			"http://example.com/": {TargetURL: "http://example.com/", Group: "content", Code: 200, Duration: 40 * time.Millisecond},
+			"http://example.com/shop/a": {TargetURL: "http://example.com/shop/a", Group: "product", Code: 200, Duration: 150 * time.Millisecond, ValidationReport: &htmlschema.Report{
+				Score:      &htmlschema.ScoreNode{Points: 10, Max: 20},
+				Penalty:    4,
+				Findings:   []*htmlschema.Finding{{Severity: htmlschema.SeverityWarn, Penalty: 4}},
+				Components: map[string]*htmlschema.ComponentSummary{"/components/teaser": {Instances: 2, Points: 3, Max: 4}},
+			}},
+			"http://example.com/shop/b": {TargetURL: "http://example.com/shop/b", Group: "product", Code: 200, Duration: 2 * time.Second, ValidationReport: &htmlschema.Report{
+				Score:      &htmlschema.ScoreNode{Points: 20, Max: 20},
+				Components: map[string]*htmlschema.ComponentSummary{"/components/teaser": {Instances: 1, Points: 2, Max: 2}},
+			}},
 			"http://example.com/missing": {TargetURL: "http://example.com/missing", Group: "content", Code: 404, Duration: 10 * time.Millisecond},
 		},
 		Jobs:    map[string]bool{},
@@ -67,14 +75,26 @@ walker_scrape_jobs_open{scrape="current"} 1
 # HELP walker_scrape_running 1 while a scrape cycle is in progress, 0 while waiting for the next one
 # TYPE walker_scrape_running gauge
 walker_scrape_running 1
-# HELP walker_scrape_validation_score average html schema score of the validated pages
-# TYPE walker_scrape_validation_score gauge
-walker_scrape_validation_score{group="product",path="/shop",scrape="complete"} 15
-walker_scrape_validation_score{group="product",path="/shop",scrape="current"} 15
-# HELP walker_scrape_validation_penalty average html schema penalty of the validated pages by validation type
-# TYPE walker_scrape_validation_penalty gauge
-walker_scrape_validation_penalty{group="product",path="/shop",scrape="complete",type="content-length"} 2
-walker_scrape_validation_penalty{group="product",path="/shop",scrape="current",type="content-length"} 2
+# HELP walker_scrape_schema_score_ratio average share of the maximum html schema score the validated pages reached
+# TYPE walker_scrape_schema_score_ratio gauge
+walker_scrape_schema_score_ratio{group="product",path="/shop",scrape="complete"} 0.75
+walker_scrape_schema_score_ratio{group="product",path="/shop",scrape="current"} 0.75
+# HELP walker_scrape_schema_penalty average html schema penalty of the validated pages
+# TYPE walker_scrape_schema_penalty gauge
+walker_scrape_schema_penalty{group="product",path="/shop",scrape="complete"} 2
+walker_scrape_schema_penalty{group="product",path="/shop",scrape="current"} 2
+# HELP walker_scrape_schema_findings average number of html schema findings of the validated pages by severity
+# TYPE walker_scrape_schema_findings gauge
+walker_scrape_schema_findings{group="product",path="/shop",scrape="complete",severity="error"} 0
+walker_scrape_schema_findings{group="product",path="/shop",scrape="complete",severity="info"} 0
+walker_scrape_schema_findings{group="product",path="/shop",scrape="complete",severity="warn"} 0.5
+walker_scrape_schema_findings{group="product",path="/shop",scrape="current",severity="error"} 0
+walker_scrape_schema_findings{group="product",path="/shop",scrape="current",severity="info"} 0
+walker_scrape_schema_findings{group="product",path="/shop",scrape="current",severity="warn"} 0.5
+# HELP walker_scrape_schema_component_score_ratio share of the maximum html schema score the instances of a component reached
+# TYPE walker_scrape_schema_component_score_ratio gauge
+walker_scrape_schema_component_score_ratio{component="/components/teaser",group="product",scrape="complete"} 0.8333333333333334
+walker_scrape_schema_component_score_ratio{component="/components/teaser",group="product",scrape="current"} 0.8333333333333334
 # HELP walker_scrape_completed_timestamp_seconds unix timestamp of the end of the scrape cycle
 # TYPE walker_scrape_completed_timestamp_seconds gauge
 walker_scrape_completed_timestamp_seconds{scrape="complete"} 1.7916414e+09
@@ -82,8 +102,10 @@ walker_scrape_completed_timestamp_seconds{scrape="complete"} 1.7916414e+09
 		"walker_scrape_pages",
 		"walker_scrape_jobs_open",
 		"walker_scrape_running",
-		"walker_scrape_validation_score",
-		"walker_scrape_validation_penalty",
+		"walker_scrape_schema_score_ratio",
+		"walker_scrape_schema_penalty",
+		"walker_scrape_schema_findings",
+		"walker_scrape_schema_component_score_ratio",
 		"walker_scrape_completed_timestamp_seconds",
 	))
 }

@@ -1,0 +1,35 @@
+{
+  "ID": "car-09",
+  "Name": "Crypto Cruiser",
+  "Description": "Pays its own tolls with fractions of a meme coin, mines a little while you are parked and explains blockchain at every red light.",
+  "Price": 6900000,
+  "Currency": "DOGE",
+  "FeatureSections": [
+    {
+      "Label": "Finance",
+      "Features": [
+        {
+          "Label": "Toll payment",
+          "Description": "Accepts only very volatile coins"
+        },
+        {
+          "Label": "Mining",
+          "Description": "Earns roughly one cent per week"
+        }
+      ]
+    },
+    {
+      "Label": "Lectures",
+      "Features": [
+        {
+          "Label": "Red light talks",
+          "Description": "Blockchain basics in ninety seconds"
+        },
+        {
+          "Label": "Volume",
+          "Description": "Cannot be turned down, sadly"
+        }
+      ]
+    }
+  ]
+}

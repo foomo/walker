@@ -1,0 +1,35 @@
+{
+  "ID": "robot-04",
+  "Name": "Gardenator",
+  "Description": "Mows the lawn in perfect stripes, talks encouragingly to the tomatoes and files formal complaints about every dandelion it meets.",
+  "Price": 74900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Garden",
+      "Features": [
+        {
+          "Label": "Mowing",
+          "Description": "Stripes so straight they upset the neighbours"
+        },
+        {
+          "Label": "Plant whispering",
+          "Description": "Tomatoes grow two percent faster, allegedly"
+        }
+      ]
+    },
+    {
+      "Label": "Bureaucracy",
+      "Features": [
+        {
+          "Label": "Weed reports",
+          "Description": "Filed in triplicate to the garden gnome"
+        },
+        {
+          "Label": "Seasonal plans",
+          "Description": "Updated every full moon"
+        }
+      ]
+    }
+  ]
+}

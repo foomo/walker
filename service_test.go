@@ -63,8 +63,8 @@ func TestStatusSummary(t *testing.T) {
 }
 
 func TestServiceProxy(t *testing.T) {
-	s := &Service{Walker: NewWalker()}
-	defer s.Walker.Stop()
+	s := &service{walker: NewWalker()}
+	defer s.walker.Stop()
 	proxy := NewDefaultServiceGoTSRPCProxy(s)
 
 	call := func(method, body string) string {
@@ -81,8 +81,8 @@ func TestServiceProxy(t *testing.T) {
 }
 
 func TestServiceGetResultsFolders(t *testing.T) {
-	s := &Service{Walker: NewWalker()}
-	defer s.Walker.Stop()
+	s := &service{walker: NewWalker()}
+	defer s.walker.Stop()
 	for _, scrape := range []string{ScrapeCurrent, ScrapeComplete} {
 		_, results, _, folders := s.GetResults(Filters{Scrape: scrape}, 0, 10)
 		assert.Empty(t, results, scrape)

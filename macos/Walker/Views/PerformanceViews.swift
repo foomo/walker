@@ -134,7 +134,7 @@ struct BucketCallout: View {
 
 /// GroupPerformanceRow shows the distribution and the percentiles of a group.
 struct GroupPerformanceRow: View {
-    let performance: GroupPerformance
+    let performance: WalkerVO.GroupPerformance
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
@@ -160,7 +160,7 @@ struct GroupPerformanceRow: View {
         .padding(.vertical, 6)
     }
 
-    private func percentile(_ label: String, _ d: Duration) -> some View {
+    private func percentile(_ label: String, _ d: GoTime.Duration) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
             Text(label)
                 .font(.caption2)

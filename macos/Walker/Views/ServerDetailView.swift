@@ -5,6 +5,7 @@ struct ServerDetailView: View {
     @AppStorage(SettingsView.refreshIntervalKey) private var refreshInterval = SettingsView
         .defaultRefreshInterval
     @State private var section = Section.overview
+    @Environment(\.openWindow) private var openWindow
 
     enum Section: String, CaseIterable, Identifiable {
         case overview = "Overview"
@@ -12,13 +13,27 @@ struct ServerDetailView: View {
         case brokenLinks = "Broken Links"
         case redirects = "Redirects"
         case links = "Links"
-        case graph = "Graph"
         case performance = "Performance"
 
         var id: Self { self }
+
+        /// tabs of the section switch - the overview first, it opens from the server name too
+        static let tabs = allCases
     }
 
     var body: some View {
+        // the status bar sits below the sections, not over them - split views
+        // and the inspector do not pass a safe area inset on, so it would
+        // cover their last rows and the pager of the results
+        VStack(spacing: 0) {
+            sections
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            StatusBar(current: model.current, complete: model.complete, connection: model.connection)
+        }
+    }
+
+    @ViewBuilder
+    private var sections: some View {
         Group {
             switch section {
             case .overview:
@@ -31,8 +46,6 @@ struct ServerDetailView: View {
                 RedirectsView(model: model)
             case .links:
                 LinksView(model: model)
-            case .graph:
-                GraphView(model: model)
             case .performance:
                 PerformanceView(model: model)
             }
@@ -45,15 +58,23 @@ struct ServerDetailView: View {
             // the server and the scrape all sections show, side by side - the
             // server is a label, not a control, so it gets no glass background
             ToolbarItem(placement: .navigation) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(model.server.name)
-                        .font(.headline)
-                    Text(model.server.baseURL.absoluteString)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Button {
+                    section = .overview
+                } label: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(model.server.name)
+                            .font(.headline)
+                        Text(model.server.baseURL.absoluteString)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+                    .contentShape(.rect)
                 }
-                .lineLimit(1)
-                .padding(.horizontal, 6)
+                .buttonStyle(.plain)
+                .pointerStyle(.link)
+                .help("Overview of \(model.server.name)")
             }
             .sharedBackgroundVisibility(.hidden)
             // the overview shows both scrapes side by side
@@ -71,18 +92,27 @@ struct ServerDetailView: View {
                     .help(model.isAvailable(.complete) ? "" : "No scrape has completed yet")
                 }
             }
+            // a local walker is started and stopped from here, its config and log are in the overview
+            if model.server.isLocal {
+                ToolbarItem(placement: .primaryAction) {
+                    LocalWalkerButton(server: model.server)
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button("Schema Developer", systemImage: "checklist") {
+                    openWindow(id: SchemaDevWindow.id, value: model.server.id)
+                }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                .help("Iterate on an html schema against a page of this server's site")
+            }
             ToolbarItem(placement: .principal) {
                 Picker("Section", selection: $section) {
-                    ForEach(Section.allCases) { section in
+                    ForEach(Section.tabs) { section in
                         Text(section.rawValue).tag(section)
                     }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .background {
-                    CrawlProgressBar(summary: model.current)
-                }
-                .help(CrawlProgressBar.help(for: model.current))
             }
         }
         .onChange(of: model.isAvailable(.complete)) {

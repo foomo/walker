@@ -1,0 +1,35 @@
+{
+  "ID": "robot-02",
+  "Name": "Vacuumulator 3000",
+  "Description": "Hunts down every crumb in the house with the determination of a heat seeking missile and reports its kills in a little victory dance.",
+  "Price": 49900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Cleaning",
+      "Features": [
+        {
+          "Label": "Suction",
+          "Description": "Strong enough to remove carpet patterns"
+        },
+        {
+          "Label": "Crumb radar",
+          "Description": "Detects cookies through two closed doors"
+        }
+      ]
+    },
+    {
+      "Label": "Extras",
+      "Features": [
+        {
+          "Label": "Victory dance",
+          "Description": "Twelve moves, all of them embarrassing"
+        },
+        {
+          "Label": "Pet mode",
+          "Description": "Politely negotiates with the cat"
+        }
+      ]
+    }
+  ]
+}

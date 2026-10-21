@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
@@ -117,7 +117,7 @@ func (w *Walker) scrapeloop() {
 	paths := []string{}
 	var cp *clientPool
 	var robotsGroup *robotstxt.Group
-	var groupValidator *htmlschema.GroupValidator
+	var schemaRoot *htmlschema.Root
 
 	// scheduling
 	var interval, offset time.Duration
@@ -127,6 +127,13 @@ func (w *Walker) scrapeloop() {
 	var completeStatus *vo.Status
 	deadlineLogged := false
 	cycleCompleted := false
+	// cycle numbers the scrape cycles - a busy client remembers the cycle it
+	// was dispatched in, results of an aborted cycle are dropped
+	cycle := 0
+	dispatched := map[*poolClient]int{}
+	// progressLogged is when the progress of the running cycle was logged last
+	var progressLogged time.Time
+	const progressEvery = 10 * time.Second
 	isRunning := func() bool {
 		return scrapeLoopStarted && !cycleCompleted
 	}
@@ -149,7 +156,9 @@ func (w *Walker) scrapeloop() {
 		deadlineLogged = false
 		baseURL = startURL
 		paths = configPaths
-		running = 0
+		cycle++
+		// running counts the requests in flight, an aborted cycle's too -
+		// their clients are busy until the results are in
 		baseURLString := baseURL.Scheme + "://" + baseURL.Host
 		// port := baseURL.Port()
 		// if port != "" {
@@ -167,6 +176,12 @@ func (w *Walker) scrapeloop() {
 
 		results = map[string]vo.ScrapeResult{}
 		scrapeLoopStarted = true
+		progressLogged = cycleStarted
+		attrs := []any{"target", baseURLString, "paths", paths}
+		if interval > 0 {
+			attrs = append(attrs, "slot", cycleStart.Format(time.RFC3339), "deadline", cycleStart.Add(interval).Format(time.RFC3339))
+		}
+		slog.Info("scrape cycle started", attrs...)
 	}
 
 	getStatus := func() vo.Status {
@@ -234,7 +249,18 @@ func (w *Walker) scrapeloop() {
 		if scrapeLoopStarted {
 			if interval > 0 && !deadlineLogged && len(jobs) > 0 && time.Now().After(cycleStart.Add(interval)) {
 				deadlineLogged = true
-				fmt.Println("ERROR scrape cycle started at", cycleStart, "exceeded interval", interval, "-", len(jobs), "jobs still open, continuing")
+				slog.Warn("scrape cycle exceeds its interval, continuing", "started", cycleStart, "interval", interval, "open", len(jobs))
+			}
+			if !cycleCompleted && time.Since(progressLogged) >= progressEvery {
+				progressLogged = time.Now()
+				status := getStatus()
+				slog.Info("scrape progress",
+					"pages", len(results),
+					"queued", len(jobs)-running,
+					"active", running,
+					"speed", strconv.FormatFloat(status.ScrapeSpeed, 'f', 1, 64)+"/s",
+					"elapsed", time.Since(cycleStarted).Round(time.Second),
+				)
 			}
 			if len(jobs) > 0 {
 			JobLoop:
@@ -249,7 +275,8 @@ func (w *Walker) scrapeloop() {
 								running++
 								jobs[jobURL] = true
 								poolClient.busy = true
-								go scrape(poolClient, jobURL, baseURL, groupHeader, scrapeFunc, validationFunc, groupValidator, w.chanResult)
+								dispatched[poolClient] = cycle
+								go scrape(poolClient, jobURL, baseURL, groupHeader, scrapeFunc, validationFunc, schemaRoot, w.chanResult)
 								continue JobLoop
 							}
 						}
@@ -279,16 +306,32 @@ func (w *Walker) scrapeloop() {
 			if chanLoopComplete != nil {
 				publishLatest(chanLoopComplete, status)
 			}
+			failed, errorCodes := 0, 0
+			for _, r := range results {
+				switch {
+				case r.Error != "":
+					failed++
+				case r.Code >= 400:
+					errorCodes++
+				}
+			}
+			completed := []any{
+				"pages", len(results),
+				"failed", failed,
+				"errorCodes", errorCodes,
+				"duration", cycleDuration.Round(time.Millisecond),
+				"speed", strconv.FormatFloat(status.ScrapeSpeedAverage, 'f', 1, 64) + "/s",
+			}
 			if interval == 0 {
-				fmt.Println("restarting", baseURL, paths)
+				slog.Info("scrape cycle completed, restarting", completed...)
 				restart(baseURL, paths, completedAt)
 			} else if !overrun {
-				fmt.Println("scrape cycle completed in", cycleDuration, "next cycle at", nextCycle)
+				slog.Info("scrape cycle completed", append(completed, "next", nextCycle.Format(time.RFC3339))...)
 				waitTimer = time.NewTimer(nextCycle.Sub(completedAt))
 				chanNextCycle = waitTimer.C
 			} else {
 				w.metrics.overruns.Inc()
-				fmt.Println("ERROR scrape cycle started at", cycleStart, "took", cycleDuration, "exceeding interval", interval, "- restarting immediately")
+				slog.Warn("scrape cycle took longer than its interval, restarting immediately", append(completed, "interval", interval)...)
 				restart(baseURL, paths, cycleSlot(completedAt, interval, offset))
 			}
 		}
@@ -297,7 +340,6 @@ func (w *Walker) scrapeloop() {
 		case <-time.After(time.Millisecond * 1000):
 			// make sure we do not get stuck
 		case <-chanNextCycle:
-			fmt.Println("starting scheduled scrape cycle", baseURL, paths)
 			restart(baseURL, paths, nextCycle)
 		case st := <-w.chanStart:
 			robotsGroup = nil
@@ -309,7 +351,7 @@ func (w *Walker) scrapeloop() {
 			ll.ignorePathPrefixes = st.conf.Ignore
 			ll.depth = st.conf.Depth
 			ll.paging = st.conf.Paging
-			groupValidator = st.groupValidator
+			schemaRoot = st.schemaRoot
 			ll.includePathPrefixes = st.conf.Target.Paths
 			ignoreRobots = st.conf.IgnoreRobots
 			ll.ignoreQueriesWith = st.conf.IgnoreQueriesWith
@@ -320,6 +362,24 @@ func (w *Walker) scrapeloop() {
 
 			if cp == nil || cp.agent != st.conf.Agent || cp.concurrency != st.conf.Concurrency || cp.useCookies != st.conf.UseCookies {
 				cp = newClientPool(st.conf.Concurrency, st.conf.Agent, st.conf.UseCookies)
+			}
+			slog.Info("walk configured",
+				"target", st.conf.Target.BaseURL,
+				"paths", st.conf.Target.Paths,
+				"concurrency", st.conf.Concurrency,
+				"agent", st.conf.Agent,
+				"cookies", st.conf.UseCookies,
+				"depth", st.conf.Depth,
+				"paging", st.conf.Paging,
+				"ignore", st.conf.Ignore,
+				"ignoreQueriesWith", st.conf.IgnoreQueriesWith,
+				"ignoreAllQueries", st.conf.IgnoreAllQueries,
+				"ignoreRobots", st.conf.IgnoreRobots,
+				"interval", interval,
+				"offset", offset,
+			)
+			if schemaRoot != nil {
+				slog.Info("validating with a schema root", "root", st.conf.SchemaRoot, "groups", schemaRoot.Groups(), "default", schemaRoot.HasDefault(), "groupHeader", groupHeader)
 			}
 
 			var errStart error
@@ -339,10 +399,15 @@ func (w *Walker) scrapeloop() {
 					}
 					if len(robotForbiddenPath) > 0 {
 						errStart = errors.New("robots.txt does not allow access to the following path (you can either ignore robots or try as a different user agent): " + strings.Join(robotForbiddenPath, ", "))
+					} else {
+						slog.Info("following robots.txt", "agent", st.conf.Agent)
 					}
 				} else {
 					errStart = errRobotsGroup
 				}
+			}
+			if errStart != nil {
+				slog.Error("could not start the walk", "target", st.conf.Target.BaseURL, "error", errStart)
 			}
 			if errStart == nil {
 				restart(startU, st.conf.Target.Paths, cycleSlot(time.Now(), interval, offset))
@@ -367,21 +432,36 @@ func (w *Walker) scrapeloop() {
 				st.running = &runningStatus
 			}
 			w.chanStatuses <- st
+		case <-w.chanRestart:
+			if baseURL == nil {
+				w.chanRestart <- false
+				break
+			}
+			slog.Info("new scrape cycle requested", "aborted", isRunning(), "pages", len(results), "open", len(jobs))
+			restart(baseURL, paths, cycleSlot(time.Now(), interval, offset))
+			w.chanRestart <- true
 		case <-w.chanStop:
+			slog.Info("walker stopped", "pages", len(results), "running", isRunning())
 			w.chanStop <- getStatus()
 			return
 		case scanResult := <-w.chanResult:
 			running--
+			scanResult.poolClient.busy = false
+			resultCycle := dispatched[scanResult.poolClient]
+			delete(dispatched, scanResult.poolClient)
+			if resultCycle != cycle {
+				slog.Debug("dropping a result of an aborted cycle", "url", scanResult.result.TargetURL)
+				continue
+			}
 			delete(jobs, scanResult.result.TargetURL)
 			if scrapeResultModifierFunc != nil {
 				modifiedScrapeResult, errModify := scrapeResultModifierFunc(scanResult.result)
 				if errModify == nil {
 					scanResult.result = modifiedScrapeResult
 				} else {
-					fmt.Println("cound not modify scrape result", errModify)
+					slog.Error("could not modify scrape result", "url", scanResult.result.TargetURL, "error", errModify)
 				}
 			}
-			scanResult.poolClient.busy = false
 			scanResult.result.Time = time.Now()
 			results[scanResult.result.TargetURL] = scanResult.result
 			w.metrics.requests.WithLabelValues(scanResult.result.Group, strconv.Itoa(scanResult.result.Code)).Inc()
@@ -389,12 +469,10 @@ func (w *Walker) scrapeloop() {
 			var linksToScrape vo.LinkList
 
 			if linkListFilterFunc != nil {
-				if scanResult.result.Error != "" {
-					fmt.Println("there was an error", scanResult.result.Error)
-				} else if scanResult.doc != nil {
+				if scanResult.result.Error == "" && scanResult.doc != nil {
 					linksToScrapeFromFromLilterFunc, errFilterLinkList := linkListFilterFunc(baseURL, scanResult.docURL, scanResult.doc)
 					if errFilterLinkList != nil {
-						fmt.Println("aua", errFilterLinkList)
+						slog.Error("link list filter failed", "url", scanResult.result.TargetURL, "error", errFilterLinkList)
 					}
 					linksToScrape = linksToScrapeFromFromLilterFunc
 				}
@@ -413,12 +491,20 @@ func (w *Walker) scrapeloop() {
 
 				linksToScrape = filterScrapeLinks(scanResult.result.Links, baseURL, linkNextNormalized, linkPrevNormalized, ll, robotsGroup)
 			}
+			newJobs := 0
 			for linkToScrape := range linksToScrape {
 				_, existingResultOK := results[linkToScrape]
 				_, existingJobOK := jobs[linkToScrape]
 				if !existingResultOK && !existingJobOK {
 					jobs[linkToScrape] = false
+					newJobs++
 				}
+			}
+			result := scanResult.result
+			if result.Error != "" {
+				slog.Warn("page could not be scraped", "url", result.TargetURL, "duration", result.Duration.Round(time.Millisecond), "error", result.Error)
+			} else {
+				slog.Debug("page scraped", "url", result.TargetURL, "code", result.Code, "duration", result.Duration.Round(time.Millisecond), "group", result.Group, "links", len(result.Links), "new", newJobs)
 			}
 		}
 	}

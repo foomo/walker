@@ -3,8 +3,8 @@ import Observation
 
 /// ServerModel is the state of one walker server: its scrapes and a page of results.
 ///
-/// It is the connection boundary of the app - a walker bundled with the app
-/// will be just another server on localhost.
+/// It is the connection boundary of the app - a local walker, run by
+/// LocalWalkers with the bundled helper, is just another server on localhost.
 @MainActor
 @Observable
 final class ServerModel {
@@ -34,7 +34,7 @@ final class ServerModel {
         let from: Int64
         let to: Int64
 
-        init(_ bucket: PerformanceBucket) {
+        init(_ bucket: WalkerVO.PerformanceBucket) {
             from = bucket.from.rawValue
             to = bucket.to.rawValue
         }
@@ -51,13 +51,13 @@ final class ServerModel {
     }
 
     let server: Server
-    @ObservationIgnored private let client: ServiceClient
-    /// graph of the site - kept, while switching sections
-    let graph: GraphModel
+    @ObservationIgnored private let client: Walker.ServiceClient
+    /// liveMetrics are the prometheus metrics of the walker - ServerStore.sampleMetrics samples them in the background
+    let liveMetrics: LiveMetrics
 
     private(set) var connection: Connection = .unknown
-    private(set) var current: ScrapeSummary?
-    private(set) var complete: ScrapeSummary?
+    private(set) var current: WalkerVO.ScrapeSummary?
+    private(set) var complete: WalkerVO.ScrapeSummary?
 
     // results query - changing a filter starts over at the first page
     var scrape: Scrape = .current {
@@ -84,24 +84,24 @@ final class ServerModel {
     var page = 0
     let pageSize = 100
 
-    private(set) var results: [ScrapeResult] = []
+    private(set) var results: [WalkerVO.ScrapeResult] = []
     /// resultsPrefix is the prefix the results were loaded with - render them
     /// relative to it, not to the prefix being edited
     private(set) var resultsPrefix = ""
     /// folderPage is the page of the folder resultsPrefix itself, e.g. the
     /// result for https://example.com/shop or .../shop/ - it sorts first, so it is taken
     /// from the first page and kept while paging
-    private(set) var folderPage: ScrapeResult?
+    private(set) var folderPage: WalkerVO.ScrapeResult?
     private(set) var numPages = 0
-    private(set) var statusOptions: [StatusStats] = []
-    private(set) var groupOptions: [GroupStats] = []
-    private(set) var bucketOptions: [PerformanceBucket] = []
+    private(set) var statusOptions: [Walker.StatusStats] = []
+    private(set) var groupOptions: [Walker.GroupStats] = []
+    private(set) var bucketOptions: [WalkerVO.PerformanceBucket] = []
     private(set) var resultsError: String?
     private(set) var isLoadingResults = false
 
     /// folders is the path tree of all results of the selected scrape - it
     /// comes with every page of results, so both always correspond
-    private(set) var folders: [Folder] = []
+    private(set) var folders: [WalkerVO.Folder] = []
 
     var resultsQuery: ResultsQuery {
         ResultsQuery(scrape: scrape, prefix: prefix, search: search, status: status, group: group, duration: duration, page: page)
@@ -109,8 +109,8 @@ final class ServerModel {
 
     init(server: Server) {
         self.server = server
-        client = ServiceClient(transport: URLSessionTransport(baseURL: server.baseURL))
-        graph = GraphModel(client: client)
+        client = Walker.ServiceClient(transport: URLSessionTransport(baseURL: server.baseURL))
+        liveMetrics = LiveMetrics(baseURL: server.baseURL)
     }
 
     func refreshScrapes() async {
@@ -126,6 +126,21 @@ final class ServerModel {
         }
     }
 
+    /// restartScrape starts a new scrape cycle on the server right away - a
+    /// running one is aborted. The error is shown in the overview.
+    private(set) var restartError: String?
+
+    func restartScrape() async {
+        do {
+            restartError = try await client.restartScrape() ? nil : "The server has no walk to restart."
+        } catch is CancellationError {
+            return
+        } catch {
+            restartError = error.localizedDescription
+        }
+        await refreshScrapes()
+    }
+
     /// pollScrapes refreshes until the calling task is cancelled.
     func pollScrapes(every interval: Swift.Duration) async {
         while !Task.isCancelled {
@@ -135,7 +150,7 @@ final class ServerModel {
     }
 
     /// brokenLinks of the selected scrape - see loadBrokenLinks
-    private(set) var brokenLinks: [BrokenLink] = []
+    private(set) var brokenLinks: [WalkerVO.BrokenLink] = []
     private(set) var brokenLinksError: String?
     private(set) var isLoadingBrokenLinks = false
 
@@ -157,7 +172,7 @@ final class ServerModel {
     }
 
     /// redirects of the selected scrape - see loadRedirects
-    private(set) var redirects: [RedirectChain] = []
+    private(set) var redirects: [WalkerVO.RedirectChain] = []
     private(set) var redirectsError: String?
     private(set) var isLoadingRedirects = false
 
@@ -179,7 +194,7 @@ final class ServerModel {
     }
 
     /// links are the link counts of every page of the selected scrape
-    private(set) var links: [PageLinks] = []
+    private(set) var links: [WalkerVO.PageLinks] = []
     private(set) var linksError: String?
     private(set) var isLoadingLinks = false
 
@@ -202,7 +217,7 @@ final class ServerModel {
 
     /// linkedFrom returns the pages of the selected scrape linking to a url -
     /// totals and groups of all, but at most limit pages
-    func linkedFrom(_ url: String, limit: Int) async throws -> LinkedFromPage {
+    func linkedFrom(_ url: String, limit: Int) async throws -> WalkerVO.LinkedFromPage {
         try await client.getLinkedFrom(scrape: scrape.rawValue, targetURL: url, limit: limit)
     }
 
@@ -217,21 +232,21 @@ final class ServerModel {
 
     /// lookupResult finds the result of the selected scrape for a url, as the
     /// preview browses it - nil, if walker did not scrape it
-    func lookupResult(_ url: String) async throws -> ScrapeResult? {
+    func lookupResult(_ url: String) async throws -> WalkerVO.ScrapeResult? {
         try await client.getResult(scrape: scrape.rawValue, targetURL: url)
     }
 
     func loadResults() async {
         isLoadingResults = true
         defer { isLoadingResults = false }
-        let filters = Filters(
+        let filters = Walker.Filters(
             scrape: scrape.rawValue,
             prefix: prefix,
             path: search,
             status: status.map { [$0] },
             groups: group.map { [$0] },
-            minDur: Duration(rawValue: duration?.from ?? 0),
-            maxDur: Duration(rawValue: duration?.to ?? 0)
+            minDur: GoTime.Duration(rawValue: duration?.from ?? 0),
+            maxDur: GoTime.Duration(rawValue: duration?.to ?? 0)
         )
         do {
             let reply = try await client.getResults(filters: filters, page: page, pageSize: pageSize)
@@ -258,6 +273,6 @@ final class ServerModel {
     }
 }
 
-extension ScrapeResult: Identifiable {
+extension WalkerVO.ScrapeResult: Identifiable {
     public var id: String { targetURL }
 }

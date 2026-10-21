@@ -145,6 +145,62 @@ func BuildFolderPages(results map[string]ScrapeResult, options GraphOptions, fol
 	return pages
 }
 
+// BuildPageGraph returns the neighborhood of a page: the page itself as the
+// first node, the pages linking to it and the pages it links to - the
+// maxNodes most linked of them - and the links among all of them, without
+// navigation links
+func BuildPageGraph(results map[string]ScrapeResult, options GraphOptions, page string, maxNodes int) Graph {
+	options = options.withDefaults()
+	if maxNodes <= 0 {
+		maxNodes = 120
+	}
+	inbound := inboundLinks(results)
+	global, globalLinks := globalTargets(results, inbound, options.GlobalShare)
+	graph := Graph{Nodes: []GraphNode{}, Edges: []GraphEdge{}, Global: globalLinks}
+	root, ok := results[page]
+	if !ok {
+		return graph
+	}
+
+	// the neighbors - linking in and linked to, navigation targets left out
+	neighbors := map[string]bool{}
+	for _, source := range inbound[page] {
+		neighbors[source.TargetURL] = true
+	}
+	for link := range root.NormalizedLinks {
+		if _, scraped := results[link]; scraped && !global[link] {
+			neighbors[link] = true
+		}
+	}
+	delete(neighbors, page)
+	targetURLs := make([]string, 0, len(neighbors))
+	for targetURL := range neighbors {
+		targetURLs = append(targetURLs, targetURL)
+	}
+	sort.Slice(targetURLs, func(i, j int) bool {
+		a, b := len(inbound[targetURLs[i]]), len(inbound[targetURLs[j]])
+		if a != b {
+			return a > b
+		}
+		return targetURLs[i] < targetURLs[j]
+	})
+	if len(targetURLs) > maxNodes-1 {
+		targetURLs = targetURLs[:maxNodes-1]
+	}
+	sort.Strings(targetURLs)
+
+	nodeOf := map[string]int{page: 0}
+	graph.Nodes = append(graph.Nodes, pageNode(root, len(inbound[page])))
+	for _, targetURL := range targetURLs {
+		nodeOf[targetURL] = len(graph.Nodes)
+		graph.Nodes = append(graph.Nodes, pageNode(results[targetURL], len(inbound[targetURL])))
+	}
+	// the page itself may be a navigation target - links to it still count here
+	delete(global, page)
+	graph.Edges = edgesBetween(results, nodeOf, global)
+	return graph
+}
+
 // FolderLink are the links from a page to a folder node of the graph
 type FolderLink struct {
 	// Folder is the index of the folder in Graph.Nodes

@@ -4,9 +4,9 @@ import SwiftUI
 /// longest chains first - with their hops and where they are linked from.
 struct RedirectsView: View {
     let model: ServerModel
-    @State private var selection: RedirectChain.ID?
+    @State private var selection: WalkerVO.RedirectChain.ID?
 
-    private var selected: RedirectChain? {
+    private var selected: WalkerVO.RedirectChain? {
         model.redirects.first { $0.id == selection }
     }
 
@@ -70,7 +70,7 @@ struct RedirectsView: View {
     }
 }
 
-extension RedirectChain: Identifiable {
+extension WalkerVO.RedirectChain: Identifiable {
     public var id: String { targetURL }
 
     /// hopCodes are the codes of the hops, e.g. "301 → 302"
@@ -82,7 +82,7 @@ extension RedirectChain: Identifiable {
 /// RedirectRow - the hop codes and the final status on the left, the source
 /// path, where it ends and the group on the right.
 struct RedirectRow: View {
-    let chain: RedirectChain
+    let chain: WalkerVO.RedirectChain
 
     private var hops: Int { chain.hops?.count ?? 0 }
 
@@ -137,7 +137,7 @@ struct RedirectRow: View {
 /// RedirectInspector shows the hops of a redirect and the pages linking to the
 /// redirecting url - they should link to where it ends instead.
 struct RedirectInspector: View {
-    let chain: RedirectChain
+    let chain: WalkerVO.RedirectChain
     let lookup: ResultLookup
 
     var body: some View {

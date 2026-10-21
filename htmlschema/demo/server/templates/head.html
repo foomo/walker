@@ -1,0 +1,50 @@
+{{define "head"}}<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}}</title>
+    <meta name="description" content="{{.Description}}">
+    <link rel="canonical" href="{{.Canonical}}">
+    <meta property="og:site_name" content="{{.SiteName}}">
+    <meta property="og:type" content="{{.OGType}}">
+    <meta property="og:title" content="{{.Title}}">
+    <meta property="og:description" content="{{.Description}}">
+    <meta property="og:url" content="{{.Canonical}}">
+    {{- with .OGImage}}
+    <meta property="og:image" content="{{.}}">
+    {{- end}}
+    {{- with .Product}}
+    <meta property="product:price:amount" content="{{priceAmount .}}">
+    <meta property="product:price:currency" content="{{.Currency}}">
+    {{- end}}
+    <meta name="twitter:card" content="summary">
+    <link rel="stylesheet" href="/static/style.css">
+    {{- range .LinkedData}}
+    <script type="application/ld+json">{{.}}</script>
+    {{- end}}
+</head>
+<body>
+<header class="site-header">
+    <a class="logo" href="/"><span aria-hidden="true">🤖</span> {{.SiteName}}</a>
+    <nav aria-label="Main">
+        <ul>
+            <li><a href="/"{{if eq .Current ""}} aria-current="page"{{end}}>Home</a></li>
+            {{- range .Directory.Categories}}
+            <li><a href="/category/{{.ID}}"{{if eq .ID $.Current}} aria-current="page"{{end}}>{{.Name}}</a></li>
+            {{- end}}
+        </ul>
+    </nav>
+</header>
+{{end}}
+
+{{define "breadcrumbs"}}
+<nav aria-label="Breadcrumb" class="breadcrumbs">
+    <ol>
+        {{- $last := len .}}
+        {{- range $i, $c := .}}
+        <li><a href="{{$c.URL}}"{{if eq (add $i 1) $last}} aria-current="page"{{end}}>{{$c.Name}}</a></li>
+        {{- end}}
+    </ol>
+</nav>
+{{end}}

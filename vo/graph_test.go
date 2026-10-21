@@ -118,3 +118,29 @@ func TestBuildPageFolderLinks(t *testing.T) {
 	assert.Equal(t, []FolderLink{{Folder: 3, Links: 2}, {Folder: 4, Links: 1}}, BuildPageFolderLinks(results, GraphOptions{Depth: 2}, "https://example.com/shop"))
 	assert.NotNil(t, BuildPageFolderLinks(results, GraphOptions{}, "https://example.com/unknown"))
 }
+
+func TestBuildPageGraph(t *testing.T) {
+	results := graphTestResults()
+	graph := BuildPageGraph(results, GraphOptions{}, "https://example.com/shop/women/y", 0)
+	ids := []string{}
+	for _, n := range graph.Nodes {
+		ids = append(ids, n.ID)
+	}
+	// y is linked from shop and x, links to blog/a - the home page is navigation
+	assert.Equal(t, []string{"https://example.com/shop/women/y", "https://example.com/blog/a", "https://example.com/shop", "https://example.com/shop/men/x"}, ids, "the page first, then its neighbors by url")
+	assert.Contains(t, graph.Edges, GraphEdge{From: 0, To: 1, Links: 3}, "y -> blog/a")
+	assert.Contains(t, graph.Edges, GraphEdge{From: 2, To: 0, Links: 1}, "shop -> y")
+	assert.Contains(t, graph.Edges, GraphEdge{From: 2, To: 3, Links: 2}, "links among the neighbors - shop -> x")
+	assertEdgesValid(t, graph)
+
+	// the home page is a navigation target - as the root its neighborhood still shows
+	home := BuildPageGraph(results, GraphOptions{}, "https://example.com/", 0)
+	assert.Greater(t, len(home.Nodes), 1)
+	assert.NotEmpty(t, home.Edges, "links to the root count, although it is a navigation target")
+
+	limited := BuildPageGraph(results, GraphOptions{}, "https://example.com/shop/women/y", 2)
+	assert.Len(t, limited.Nodes, 2, "the page and its most linked neighbor")
+	assertEdgesValid(t, limited)
+
+	assert.Empty(t, BuildPageGraph(results, GraphOptions{}, "https://example.com/unknown", 0).Nodes)
+}

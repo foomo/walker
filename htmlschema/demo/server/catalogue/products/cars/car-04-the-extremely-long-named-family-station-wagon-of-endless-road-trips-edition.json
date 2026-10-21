@@ -1,0 +1,35 @@
+{
+  "ID": "car-04",
+  "Name": "The Extremely Long Named Family Station Wagon Of Endless Road Trips Edition",
+  "Description": "Room for seven people, nine suitcases and the never ending question of whether we are there yet, asked approximately every four minutes.",
+  "Price": 3499000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Family",
+      "Features": [
+        {
+          "Label": "Seats",
+          "Description": "Seven, all with individual cup holders"
+        },
+        {
+          "Label": "Snack bar",
+          "Description": "Built into the center console"
+        }
+      ]
+    },
+    {
+      "Label": "Road trips",
+      "Features": [
+        {
+          "Label": "Are we there yet",
+          "Description": "Answered automatically every four minutes"
+        },
+        {
+          "Label": "Games",
+          "Description": "I spy with eight hundred objects"
+        }
+      ]
+    }
+  ]
+}

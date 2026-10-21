@@ -18,7 +18,7 @@ func reportSchema(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 			continue
 		}
 		if res.ValidationReport == nil {
-			println("no validation report for:", res.TargetURL)
+			println("no validation report for:", res.TargetURL, res.ValidationError)
 			continue
 		}
 		println("validation report for:", res.TargetURL)

@@ -9,26 +9,29 @@ import (
 	"github.com/foomo/walker/vo"
 )
 
-type Service struct {
-	Walker *Walker
-	// targetURL string
+type service struct {
+	walker *Walker
+	// conf of the walker - the schema developer api uses its agent and group header
+	conf *config.Config
 }
 
+// NewService starts walking conf - w is the walker behind the service, for
+// its status, reports and metrics
 func NewService(
 	conf *config.Config,
 	linkListFilter LinkListFilterFunc,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
 	scrapeResultModifierFunc ScrapeResultModifierFunc,
-) (s *Service, chanLoopComplete chan vo.Status, err error) {
-	w := NewWalker()
+) (s Service, w *Walker, chanLoopComplete chan vo.Status, err error) {
+	w = NewWalker()
 	chanLoopComplete, errWalk := w.Walk(conf, linkListFilter, scrapeFunc, validationFunc, scrapeResultModifierFunc)
 	if errWalk != nil {
-		return nil, nil, errWalk
+		return nil, nil, nil, errWalk
 	}
-	s = &Service{
-		Walker: w,
-		// targetURL: conf.Target,
+	s = &service{
+		walker: w,
+		conf:   conf,
 	}
 	return
 }
@@ -193,7 +196,7 @@ func getFilterOptions(resultMap map[string]vo.ScrapeResult) FilterOptions {
 // or ScrapeComplete. The folders are the path tree of all results of the
 // same scrape - unfiltered and from the same snapshot as the page, so that
 // the tree and the results always correspond.
-func (s *Service) GetResults(
+func (s *service) GetResults(
 	filters Filters,
 	page int,
 	pageSize int,
@@ -220,11 +223,11 @@ func (s *Service) GetResults(
 }
 
 // scrapeResults returns a copy of the results of ScrapeCurrent (default) or ScrapeComplete
-func (s *Service) scrapeResults(scrape string) map[string]vo.ScrapeResult {
+func (s *service) scrapeResults(scrape string) map[string]vo.ScrapeResult {
 	if scrape != ScrapeComplete {
-		return s.Walker.GetStatus().Results
+		return s.walker.GetStatus().Results
 	}
-	complete, _ := s.Walker.GetStatuses()
+	complete, _ := s.walker.GetStatuses()
 	if complete == nil {
 		return map[string]vo.ScrapeResult{}
 	}
@@ -248,43 +251,49 @@ func containsFolder(folders []vo.Folder, prefix string) bool {
 
 // GetBrokenLinks returns the broken pages of ScrapeCurrent (default) or
 // ScrapeComplete - status >= 400 or failed - and the pages linking to them
-func (s *Service) GetBrokenLinks(scrape string) []vo.BrokenLink {
+func (s *service) GetBrokenLinks(scrape string) []vo.BrokenLink {
 	return vo.BrokenLinks(s.scrapeResults(scrape))
 }
 
 // GetRedirects returns the redirecting urls of ScrapeCurrent (default) or
 // ScrapeComplete with their chains and the pages linking to them
-func (s *Service) GetRedirects(scrape string) []vo.RedirectChain {
+func (s *service) GetRedirects(scrape string) []vo.RedirectChain {
 	return vo.Redirects(s.scrapeResults(scrape))
 }
 
 // GetLinks returns the link counts of every page of ScrapeCurrent (default)
 // or ScrapeComplete - GetLinkedFrom has the linking pages of one url
-func (s *Service) GetLinks(scrape string) []vo.PageLinks {
+func (s *service) GetLinks(scrape string) []vo.PageLinks {
 	return vo.Links(s.scrapeResults(scrape))
 }
 
 // GetLinkedFrom returns the pages of ScrapeCurrent (default) or ScrapeComplete
 // linking to a url - the totals and groups of all, but at most limit pages
-func (s *Service) GetLinkedFrom(scrape string, targetURL string, limit int) vo.LinkedFromPage {
+func (s *service) GetLinkedFrom(scrape string, targetURL string, limit int) vo.LinkedFromPage {
 	return vo.LinkedFrom(s.scrapeResults(scrape), targetURL, limit)
 }
 
 // GetGraph returns the folder graph of ScrapeCurrent (default) or
 // ScrapeComplete - navigation links are left out, see vo.GraphOptions
-func (s *Service) GetGraph(scrape string, options vo.GraphOptions) vo.Graph {
+func (s *service) GetGraph(scrape string, options vo.GraphOptions) vo.Graph {
 	return vo.BuildGraph(s.scrapeResults(scrape), options)
+}
+
+// GetPageGraph returns the neighborhood of a page - the page first, the
+// pages linking to it and linked from it, the most linked up to maxNodes
+func (s *service) GetPageGraph(scrape string, options vo.GraphOptions, page string, maxNodes int) vo.Graph {
+	return vo.BuildPageGraph(s.scrapeResults(scrape), options, page, maxNodes)
 }
 
 // GetPageFolderLinks returns the links of a page to the folder nodes of the
 // graph built with the same options
-func (s *Service) GetPageFolderLinks(scrape string, options vo.GraphOptions, page string) []vo.FolderLink {
+func (s *service) GetPageFolderLinks(scrape string, options vo.GraphOptions, page string) []vo.FolderLink {
 	return vo.BuildPageFolderLinks(s.scrapeResults(scrape), options, page)
 }
 
 // GetFolderPages returns the pages of a folder node of the graph built with
 // the same options - at most maxPages, the most linked ones
-func (s *Service) GetFolderPages(scrape string, options vo.GraphOptions, folder string, maxPages int) vo.FolderPages {
+func (s *service) GetFolderPages(scrape string, options vo.GraphOptions, folder string, maxPages int) vo.FolderPages {
 	return vo.BuildFolderPages(s.scrapeResults(scrape), options, folder, maxPages)
 }
 
@@ -292,7 +301,7 @@ func (s *Service) GetFolderPages(scrape string, options vo.GraphOptions, folder 
 // a url as a browser sees it: an exact match first, then ignoring the fragment
 // and credentials, then a result whose redirects end at the url - nil, if the
 // url was not scraped
-func (s *Service) GetResult(scrape string, targetURL string) *vo.ScrapeResult {
+func (s *service) GetResult(scrape string, targetURL string) *vo.ScrapeResult {
 	return findResult(s.scrapeResults(scrape), targetURL)
 }
 
@@ -351,8 +360,8 @@ func paginate(results []vo.ScrapeResult, page, pageSize int) (pageResults []vo.S
 
 // GetScrapes returns summaries of the last completed scrape and the one in
 // progress - either one is nil if there is none
-func (s *Service) GetScrapes() (complete, current *vo.ScrapeSummary) {
-	completeStatus, runningStatus := s.Walker.GetStatuses()
+func (s *service) GetScrapes() (complete, current *vo.ScrapeSummary) {
+	completeStatus, runningStatus := s.walker.GetStatuses()
 	if completeStatus != nil {
 		summary := completeStatus.Summary()
 		complete = &summary
@@ -364,8 +373,14 @@ func (s *Service) GetScrapes() (complete, current *vo.ScrapeSummary) {
 	return
 }
 
-func (s *Service) GetStatus() vo.ServiceStatus {
-	walkerStatus := s.Walker.GetStatus()
+// RestartScrape starts a new scrape cycle right away - a running one is
+// aborted, its results are dropped; the last complete scrape stays
+func (s *service) RestartScrape() bool {
+	return s.walker.Restart()
+}
+
+func (s *service) GetStatus() vo.ServiceStatus {
+	walkerStatus := s.walker.GetStatus()
 	open := 0
 	pending := 0
 	for _, active := range walkerStatus.Jobs {

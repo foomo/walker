@@ -1,0 +1,35 @@
+{
+  "ID": "robot-03",
+  "Name": "Sir Beeps-a-Lot",
+  "Description": "A knight in shining aluminium who guards your fridge at night and challenges every midnight snacker to a duel of honour.",
+  "Price": 89900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Security",
+      "Features": [
+        {
+          "Label": "Fridge guard",
+          "Description": "Sleepless watch over the leftover lasagna"
+        },
+        {
+          "Label": "Duels",
+          "Description": "Fights with a foam sword only"
+        }
+      ]
+    },
+    {
+      "Label": "Manners",
+      "Features": [
+        {
+          "Label": "Chivalry",
+          "Description": "Holds every door, including the dishwasher"
+        },
+        {
+          "Label": "Titles",
+          "Description": "Addresses the toaster as my lord"
+        }
+      ]
+    }
+  ]
+}

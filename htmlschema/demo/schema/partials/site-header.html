@@ -1,0 +1,9 @@
+<!-- the site header: a logo link and the main navigation -->
+<header>
+    <a val:attr-href="required" />
+    <nav aria-label="Main">
+        <val:wildcard for="ul, li">
+            <a val:min="2" val:max="10" val:attr-href="required" />
+        </val:wildcard>
+    </nav>
+</header>

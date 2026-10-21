@@ -1,0 +1,23 @@
+module: ./
+runtime: macos/Walker/Generated/GotsRPC.swift
+
+services:
+  github.com/foomo/walker:
+    out: macos/Walker/Generated/ServiceClient.swift
+    namespace: WalkerClient
+    services:
+      /service: Service
+
+mappings:
+  github.com/foomo/walker/vo:
+    out: macos/Walker/Generated/WalkerVo.swift
+    namespace: WalkerVO
+  github.com/foomo/walker/htmlschema:
+    out: macos/Walker/Generated/HTMLSchemaVO.swift
+    namespace: HTMLSchemaVO
+  github.com/foomo/walker:
+    out: macos/Walker/Generated/Walker.swift
+    namespace: Walker
+  time:
+    out: macos/Walker/Generated/GoTime.swift
+    namespace: GoTime

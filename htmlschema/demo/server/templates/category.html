@@ -1,0 +1,23 @@
+{{define "category"}}{{template "head" .}}
+<main>
+    {{template "breadcrumbs" .Breadcrumbs}}
+    <h1>{{.Category.Name}}</h1>
+    <p class="lead">{{.Category.Description}}</p>
+    <div class="tiles">
+        {{- range .Category.Products}}
+        <article class="tile" data-component="product-tile">
+            <a href="/product/{{.ID}}">
+                <img
+                    src="{{.Image}}"
+                    alt="{{.Name}}"
+                    width="200"
+                    height="200"
+                />
+                <h2>{{.Name}}</h2>
+            </a>
+            <p class="price">{{price .}}</p>
+        </article>
+        {{- end}}
+    </div>
+</main>
+{{template "footer" .}}{{end}}

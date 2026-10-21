@@ -1,0 +1,35 @@
+{
+  "ID": "car-05",
+  "Name": "Puddle Jumper 4x4",
+  "Description": "An off road vehicle that is mortally afraid of mud, avoids every puddle with elegant swerves and keeps itself shiny at all times.",
+  "Price": 2899000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Off road",
+      "Features": [
+        {
+          "Label": "Puddle avoidance",
+          "Description": "Swerves around water up to two metres"
+        },
+        {
+          "Label": "Mud alarm",
+          "Description": "Sounds when a puddle looks suspicious"
+        }
+      ]
+    },
+    {
+      "Label": "Care",
+      "Features": [
+        {
+          "Label": "Self polish",
+          "Description": "Shiny even after a forest trip"
+        },
+        {
+          "Label": "Tyres",
+          "Description": "Mostly decorative, but very clean"
+        }
+      ]
+    }
+  ]
+}

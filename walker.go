@@ -16,7 +16,7 @@ import (
 
 type start struct {
 	conf                     config.Config
-	groupValidator           *htmlschema.GroupValidator
+	schemaRoot               *htmlschema.Root
 	linkListFilterFunc       LinkListFilterFunc
 	validationFunc           ValidationFunc
 	scrapeFunc               ScrapeFunc
@@ -58,6 +58,7 @@ type Walker struct {
 	chanStop     chan vo.Status
 	chanStarted  chan started
 	chanStatuses chan statuses
+	chanRestart  chan bool
 	// closed, when the scrape loop has stopped
 	chanDone chan struct{}
 	metrics  *metrics
@@ -71,6 +72,7 @@ func NewWalker() *Walker {
 		chanStatus:   make(chan vo.Status),
 		chanStarted:  make(chan started),
 		chanStatuses: make(chan statuses),
+		chanRestart:  make(chan bool),
 		chanDone:     make(chan struct{}),
 	}
 	w.metrics = newMetrics(w.GetStatuses)
@@ -88,16 +90,16 @@ func (w *Walker) Walk(
 	validationFunc ValidationFunc,
 	scrapeResultModifierFunc ScrapeResultModifierFunc,
 ) (chanLoopStatus chan vo.Status, err error) {
-	var groupValidator *htmlschema.GroupValidator
+	var schemaRoot *htmlschema.Root
 	if conf.SchemaRoot != "" {
-		gv, errGroupValidator := htmlschema.NewGroupValidator(conf.SchemaRoot)
-		if errGroupValidator != nil {
-			return nil, errGroupValidator
+		root, errLoad := htmlschema.LoadRoot(conf.SchemaRoot)
+		if errLoad != nil {
+			return nil, errLoad
 		}
-		groupValidator = gv
+		schemaRoot = root
 	}
 	w.chanStart <- start{
-		groupValidator:           groupValidator,
+		schemaRoot:               schemaRoot,
 		conf:                     *conf,
 		scrapeFunc:               scrapeFunc,
 		linkListFilterFunc:       linkListFilter,
@@ -111,6 +113,18 @@ func (w *Walker) Walk(
 func (w *Walker) Stop() vo.Status {
 	w.chanStop <- vo.Status{}
 	return <-w.chanStop
+}
+
+// Restart starts a new scrape cycle right away - a running cycle is
+// aborted, the wait for a scheduled one ends. False, if there is no walk to
+// restart.
+func (w *Walker) Restart() bool {
+	select {
+	case w.chanRestart <- false:
+	case <-w.chanDone:
+		return false
+	}
+	return <-w.chanRestart
 }
 
 // GetStatus returns the status of the current cycle - once a cycle has

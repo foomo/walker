@@ -1,0 +1,35 @@
+{
+  "ID": "car-02",
+  "Name": "Banana Roadster",
+  "Description": "A bright yellow convertible shaped like a banana that is guaranteed to make every traffic jam a little more cheerful and slippery.",
+  "Price": 1899000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Design",
+      "Features": [
+        {
+          "Label": "Colour",
+          "Description": "Ripe yellow with tiny brown spots"
+        },
+        {
+          "Label": "Peelable roof",
+          "Description": "Opens in three elegant strips"
+        }
+      ]
+    },
+    {
+      "Label": "Fun",
+      "Features": [
+        {
+          "Label": "Smile factor",
+          "Description": "Pedestrians wave at you constantly"
+        },
+        {
+          "Label": "Horn",
+          "Description": "Plays a short marimba melody"
+        }
+      ]
+    }
+  ]
+}

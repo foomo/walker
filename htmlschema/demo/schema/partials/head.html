@@ -1,0 +1,15 @@
+<!--
+    head rules of every page - the title is checked per group, it has
+    different lengths for an index and a product
+-->
+<meta charset="*" />
+<meta name="viewport" val:attr-content="required" />
+<meta name="description" val:score="10" val:attr-content="min-length:70; max-length:160" />
+<link rel="canonical" val:score="5" val:attr-href="url:absolute" />
+<meta property="og:site_name" val:attr-content="required" />
+<meta property="og:title" val:score="2" val:attr-content="min-length:10; max-length:90" />
+<meta property="og:description" val:score="2" val:attr-content="min-length:70; max-length:200" />
+<meta property="og:url" val:score="2" val:attr-content="url:absolute" />
+<!-- social networks do not render svg previews -->
+<meta property="og:image" val:optional val:score="3" val:attr-content="url:absolute; regex:\.(png|jpe?g|webp|gif)(\?.*)?$" />
+<meta name="twitter:card" val:optional val:attr-content="one-of:summary|summary_large_image" />

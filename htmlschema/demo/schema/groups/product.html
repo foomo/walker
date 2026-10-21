@@ -1,0 +1,123 @@
+<!--
+    group product - a product page: image, name, price, description and feature sections
+-->
+<html val:attr-lang="one-of:en|de">
+    <head>
+        <title
+            val:score="10"
+            val:penalty="20"
+            val:min-length="20"
+            val:max-length="60"
+        />
+        <val:include path="/partials/head" />
+        <meta property="og:type" content="product" />
+        <meta property="product:price:amount" content="*" val:score="2" />
+        <meta
+            property="product:price:currency"
+            val:attr-content="one-of:EUR|USD|CHF"
+        />
+    </head>
+    <body>
+        <val:ld type="Product" score="20">
+            <val:prop path="name" min-length="3" max-length="60" />
+            <val:prop path="description" min-length="70" />
+            <val:prop path="image" value="url:absolute" />
+            <val:prop path="sku" value="required" />
+            <val:prop path="offers.price" value="regex:^[0-9]+\.[0-9]{2}$" />
+            <val:prop path="offers.priceCurrency" value="one-of:EUR|USD|CHF" />
+            <val:prop
+                path="offers.availability"
+                value="regex:^https://schema\.org/(InStock|OutOfStock|PreOrder)$"
+            />
+            <!-- recommended for merchant listings: missing costs points, wrong is a finding -->
+            <val:prop path="brand.name" optional score="2" min-length="2" />
+            <val:prop
+                path="offers.itemCondition"
+                optional
+                score="1"
+                value="regex:^https://schema\.org/(New|Used|Refurbished|Damaged)Condition$"
+            />
+            <val:prop
+                path="offers.priceValidUntil"
+                optional
+                score="1"
+                value="regex:^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            />
+            <val:prop
+                path="offers.shippingDetails.shippingRate.value"
+                optional
+                score="2"
+                value="regex:^[0-9]+(\.[0-9]+)?$"
+            />
+            <val:prop
+                path="offers.shippingDetails.shippingRate.currency"
+                optional
+                value="one-of:EUR|USD|CHF"
+            />
+            <val:prop
+                path="offers.shippingDetails.shippingDestination.addressCountry"
+                optional
+                score="1"
+                value="regex:^[A-Z]{2}$"
+            />
+            <val:prop
+                path="offers.shippingDetails.deliveryTime.transitTime.maxValue"
+                optional
+                score="1"
+                value="regex:^[0-9]+$"
+            />
+            <val:prop
+                path="offers.hasMerchantReturnPolicy.returnPolicyCategory"
+                optional
+                score="2"
+                value="regex:^https://schema\.org/MerchantReturn(FiniteReturnWindow|NotPermitted|UnlimitedWindow)$"
+            />
+            <val:prop
+                path="offers.hasMerchantReturnPolicy.merchantReturnDays"
+                optional
+                score="1"
+                value="regex:^[0-9]+$"
+            />
+        </val:ld>
+        <val:ld type="BreadcrumbList" score="5">
+            <val:prop path="itemListElement.item" value="url:absolute" />
+        </val:ld>
+        <val:include path="/partials/page-baseline" />
+        <val:comp path="/partials/site-header" />
+        <main>
+            <val:comp path="/partials/breadcrumbs" />
+            <article>
+                <val:wildcard for="div">
+                    <figure val:score="2">
+                        <img
+                            val:score="3"
+                            val:attr-alt="min-length:3"
+                            val:attr-src="required"
+                        />
+                    </figure>
+                    <h1
+                        val:score="20"
+                        val:penalty="50"
+                        val:min-length="3"
+                        val:max-length="60"
+                    />
+                    <p class="price" val:score="5" val:min-length="3" />
+                    <p
+                        class="description"
+                        val:score="2"
+                        val:score-per="words:10"
+                        val:score-max="10"
+                        val:min-words="12"
+                    />
+                    <val:choice min="1" max="6" score-max="30">
+                        <val:comp
+                            path="/components/feature-section"
+                            val:max="6"
+                        />
+                    </val:choice>
+                </val:wildcard>
+            </article>
+        </main>
+        <val:comp path="/partials/site-footer" />
+    </body>
+</html>

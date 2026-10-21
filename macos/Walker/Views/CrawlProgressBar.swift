@@ -3,7 +3,9 @@ import SwiftUI
 /// CrawlProgressBar shows the progress of a running scrape: the crawled pages,
 /// colored by status class, as a share of all known pages - crawled and open.
 struct CrawlProgressBar: View {
-    let summary: ScrapeSummary?
+    let summary: WalkerVO.ScrapeSummary?
+    /// opacity of the colors - low enough to read text on top
+    var opacity: Double = 0.35
 
     /// Segment is one status class of the crawled pages
     struct Segment: Identifiable, Equatable {
@@ -17,7 +19,7 @@ struct CrawlProgressBar: View {
         ("2xx", 200), ("3xx", 300), ("4xx", 400), ("5xx", 500), ("failed", 0),
     ]
 
-    static func segments(of summary: ScrapeSummary?) -> [Segment] {
+    static func segments(of summary: WalkerVO.ScrapeSummary?) -> [Segment] {
         var pages: [String: Int] = [:]
         for (code, count) in summary?.statusCodes ?? [:] {
             let id = switch code {
@@ -46,21 +48,20 @@ struct CrawlProgressBar: View {
                 if total > 0 {
                     ForEach(Self.segments(of: summary)) { segment in
                         Rectangle()
-                            .fill(segment.color.opacity(0.35))
+                            .fill(segment.color.opacity(opacity))
                             .frame(width: geometry.size.width * CGFloat(segment.pages) / CGFloat(total))
                     }
                 }
                 Spacer(minLength: 0)
             }
         }
-        .clipShape(.capsule)
         .animation(.smooth, value: Self.segments(of: summary))
         .animation(.smooth, value: total)
         .allowsHitTesting(false)
     }
 
     /// help describes the progress, e.g. "412 of 1,203 pages crawled · 380 × 200, 12 × 404"
-    static func help(for summary: ScrapeSummary?) -> String {
+    static func help(for summary: WalkerVO.ScrapeSummary?) -> String {
         guard let summary, summary.running else { return "No scrape is running" }
         let codes = (summary.statusCodes ?? [:])
             .sorted { $0.value > $1.value }

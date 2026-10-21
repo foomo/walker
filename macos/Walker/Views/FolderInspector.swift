@@ -3,13 +3,13 @@ import SwiftUI
 /// FolderInspector shows a folder of the tree and - if it was scraped - the
 /// folder's own page, e.g. https://example.com/shop for the folder shop.
 struct FolderInspector: View {
-    let folder: Folder
-    let page: ScrapeResult?
+    let folder: WalkerVO.Folder
+    let page: WalkerVO.ScrapeResult?
     /// isLoading is true until the results of the folder arrived
     let isLoading: Bool
     let lookup: ResultLookup
     /// open navigates to a sub folder
-    let open: (Folder) -> Void
+    let open: (WalkerVO.Folder) -> Void
 
     var body: some View {
         Form {

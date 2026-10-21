@@ -13,11 +13,12 @@ import (
 )
 
 const (
-	labelScrape         = "scrape"
-	labelGroup          = "group"
-	labelStatus         = "status"
-	labelPath           = "path"
-	labelValidationType = "type"
+	labelScrape    = "scrape"
+	labelGroup     = "group"
+	labelStatus    = "status"
+	labelPath      = "path"
+	labelSeverity  = "severity"
+	labelComponent = "component"
 
 	scrapeCurrent  = "current"
 	scrapeComplete = "complete"
@@ -105,15 +106,25 @@ var (
 		"duration of the scrape cycle - elapsed time while it is running",
 		[]string{labelScrape}, nil,
 	)
-	descValidationScore = prometheus.NewDesc(
-		"walker_scrape_validation_score",
-		"average html schema score of the validated pages",
+	descSchemaScore = prometheus.NewDesc(
+		"walker_scrape_schema_score_ratio",
+		"average share of the maximum html schema score the validated pages reached",
 		[]string{labelScrape, labelGroup, labelPath}, nil,
 	)
-	descValidationPenalty = prometheus.NewDesc(
-		"walker_scrape_validation_penalty",
-		"average html schema penalty of the validated pages by validation type",
-		[]string{labelScrape, labelGroup, labelPath, labelValidationType}, nil,
+	descSchemaPenalty = prometheus.NewDesc(
+		"walker_scrape_schema_penalty",
+		"average html schema penalty of the validated pages",
+		[]string{labelScrape, labelGroup, labelPath}, nil,
+	)
+	descSchemaFindings = prometheus.NewDesc(
+		"walker_scrape_schema_findings",
+		"average number of html schema findings of the validated pages by severity",
+		[]string{labelScrape, labelGroup, labelPath, labelSeverity}, nil,
+	)
+	descSchemaComponentScore = prometheus.NewDesc(
+		"walker_scrape_schema_component_score_ratio",
+		"share of the maximum html schema score the instances of a component reached",
+		[]string{labelScrape, labelGroup, labelComponent}, nil,
 	)
 )
 
@@ -155,8 +166,10 @@ func (c *scrapeCollector) Describe(ch chan<- *prometheus.Desc) {
 		descScrapeStarted,
 		descScrapeCompleted,
 		descScrapeDuration,
-		descValidationScore,
-		descValidationPenalty,
+		descSchemaScore,
+		descSchemaPenalty,
+		descSchemaFindings,
+		descSchemaComponentScore,
 	} {
 		ch <- d
 	}
@@ -245,11 +258,18 @@ func (c *scrapeCollector) scrapeMetrics(scrape string, status vo.Status) []prome
 			descScrapeRequestDuration, h.count, h.sum, h.buckets, scrape, group,
 		))
 	}
-	for _, v := range aggregateValidations(status) {
-		metrics = append(metrics, gauge(descValidationScore, v.averageScore(), v.group, v.path))
-		for validationType, penalty := range v.averagePenalties() {
-			metrics = append(metrics, gauge(descValidationPenalty, penalty, v.group, v.path, validationType))
+	validations, components := aggregateValidations(status)
+	for _, v := range validations {
+		metrics = append(metrics,
+			gauge(descSchemaScore, v.averageRatio(), v.group, v.path),
+			gauge(descSchemaPenalty, v.averagePenalty(), v.group, v.path),
+		)
+		for severity, count := range v.averageFindings() {
+			metrics = append(metrics, gauge(descSchemaFindings, count, v.group, v.path, string(severity)))
 		}
+	}
+	for _, c := range components {
+		metrics = append(metrics, gauge(descSchemaComponentScore, c.ratio(), c.group, c.component))
 	}
 	return metrics
 }

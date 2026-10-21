@@ -1,0 +1,49 @@
+[tools]
+go = "1.27"
+# gotsrpc must match github.com/foomo/gotsrpc/v3 in go.mod
+"go:github.com/foomo/gotsrpc/v3/cmd/gotsrpc" = "3.2.0"
+
+[tasks.build]
+description = "Build everything"
+run = "go build ./..."
+
+[tasks.test]
+description = "Run all tests"
+run = "go test ./..."
+
+[tasks.walker]
+description = "Run the crawler + web UI, e.g. mise run walker cmd/walker/config.yaml"
+run = "go run ./cmd/walker"
+
+[tasks.demo]
+description = "Run the demo shop on :8080"
+run = "go run ./cmd/demo"
+
+[tasks.validator]
+description = "Validate one page: mise run validator schema-root group https://host/page"
+run = "go run ./cmd/validator"
+
+[tasks.configvalidator]
+description = "Validate a walker config: mise run configvalidator config.yaml"
+run = "go run ./cmd/configvalidator"
+
+[tasks."generate:go"]
+description = "Generate the Go gotsrpc proxy"
+run = "gotsrpc gotsrpc.yaml"
+
+# goswiftrpc is pre-alpha and has no mise support yet, so it is installed on every run
+[tasks."generate:swift"]
+description = "Generate the Swift client in macos/Walker/Generated"
+run = """
+go install github.com/foomo/goswiftrpc/cmd/goswiftrpc@latest
+BIN=$(go env GOBIN)
+"${BIN:-$(go env GOPATH)/bin}/goswiftrpc" generate goswiftrpc.yaml
+"""
+
+[tasks.generate]
+description = "Regenerate the Go proxy and the Swift client"
+depends = ["generate:go", "generate:swift"]
+
+[tasks.lsp]
+description = "Install the htmlschema language server"
+run = "go install ./cmd/htmlschema-lsp"

@@ -37,7 +37,7 @@ func scrape(
 	groupHeader string,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
-	groupValidator *htmlschema.GroupValidator,
+	schemaRoot *htmlschema.Root,
 	chanResult chan scrapeResultAndClient,
 ) {
 	result := vo.ScrapeResult{
@@ -99,10 +99,12 @@ func scrape(
 
 		resp.Body = bodyReadCloser
 
-		if groupValidator != nil {
-			report, errValidate := groupValidator.Validate(result.Group, bodyBytes, nil)
+		if schemaRoot != nil {
+			report, errValidate := schemaRoot.Validate(result.Group, bodyBytes)
 			result.ValidationReport = report
-			result.ValidionError = errValidate
+			if errValidate != nil {
+				result.ValidationError = errValidate.Error()
+			}
 		}
 
 		nextDoc, errNewDoc := goquery.NewDocumentFromReader(bytes.NewBuffer(bodyBytes))

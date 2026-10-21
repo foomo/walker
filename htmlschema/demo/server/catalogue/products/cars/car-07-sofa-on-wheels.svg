@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="t">
+  <title id="t">Sofa on Wheels</title>
+  <rect width="200" height="200" rx="24" fill="#f5f6fa"/>
+  <rect x="0" y="150" width="200" height="50" fill="#dfe6e9"/>
+  <path d="M58 98 L76 66 L132 66 L150 98 Z" fill="#55efc4" opacity="0.85"/>
+  <path d="M74 96 L86 72 L122 72 L134 96 Z" fill="#ffffff" opacity="0.8"/>
+  <rect x="26" y="96" width="148" height="40" rx="14" fill="#55efc4"/>
+  <circle cx="164" cy="112" r="6" fill="#ffeaa7"/>
+  <circle cx="62" cy="140" r="17" fill="#2d3436"/><circle cx="62" cy="140" r="7" fill="#b2bec3"/>
+  <circle cx="140" cy="140" r="17" fill="#2d3436"/><circle cx="140" cy="140" r="7" fill="#b2bec3"/>
+  <path d="M90 116 h20" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+</svg>

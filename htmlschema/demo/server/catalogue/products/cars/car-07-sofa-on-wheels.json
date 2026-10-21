@@ -1,0 +1,35 @@
+{
+  "ID": "car-07",
+  "Name": "Sofa on Wheels",
+  "Description": "Combines the comfort of your favourite living room sofa with the speed of a fairly motivated tortoise and a built in popcorn machine.",
+  "Price": 1299000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Comfort",
+      "Features": [
+        {
+          "Label": "Cushions",
+          "Description": "Fluffy, removable and machine washable"
+        },
+        {
+          "Label": "Recline",
+          "Description": "Full nap mode at the traffic light"
+        }
+      ]
+    },
+    {
+      "Label": "Entertainment",
+      "Features": [
+        {
+          "Label": "Popcorn machine",
+          "Description": "Salted or sweet, never both"
+        },
+        {
+          "Label": "Remote",
+          "Description": "Always findable, unlike at home"
+        }
+      ]
+    }
+  ]
+}

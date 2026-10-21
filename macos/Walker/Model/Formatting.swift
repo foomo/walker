@@ -1,9 +1,8 @@
 import SwiftUI
 
-// The generated client defines `Duration` for go's time.Duration (nanoseconds).
-// It shadows Swift.Duration in this module - spell out Swift.Duration where the
-// standard library type is meant.
-extension Duration {
+// The generated client defines `GoTime.Duration` for go's time.Duration
+// (nanoseconds) - a bare `Duration` is Swift.Duration.
+extension GoTime.Duration {
     var swiftDuration: Swift.Duration { .nanoseconds(rawValue) }
 
     var formatted: String {
@@ -11,7 +10,7 @@ extension Duration {
     }
 }
 
-extension ScrapeSummary {
+extension WalkerVO.ScrapeSummary {
     /// elapsed is the duration of a completed scrape, or the time since a running one started
     func elapsed(now: Date = .now) -> Swift.Duration? {
         guard let started else { return nil }
@@ -46,8 +45,8 @@ struct BucketShare: Identifiable, Equatable {
     let index: Int
     let count: Int
     let name: String
-    let from: Duration
-    let to: Duration
+    let from: GoTime.Duration
+    let to: GoTime.Duration
     let pages: Int
     let total: Int
 
@@ -87,16 +86,16 @@ struct BucketShare: Identifiable, Equatable {
         return stops[stops.count - 1].1
     }
 
-    private static func number(_ d: Duration) -> String {
+    private static func number(_ d: GoTime.Duration) -> String {
         d.rawValue >= 1_000_000_000 ? String(d.rawValue / 1_000_000_000) : String(d.rawValue / 1_000_000)
     }
 
-    private static func format(_ d: Duration) -> String {
+    private static func format(_ d: GoTime.Duration) -> String {
         d.rawValue >= 1_000_000_000 ? "\(number(d)) s" : "\(number(d)) ms"
     }
 }
 
-extension Array where Element == PerformanceBucket {
+extension Array where Element == WalkerVO.PerformanceBucket {
     func shares() -> [BucketShare] {
         let total = reduce(0) { $0 + $1.pages }
         return enumerated().map { index, bucket in
@@ -105,24 +104,24 @@ extension Array where Element == PerformanceBucket {
     }
 
     /// bucketIndex finds the bucket of a duration - [from, to)
-    func bucketIndex(of d: Duration) -> Int {
+    func bucketIndex(of d: GoTime.Duration) -> Int {
         firstIndex { d.rawValue >= $0.from.rawValue && d.rawValue < $0.to.rawValue } ?? Swift.max(count - 1, 0)
     }
 }
 
-extension GroupPerformance {
+extension WalkerVO.GroupPerformance {
     var shares: [BucketShare] { (buckets ?? []).shares() }
 
-    func color(of d: Duration) -> Color {
+    func color(of d: GoTime.Duration) -> Color {
         let buckets = buckets ?? []
         return BucketShare.color(index: buckets.bucketIndex(of: d), count: buckets.count)
     }
 }
 
-extension ScrapeSummary {
+extension WalkerVO.ScrapeSummary {
     /// mergedBuckets sums up the buckets of all groups
-    var mergedBuckets: [PerformanceBucket] {
-        var merged: [PerformanceBucket] = []
+    var mergedBuckets: [WalkerVO.PerformanceBucket] {
+        var merged: [WalkerVO.PerformanceBucket] = []
         for group in performance ?? [] {
             for (index, bucket) in (group.buckets ?? []).enumerated() {
                 if index < merged.count {
@@ -136,7 +135,7 @@ extension ScrapeSummary {
     }
 
     /// share(within:) is the share of pages faster than d - exact on bucket boundaries
-    func share(within d: Duration) -> Double? {
+    func share(within d: GoTime.Duration) -> Double? {
         let buckets = mergedBuckets
         let total = buckets.reduce(0) { $0 + $1.pages }
         guard total > 0 else { return nil }
@@ -147,7 +146,7 @@ extension ScrapeSummary {
 
 // MARK: - paths
 
-extension ScrapeResult {
+extension WalkerVO.ScrapeResult {
     /// path is the target url without scheme and host, e.g. "/shop/a?color=red"
     var path: String { targetURL.urlPath }
 

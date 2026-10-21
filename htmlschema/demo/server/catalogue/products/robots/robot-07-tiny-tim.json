@@ -1,0 +1,35 @@
+{
+  "ID": "robot-07",
+  "Name": "Tiny Tim",
+  "Description": "Beeps.",
+  "Price": 9900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Size",
+      "Features": [
+        {
+          "Label": "Pocket format",
+          "Description": "Fits into any coat pocket"
+        },
+        {
+          "Label": "Weight",
+          "Description": "Lighter than a sandwich"
+        }
+      ]
+    },
+    {
+      "Label": "Talents",
+      "Features": [
+        {
+          "Label": "Beeping",
+          "Description": "In four different keys"
+        },
+        {
+          "Label": "Blinking",
+          "Description": "One very small green light"
+        }
+      ]
+    }
+  ]
+}

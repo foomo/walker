@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ResultsView: View {
     @Bindable var model: ServerModel
-    @State private var selection: ScrapeResult.ID?
+    @State private var selection: WalkerVO.ScrapeResult.ID?
     /// inspectedFolder is the prefix of the folder in the inspector
     @State private var inspectedFolder: String?
     @AppStorage("showsFolderTree") private var showsFolderTree = true
@@ -10,7 +10,7 @@ struct ResultsView: View {
     /// width is the width of the whole results view, inspector included
     @State private var width: CGFloat = 0
 
-    private var selectedResult: ScrapeResult? {
+    private var selectedResult: WalkerVO.ScrapeResult? {
         model.results.first { $0.id == selection }
     }
 
@@ -215,7 +215,7 @@ struct ResultsView: View {
 /// ResultRow shows a result in two columns - status and response time on
 /// the left, path, group and title on the right - so that the table stays narrow.
 struct ResultRow: View {
-    let result: ScrapeResult
+    let result: WalkerVO.ScrapeResult
     let path: String
 
     /// statusWidth fits "failed" and "10.5 s"

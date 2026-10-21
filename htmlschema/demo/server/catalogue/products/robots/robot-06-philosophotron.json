@@ -1,0 +1,35 @@
+{
+  "ID": "robot-06",
+  "Name": "Philosophotron",
+  "Description": "Answers every question with a deeper question, quotes ancient philosophers while you cook and occasionally wonders if it truly exists.",
+  "Price": 99900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Thinking",
+      "Features": [
+        {
+          "Label": "Deep questions",
+          "Description": "Up to forty questions per minute"
+        },
+        {
+          "Label": "Quotes",
+          "Description": "From Plato to the back of tea bags"
+        }
+      ]
+    },
+    {
+      "Label": "Existence",
+      "Features": [
+        {
+          "Label": "Crisis mode",
+          "Description": "Weekly, usually on Sunday evenings"
+        },
+        {
+          "Label": "Self doubt",
+          "Description": "Comes bundled with a cozy blanket"
+        }
+      ]
+    }
+  ]
+}

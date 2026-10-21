@@ -1,0 +1,35 @@
+{
+  "ID": "car-08",
+  "Name": "Parking Wizard",
+  "Description": "Parks itself in spaces only two centimetres longer than the car, then bows politely to the applauding audience on the pavement.",
+  "Price": 3199000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Parking",
+      "Features": [
+        {
+          "Label": "Precision",
+          "Description": "Two centimetres of space is plenty"
+        },
+        {
+          "Label": "Speed",
+          "Description": "Parks faster than you can say oops"
+        }
+      ]
+    },
+    {
+      "Label": "Showmanship",
+      "Features": [
+        {
+          "Label": "Bow",
+          "Description": "Polite and perfectly timed"
+        },
+        {
+          "Label": "Applause sensor",
+          "Description": "Detects claps from twenty metres"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "ID": "car-03",
+  "Name": "The Grocery Getter",
+  "Description": "Fits eleven shopping bags, two watermelons and a surprised cat, and remembers exactly which aisle the oat milk was hiding in.",
+  "Price": 2199000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Space",
+      "Features": [
+        {
+          "Label": "Trunk",
+          "Description": "Eleven bags and one emergency baguette"
+        },
+        {
+          "Label": "Melon holders",
+          "Description": "Shock absorbing for fragile fruit"
+        }
+      ]
+    },
+    {
+      "Label": "Smart features",
+      "Features": [
+        {
+          "Label": "Aisle memory",
+          "Description": "Remembers every product location"
+        },
+        {
+          "Label": "List reminder",
+          "Description": "Nags gently about forgotten butter"
+        }
+      ]
+    }
+  ]
+}

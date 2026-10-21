@@ -1,0 +1,33 @@
+{{define "product"}}{{template "head" .}}
+<main>
+    {{template "breadcrumbs" .Breadcrumbs}}
+    <article class="product">
+        <div class="product-top">
+            <figure>
+                <img
+                    src="{{.Product.Image}}"
+                    alt="{{.Product.Name}}"
+                    width="360"
+                    height="360"
+                />
+            </figure>
+            <div class="product-info">
+                <h1>{{.Product.Name}}</h1>
+                <p class="price">{{price .Product}}</p>
+                <p class="description">{{.Product.Description}}</p>
+            </div>
+        </div>
+        {{- range .Product.FeatureSections}}
+        <section class="features" data-component="feature-section">
+            <h2>{{.Label}}</h2>
+            <dl>
+                {{- range .Features}}
+                <dt>{{.Label}}</dt>
+                <dd>{{.Description}}</dd>
+                {{- end}}
+            </dl>
+        </section>
+        {{- end}}
+    </article>
+</main>
+{{template "footer" .}}{{end}}

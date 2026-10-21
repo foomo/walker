@@ -1,0 +1,278 @@
+:root {
+    --bg: #f7f8fb;
+    --surface: #ffffff;
+    --text: #1f2430;
+    --muted: #5f6675;
+    --accent: #5b4ae0;
+    --accent-soft: #ece9ff;
+    --border: #e3e6ee;
+    --radius: 16px;
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #14161c;
+        --surface: #1d2029;
+        --text: #eceef3;
+        --muted: #a2a8b6;
+        --accent: #a89cff;
+        --accent-soft: #2a2648;
+        --border: #2e3240;
+        color-scheme: dark;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+code {
+    background: var(--accent-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+/* header */
+
+.site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem clamp(1rem, 4vw, 3rem);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--text);
+}
+
+.site-header ul {
+    display: flex;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.site-header nav a {
+    display: block;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.site-header nav a[aria-current="page"],
+.site-header nav a:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+    text-decoration: none;
+}
+
+/* main */
+
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem clamp(1rem, 4vw, 3rem) 4rem;
+}
+
+h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1.2;
+    margin: 0.5rem 0 1rem;
+}
+
+.lead {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 65ch;
+}
+
+section {
+    margin-top: 3rem;
+}
+
+/* breadcrumbs */
+
+.breadcrumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.9rem;
+}
+
+.breadcrumbs li + li::before {
+    content: "›";
+    margin: 0 0.5rem;
+    color: var(--muted);
+}
+
+.breadcrumbs a[aria-current="page"] {
+    color: var(--muted);
+}
+
+/* tiles */
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tile:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(20, 20, 50, 0.08);
+}
+
+.tile a {
+    color: var(--text);
+}
+
+.tile img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: calc(var(--radius) - 6px);
+}
+
+.tile h2,
+.tile h3 {
+    font-size: 1.1rem;
+    margin: 0.75rem 0 0.25rem;
+}
+
+.tile p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.price {
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.tile .price {
+    color: var(--accent);
+}
+
+/* product */
+
+.product-top {
+    display: grid;
+    grid-template-columns: minmax(220px, 360px) 1fr;
+    gap: 2.5rem;
+    align-items: start;
+    margin-top: 1rem;
+}
+
+@media (max-width: 720px) {
+    .product-top {
+        grid-template-columns: 1fr;
+    }
+}
+
+.product figure {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+}
+
+.product figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.product-info .price {
+    font-size: 1.6rem;
+    margin: 0 0 1rem;
+}
+
+.description {
+    font-size: 1.1rem;
+}
+
+.features {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.features h2 {
+    font-size: 1.2rem;
+    margin: 0 0 0.75rem;
+}
+
+.features dl {
+    display: grid;
+    grid-template-columns: minmax(140px, max-content) 1fr;
+    gap: 0.5rem 1.5rem;
+    margin: 0;
+}
+
+.features dt {
+    font-weight: 600;
+}
+
+.features dd {
+    margin: 0;
+    color: var(--muted);
+}
+
+/* footer */
+
+.site-footer {
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 2rem clamp(1rem, 4vw, 3rem);
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.site-footer nav {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 0.75rem;
+}

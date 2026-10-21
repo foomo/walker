@@ -1,7 +1,6 @@
 package reports
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -86,8 +85,6 @@ func reportSEO(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 			if !foundH1 {
 				missingH1.add(finalURL)
 			}
-		} else {
-			fmt.Println(r.ContentType)
 		}
 	}
 	printDuplicates := func(title string, d duplications) {

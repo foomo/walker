@@ -1,0 +1,35 @@
+{
+  "ID": "car-06",
+  "Name": "Moonwalker Coupe",
+  "Description": "A coupe that drives backwards with style, moonwalks out of parking spaces and leaves every audience speechless at the petrol station.",
+  "Price": 4299000,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Moves",
+      "Features": [
+        {
+          "Label": "Moonwalk",
+          "Description": "Smooth reverse gliding at any speed"
+        },
+        {
+          "Label": "Spin",
+          "Description": "One graceful pirouette per tank"
+        }
+      ]
+    },
+    {
+      "Label": "Style",
+      "Features": [
+        {
+          "Label": "Glove box",
+          "Description": "Contains one sparkly white glove"
+        },
+        {
+          "Label": "Lights",
+          "Description": "Dance floor underbody lighting"
+        }
+      ]
+    }
+  ]
+}

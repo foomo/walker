@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		7A00000000000000000000A2 /* GraphLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 7A00000000000000000000A1 /* GraphLayout */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		7A0000000000000000000001 /* Walker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Walker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A0000000000000000000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -22,12 +18,6 @@
 			path = Walker;
 			sourceTree = "<group>";
 		};
-		7A0000000000000000000011 /* GotsRPC */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = GotsRPC;
-			path = ../swift;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -35,7 +25,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7A00000000000000000000A2 /* GraphLayout in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,7 +35,6 @@
 			isa = PBXGroup;
 			children = (
 				7A0000000000000000000010 /* Walker */,
-				7A0000000000000000000011 /* GotsRPC */,
 				7A0000000000000000000002 /* Info.plist */,
 				7A0000000000000000000003 /* Walker.entitlements */,
 				7A0000000000000000000031 /* Products */,
@@ -71,6 +59,7 @@
 				7A0000000000000000000050 /* Sources */,
 				7A0000000000000000000020 /* Frameworks */,
 				7A0000000000000000000051 /* Resources */,
+				7A00000000000000000000B0 /* helpers */,
 			);
 			buildRules = (
 			);
@@ -78,12 +67,8 @@
 			);
 			fileSystemSynchronizedGroups = (
 				7A0000000000000000000010 /* Walker */,
-				7A0000000000000000000011 /* GotsRPC */,
 			);
 			name = Walker;
-			packageProductDependencies = (
-				7A00000000000000000000A1 /* GraphLayout */,
-			);
 			productName = Walker;
 			productReference = 7A0000000000000000000001 /* Walker.app */;
 			productType = "com.apple.product-type.application";
@@ -112,9 +97,6 @@
 			);
 			mainGroup = 7A0000000000000000000030;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				7A00000000000000000000A0 /* XCLocalSwiftPackageReference "Packages/GraphLayout" */,
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7A0000000000000000000031 /* Products */;
 			projectDirPath = "";
@@ -134,6 +116,29 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		7A00000000000000000000B0 /* helpers */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = helpers;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# builds cmd/walker and cmd/configvalidator into Contents/Helpers - the app runs\n# local walkers with the first, the config editor uses the second\n# go is the toolchain pinned in the repo's mise.toml\nset -e\nROOT=$(cd \"$SRCROOT/..\" && pwd)\nexport PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin\"\nif ! command -v mise >/dev/null; then\n  echo \"error: mise is needed to build the walker helpers - https://mise.jdx.dev, then run 'mise trust && mise install' in $ROOT\"\n  exit 1\nfi\nif ! GO=$(mise -C \"$ROOT\" which go 2>/dev/null); then\n  echo \"error: go from mise.toml is not available - run 'mise trust && mise install' in $ROOT\"\n  exit 1\nfi\nexport GOTOOLCHAIN=local\necho \"building helpers with $(\"$GO\" version)\"\nHELPERS=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Helpers\"\nmkdir -p \"$HELPERS\"\nfor TOOL in walker configvalidator; do\n  SLICES=\"\"\n  for ARCH in $ARCHS; do\n    GOARCH=\"$ARCH\"\n    if [ \"$ARCH\" = \"x86_64\" ]; then GOARCH=amd64; fi\n    OUT=\"$DERIVED_FILE_DIR/$TOOL-$ARCH\"\n    CGO_ENABLED=0 GOOS=darwin GOARCH=\"$GOARCH\" \"$GO\" build -C \"$ROOT\" -trimpath -o \"$OUT\" \"./cmd/$TOOL\"\n    SLICES=\"$SLICES $OUT\"\n  done\n  lipo -create $SLICES -output \"$HELPERS/$TOOL\"\n  codesign --force --options runtime --timestamp=none --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" \"$HELPERS/$TOOL\"\ndone\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		7A0000000000000000000050 /* Sources */ = {
@@ -204,6 +209,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Walker;
@@ -232,6 +238,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Walker;
@@ -270,20 +277,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCLocalSwiftPackageReference section */
-		7A00000000000000000000A0 /* XCLocalSwiftPackageReference "Packages/GraphLayout" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/GraphLayout;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		7A00000000000000000000A1 /* GraphLayout */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = GraphLayout;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7A0000000000000000000060 /* Project object */;
 }

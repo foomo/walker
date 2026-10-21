@@ -1,0 +1,76 @@
+<!--
+    group category - a category with all its products as tiles
+-->
+<html val:attr-lang="one-of:en|de">
+    <head>
+        <title val:score="10" val:min-length="10" val:max-length="60" />
+        <val:include path="/partials/head" />
+        <meta property="og:type" content="website" />
+    </head>
+    <body>
+        <val:ld type="BreadcrumbList" score="5">
+            <val:prop path="itemListElement.item" value="url:absolute" />
+        </val:ld>
+        <!--
+            a host carousel: every list item is a complete product with its own
+            page - every checks all of them, one good product must not hide a bad one
+        -->
+        <val:ld type="ItemList" score="10">
+            <val:prop
+                path="itemListElement.position"
+                every
+                value="regex:^[0-9]+$"
+            />
+            <val:prop
+                path="itemListElement.item.@type"
+                every
+                value="one-of:Product"
+            />
+            <val:prop
+                path="itemListElement.item.name"
+                every
+                min-length="3"
+                max-length="60"
+                severity="warn"
+            />
+            <val:prop
+                path="itemListElement.item.url"
+                every
+                value="url:absolute"
+            />
+            <val:prop
+                path="itemListElement.item.image"
+                every
+                value="url:absolute"
+            />
+            <val:prop
+                path="itemListElement.item.offers.price"
+                every
+                value="regex:^[0-9]+\.[0-9]{2}$"
+            />
+            <val:prop
+                path="itemListElement.item.offers.priceCurrency"
+                every
+                value="one-of:EUR|USD|CHF|DOGE"
+            />
+        </val:ld>
+        <val:include path="/partials/page-baseline" />
+        <val:comp path="/partials/site-header" />
+        <main>
+            <val:comp path="/partials/breadcrumbs" />
+            <h1
+                val:score="20"
+                val:min-length="3"
+                val:max-length="70"
+                val:penalty="50"
+            />
+            <p class="lead" val:score="10" val:min-words="15" />
+            <val:wildcard for="div">
+                <val:choice min="1" max="40" score-max="100">
+                    <val:comp path="/components/product-tile" val:max="40" />
+                </val:choice>
+            </val:wildcard>
+        </main>
+        <val:comp path="/partials/site-footer" />
+    </body>
+</html>

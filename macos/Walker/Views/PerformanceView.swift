@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PerformanceView: View {
     let model: ServerModel
-    private var summary: ScrapeSummary? {
+    private var summary: WalkerVO.ScrapeSummary? {
         switch model.scrape {
         case .current: model.current
         case .complete: model.complete
@@ -10,28 +10,32 @@ struct PerformanceView: View {
     }
 
     var body: some View {
-        Group {
-            if let summary, !(summary.performance ?? []).isEmpty {
-                ScrollView {
+        // the live metrics over time on top, the performance of the selected scrape below
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                LiveMetricsView(metrics: model.liveMetrics)
+                Divider()
+                if let summary, !(summary.performance ?? []).isEmpty {
                     PerformanceDetails(summary: summary)
-                        .padding()
+                } else {
+                    ContentUnavailableView(
+                        model.scrape == .current ? "No Scrape Running" : "No Complete Scrape",
+                        systemImage: "gauge.with.dots.needle.33percent",
+                        description: Text(model.scrape == .current ? "Switch to the last complete scrape, or wait for the next one." : "The first scrape has not completed yet.")
+                    )
+                    .frame(minHeight: 240)
                 }
-            } else {
-                ContentUnavailableView(
-                    model.scrape == .current ? "No Scrape Running" : "No Complete Scrape",
-                    systemImage: "gauge.with.dots.needle.33percent",
-                    description: Text(model.scrape == .current ? "Switch to the last complete scrape, or wait for the next one." : "The first scrape has not completed yet.")
-                )
             }
+            .padding()
         }
     }
 }
 
 /// PerformanceDetails renders the performance of one scrape - the same for current and complete.
 struct PerformanceDetails: View {
-    let summary: ScrapeSummary
+    let summary: WalkerVO.ScrapeSummary
 
-    private var groups: [GroupPerformance] {
+    private var groups: [WalkerVO.GroupPerformance] {
         // slowest groups first - that is where to look
         (summary.performance ?? []).sorted { $0.p90.rawValue > $1.p90.rawValue }
     }
@@ -43,7 +47,7 @@ struct PerformanceDetails: View {
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .firstTextBaseline) {
-                        if let within = summary.share(within: Duration(rawValue: 200_000_000)) {
+                        if let within = summary.share(within: GoTime.Duration(rawValue: 200_000_000)) {
                             Text(within, format: .percent.precision(.fractionLength(0)))
                                 .font(.system(.largeTitle, design: .rounded).weight(.semibold))
                                 .foregroundStyle(within >= 0.9 ? .green : within >= 0.6 ? .orange : .red)

@@ -4,38 +4,71 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/foomo/walker/htmlschema"
 	"github.com/foomo/walker/vo"
 )
 
+var severities = []htmlschema.Severity{htmlschema.SeverityError, htmlschema.SeverityWarn, htmlschema.SeverityInfo}
+
+// validationAggregate sums up the schema validation reports of the pages of a
+// group below a path - score and penalty are kept apart
 type validationAggregate struct {
-	group     string
-	path      string
-	pages     int
-	score     int
-	penalties map[string]int
+	group string
+	path  string
+	pages int
+	// ratio is the sum of points / max of the pages with a maximum score
+	ratio      float64
+	ratioPages int
+	penalty    int
+	findings   map[htmlschema.Severity]int
 }
 
-func (v *validationAggregate) averageScore() float64 {
-	return float64(v.score) / float64(v.pages)
+func (v *validationAggregate) averageRatio() float64 {
+	if v.ratioPages == 0 {
+		return 0
+	}
+	return v.ratio / float64(v.ratioPages)
 }
 
-func (v *validationAggregate) averagePenalties() map[string]float64 {
-	averages := make(map[string]float64, len(v.penalties))
-	for validationType, penalty := range v.penalties {
-		averages[validationType] = float64(penalty) / float64(v.pages)
+func (v *validationAggregate) averagePenalty() float64 {
+	return float64(v.penalty) / float64(v.pages)
+}
+
+func (v *validationAggregate) averageFindings() map[htmlschema.Severity]float64 {
+	averages := make(map[htmlschema.Severity]float64, len(severities))
+	for _, s := range severities {
+		averages[s] = float64(v.findings[s]) / float64(v.pages)
 	}
 	return averages
 }
 
+// componentAggregate sums up the instances of a component in a group
+type componentAggregate struct {
+	group     string
+	component string
+	points    int
+	max       int
+}
+
+func (c *componentAggregate) ratio() float64 {
+	if c.max == 0 {
+		return 0
+	}
+	return float64(c.points) / float64(c.max)
+}
+
 // aggregateValidations sums up the schema validation reports of a status by
-// group and the longest matching target path
-func aggregateValidations(status vo.Status) []*validationAggregate {
+// group and the longest matching target path, and the components by group
+func aggregateValidations(status vo.Status) ([]*validationAggregate, []*componentAggregate) {
 	sortedPaths := sortPathsByLength(status.Paths)
 	type key struct{ group, path string }
 	aggregates := map[key]*validationAggregate{}
 	list := []*validationAggregate{}
+	components := map[key]*componentAggregate{}
+	componentList := []*componentAggregate{}
 	for _, r := range status.Results {
-		if r.ValidationReport == nil {
+		report := r.ValidationReport
+		if report == nil || report.Score == nil {
 			continue
 		}
 		u, errParse := url.Parse(r.TargetURL)
@@ -52,15 +85,30 @@ func aggregateValidations(status vo.Status) []*validationAggregate {
 		k := key{r.Group, path}
 		a, ok := aggregates[k]
 		if !ok {
-			a = &validationAggregate{group: r.Group, path: path, penalties: map[string]int{}}
+			a = &validationAggregate{group: r.Group, path: path, findings: map[htmlschema.Severity]int{}}
 			aggregates[k] = a
 			list = append(list, a)
 		}
 		a.pages++
-		a.score += r.ValidationReport.Score
-		for _, validation := range r.ValidationReport.Validations {
-			a.penalties[string(validation.Type)] += validation.Penalty
+		if report.Score.Max > 0 {
+			a.ratio += float64(report.Score.Points) / float64(report.Score.Max)
+			a.ratioPages++
+		}
+		a.penalty += report.Penalty
+		for _, f := range report.Findings {
+			a.findings[f.Severity]++
+		}
+		for name, summary := range report.Components {
+			ck := key{r.Group, name}
+			c, ok := components[ck]
+			if !ok {
+				c = &componentAggregate{group: r.Group, component: name}
+				components[ck] = c
+				componentList = append(componentList, c)
+			}
+			c.points += summary.Points
+			c.max += summary.Max
 		}
 	}
-	return list
+	return list, componentList
 }

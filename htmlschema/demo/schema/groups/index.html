@@ -1,0 +1,51 @@
+<!--
+    group index - the home page: what the shop is, its categories and how the demo works
+-->
+<html val:attr-lang="one-of:en|de">
+    <head>
+        <title val:score="10" val:min-length="10" val:max-length="60" />
+        <val:include path="/partials/head" />
+        <meta property="og:type" content="website" />
+    </head>
+    <body>
+        <val:ld type="WebSite" score="5">
+            <val:prop path="name" min-length="3" />
+            <val:prop path="url" value="url:absolute" />
+        </val:ld>
+
+        <val:include path="/partials/page-baseline" />
+        <val:comp path="/partials/site-header" />
+        <main>
+            <h1
+                val:score="20"
+                val:min-length="20"
+                val:max-length="70"
+                val:penalty="50"
+            />
+            <p class="lead" val:score="10" val:min-words="20" />
+            <section aria-labelledby="categories">
+                <h2 val:score="2" />
+                <val:wildcard for="div">
+                    <val:choice min="1" max="10" score-max="40">
+                        <val:comp
+                            path="/components/category-tile"
+                            val:max="10"
+                        />
+                    </val:choice>
+                </val:wildcard>
+            </section>
+            <section aria-labelledby="about" val:optional>
+                <h2 />
+                <p
+                    val:min="1"
+                    val:max="*"
+                    val:score="2"
+                    val:score-max="6"
+                    val:min-words="3"
+                    val:max-words="100"
+                />
+            </section>
+        </main>
+        <val:comp path="/partials/site-footer" />
+    </body>
+</html>

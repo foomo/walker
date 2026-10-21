@@ -1,0 +1,35 @@
+{
+  "ID": "robot-09",
+  "Name": "Nanny-Nine",
+  "Description": "Reads bedtime stories in forty voices, negotiates peace treaties between siblings and somehow always knows where the missing sock went.",
+  "Price": 119900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Care",
+      "Features": [
+        {
+          "Label": "Bedtime stories",
+          "Description": "Forty voices, including a convincing dragon"
+        },
+        {
+          "Label": "Sock finder",
+          "Description": "Locates lost socks within a day"
+        }
+      ]
+    },
+    {
+      "Label": "Diplomacy",
+      "Features": [
+        {
+          "Label": "Peace treaties",
+          "Description": "Signed in crayon by all parties"
+        },
+        {
+          "Label": "Snack rationing",
+          "Description": "Fair, firm and fully transparent"
+        }
+      ]
+    }
+  ]
+}

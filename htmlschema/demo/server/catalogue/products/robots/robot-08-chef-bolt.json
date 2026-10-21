@@ -1,0 +1,35 @@
+{
+  "ID": "robot-08",
+  "Name": "Chef Bolt",
+  "Description": "Cooks a five course dinner from whatever is left in the fridge and insists that ketchup on pasta is a culinary crime worth reporting.",
+  "Price": 149900,
+  "Currency": "EUR",
+  "FeatureSections": [
+    {
+      "Label": "Kitchen",
+      "Features": [
+        {
+          "Label": "Leftover magic",
+          "Description": "Turns three carrots into a banquet"
+        },
+        {
+          "Label": "Knife skills",
+          "Description": "Julienne at the speed of light"
+        }
+      ]
+    },
+    {
+      "Label": "Opinions",
+      "Features": [
+        {
+          "Label": "Ketchup policy",
+          "Description": "Strictly forbidden near any pasta"
+        },
+        {
+          "Label": "Food critique",
+          "Description": "Brutally honest, gently delivered"
+        }
+      ]
+    }
+  ]
+}

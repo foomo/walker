@@ -2,10 +2,10 @@ import SwiftUI
 
 /// ResultLookup finds the result for a url the preview navigated to - nil, if
 /// walker did not scrape it
-typealias ResultLookup = @MainActor (String) async throws -> ScrapeResult?
+typealias ResultLookup = @MainActor (String) async throws -> WalkerVO.ScrapeResult?
 
 struct ResultInspector: View {
-    let result: ScrapeResult
+    let result: WalkerVO.ScrapeResult
     let lookup: ResultLookup
 
     var body: some View {
@@ -22,7 +22,7 @@ struct ResultInspector: View {
 /// BrowsableResult previews a result and follows the preview: when the page
 /// navigates, it shows the result of the new url.
 struct BrowsableResult: View {
-    let start: ScrapeResult
+    let start: WalkerVO.ScrapeResult
     let lookup: ResultLookup
     /// highlight outlines links to this url in the preview
     var highlight: String?
@@ -34,13 +34,13 @@ struct BrowsableResult: View {
     enum Browsed {
         case start
         case loading(String)
-        case found(ScrapeResult)
+        case found(WalkerVO.ScrapeResult)
         case notScraped(String)
         case failed(String, String)
     }
 
     /// shown is the result the inspector shows - the start, or where the preview went
-    private var shown: ScrapeResult? {
+    private var shown: WalkerVO.ScrapeResult? {
         switch browsed {
         case .start: start
         case let .found(result): result
@@ -122,7 +122,7 @@ struct BrowsableResult: View {
     }
 }
 
-extension ScrapeResult {
+extension WalkerVO.ScrapeResult {
     /// previewURL is set for html pages that loaded - not for failed requests,
     /// images, json or the like
     var previewURL: URL? {
@@ -153,7 +153,7 @@ extension String {
 /// ResultSections are the form sections of a result - shared by the result
 /// and the folder inspector.
 struct ResultSections: View {
-    let result: ScrapeResult
+    let result: WalkerVO.ScrapeResult
     /// preview shows the page of the result - hovering a heading highlights it there
     var preview: PreviewController?
 
@@ -219,12 +219,22 @@ struct ResultSections: View {
 
             if let report = result.validationReport {
                 Section("Schema validation") {
-                    LabeledContent("Score", value: report.score.formatted())
-                    ForEach(Array((report.validations ?? []).compactMap { $0 }.enumerated()), id: \.offset) { _, validation in
-                        LabeledContent(validation.type.rawValue) {
-                            Text("\(validation.comment) (−\(validation.penalty))")
-                        }
+                    LabeledContent("Schema", value: report.schema)
+                    if let score = report.score {
+                        LabeledContent("Score", value: score.summary)
                     }
+                    // score and penalty are separate measures, never combined
+                    LabeledContent("Penalty", value: report.penalty.formatted())
+                    ForEach(Array((report.findings ?? []).compactMap { $0 }.enumerated()), id: \.offset) { _, finding in
+                        LabeledContent("\(finding.severity.rawValue) \(finding.rule)") {
+                            Text("\(finding.message) (penalty \(finding.penalty))")
+                        }
+                        .help("\(finding.path)\n\(finding.locator)\n\(finding.source)")
+                    }
+                }
+            } else if !result.validationError.isEmpty {
+                Section("Schema validation") {
+                    Text(result.validationError)
                 }
             }
         }
@@ -318,7 +328,7 @@ struct LinksDisclosure: View {
 /// sized by level - and marks what search engines dislike: empty headings,
 /// skipped levels and more than one h1.
 struct HeadingOutline: View {
-    let headings: [Heading]
+    let headings: [WalkerVO.Heading]
     /// onHover reports the heading under the mouse - nil, when it left
     var onHover: ((Position?) -> Void)?
 
@@ -400,7 +410,7 @@ struct HeadingOutline: View {
         .padding(.vertical, 4)
     }
 
-    private func row(_ heading: Heading, issue: Issue?) -> some View {
+    private func row(_ heading: WalkerVO.Heading, issue: Issue?) -> some View {
         let depth = max(min(heading.level, 6) - 1, 0)
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text("H\(heading.level)")
@@ -443,5 +453,16 @@ struct HeadingOutline: View {
         case 4: .body
         default: .callout
         }
+    }
+}
+
+extension HTMLSchemaVO.ScoreNode {
+    /// summary shows the points of the maximum and the share in percent
+    var summary: String {
+        guard max > 0 else {
+            return "\(points)/\(max)"
+        }
+        let share = Double(points) / Double(max)
+        return "\(points)/\(max) (\(share.formatted(.percent.precision(.fractionLength(1)))))"
     }
 }

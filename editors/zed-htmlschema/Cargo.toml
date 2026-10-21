@@ -1,0 +1,14 @@
+[package]
+name = "zed-htmlschema"
+version = "0.1.0"
+# edition 2024 brings resolver 3: dependencies are resolved for rust-version
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+zed_extension_api = "0.7.0"

@@ -3,6 +3,7 @@ package reports
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"sort"
@@ -67,7 +68,7 @@ func GetReportHandler(basePath string) func(
 		completeStatus, runningStatus *vo.Status,
 	) {
 		path := strings.TrimPrefix(r.URL.Path, basePath+"/")
-		fmt.Println("handling reports:", path)
+		slog.Debug("handling report", "path", path)
 		var rep reporter
 		var f scrapeResultFilter
 		switch true {

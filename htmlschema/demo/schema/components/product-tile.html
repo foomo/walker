@@ -1,0 +1,18 @@
+<!-- a product in a category: image, name and price -->
+<val:component marker="product-tile">
+    <a val:attr-href="required" val:score="1">
+        <img
+            val:score="2"
+            val:attr-alt="min-length:3"
+            val:attr-src="required"
+        />
+
+        <h2
+            val:score="2"
+            val:min-length="3"
+            val:max-length="60"
+            val:severity="warn"
+        />
+    </a>
+    <p class="price" val:score="1" val:min-length="3" />
+</val:component>

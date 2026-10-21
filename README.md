@@ -4,6 +4,18 @@ Walker walkes aka as crawls through websites and collects performance and SEO re
 
 **Be careful when crawling your website with walker with aggressive settings, it might take your site down**
 
+## Development
+
+[mise](https://mise.jdx.dev) installs Go and `gotsrpc` from `mise.toml` and runs the common tasks:
+
+```sh
+mise install
+mise tasks                                   # list all tasks
+mise run test
+mise run walker cmd/walker/config-example.yaml
+mise run generate                            # Go proxy + Swift client
+```
+
 ## Configuration
 
 ```yaml
@@ -60,7 +72,7 @@ WIP
 
 ## service API
 
-`cmd/walker` serves the gotsrpc `Service` on `/service` (`POST /service/<Method>` with a JSON array of arguments):
+`cmd/walker` serves the gotsrpc `ServiceInterface` on `/service` (`POST /service/<Method>` with a JSON array of arguments):
 
 - `GetScrapes()` summaries of the last complete and the current scrape (either is `null` if there is none), including the performance buckets, P50, P90 and max per group
 - `GetResults(filters, page, pageSize)` filtered and paged results, `filters.Scrape` selects `"current"` (default) or `"complete"`. `filters.Path` searches the paths (case insensitive, anywhere in the path, without host and query), `filters.MinDur` / `filters.MaxDur` select a duration range `[MinDur, MaxDur)` like a performance bucket, `filters.Groups` selects groups (`""` for results without one), and the filter options list all groups and performance buckets with their page counts. It also returns the folder tree of all result paths of that scrape with page and error counts, from the same snapshot as the page. A folder's `Prefix` has no trailing slash (e.g. `https://example.com/shop`); used as `filters.Prefix` it selects the folder's own page and everything below it, but not `…/shopping`. Any other prefix matches as a plain string prefix
@@ -68,20 +80,24 @@ WIP
 - `GetRedirects(scrape)` the redirecting urls with their hops, where they end, whether they are permanent, and the pages linking to them - the longest chains first
 - `GetLinks(scrape)` every page with the number of pages and links pointing to it and its own links; `GetLinkedFrom(scrape, url, limit)` the pages linking to one url: total, a breakdown by group, and the first `limit` pages with the most links
 - `GetGraph(scrape, options)` the site as a graph of folders down to `Depth`, with edges weighted by links. Links to navigation targets - linked from more than `GlobalShare` of the pages - are left out and listed separately
+- `GetPageGraph(scrape, options, page, max)` the neighborhood of a page as a graph - the page first, the pages linking to it and linked from it, the most linked up to `max`
 - `GetPageFolderLinks(scrape, options, page)` the links of a page to the folder nodes of that graph, without navigation links and links into its own folder
 - `GetFolderPages(scrape, options, folder, max)` the pages a folder node of that graph stands for, the `max` most linked, with the links between them
 - `GetResult(scrape, url)` the result for a url as a browser sees it: exact match, then ignoring the fragment and credentials, then a result redirecting to the url - `null` if it was not scraped
 - `GetStatus()` open / done / pending counts
 
-The Go proxy (`gotsrpc_gen.go`) and the Swift client (`swift/`) are generated from `gotsrpc.yml`:
+The Go proxy (`gotsrpc_gen.go`) is generated from `gotsrpc.yaml`, the Swift client (`macos/Walker/Generated/`) from `goswiftrpc.yaml`:
 
 ```sh
-gotsrpc gotsrpc.yml
+gotsrpc gotsrpc.yaml
+goswiftrpc generate goswiftrpc.yaml
 ```
+
+`mise run generate` does both; it installs `goswiftrpc` (pre-alpha, no mise support yet) with `go install github.com/foomo/goswiftrpc/cmd/goswiftrpc@latest` on every run.
 
 ## macOS app
 
-`macos/Walker.xcodeproj` is a native SwiftUI app (macOS 26) for one or more walker servers. It shows the current and the last complete scrape and browses the results. It compiles the generated client from `swift/` directly. The Graph section shows the site in 3D - laid out by `macos/Packages/GraphLayout` with [Grape](https://github.com/swiftgraphs/Grape)'s force simulation, rendered with RealityKit. Xcode fetches Grape when the project is opened the first time.
+`macos/Walker.xcodeproj` is a native SwiftUI app (macOS 26) for one or more walker servers. It shows the current and the last complete scrape and browses the results. It compiles the generated client from `macos/Walker/Generated/` directly. The app bundles the `walker` and `configvalidator` binaries, built with the Go from `mise.toml` - run `mise trust && mise install` once before building in Xcode.
 
 ```sh
 go run ./cmd/walker path/to/config.yaml   # serves on :3001 by default

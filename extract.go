@@ -2,7 +2,7 @@ package walker
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -40,7 +40,11 @@ func ExtractStructure(doc *goquery.Document) (s vo.Structure, err error) {
 		ld := &vo.LinkedData{}
 		errDoc := json.Unmarshal([]byte(sel.Text()), &ld)
 		if errDoc != nil {
-			fmt.Println("json crap", errDoc)
+			attrs := []any{"error", errDoc}
+			if doc.Url != nil {
+				attrs = append(attrs, "url", doc.Url.String())
+			}
+			slog.Debug("skipping invalid JSON-LD", attrs...)
 			return
 		}
 		s.LinkedData = append(s.LinkedData, *ld)

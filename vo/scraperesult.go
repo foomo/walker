@@ -22,7 +22,7 @@ type ScrapeResult struct {
 	Error            string
 	Code             int
 	ValidationReport *htmlschema.Report
-	ValidionError    error
+	ValidationError  string
 	Status           string
 	ContentType      string
 	Length           int

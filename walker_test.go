@@ -11,7 +11,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/foomo/walker/config"
-	"github.com/foomo/walker/htmlschema/example"
+	"github.com/foomo/walker/htmlschema/demo/server"
 	"github.com/foomo/walker/vo"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,8 +30,7 @@ func TestSortPathsByLength(t *testing.T) {
 }
 
 func TestWalker(t *testing.T) {
-	s := example.NewServer(getExampleDir("htmlschema", "example", "htdocs"))
-	testServer := httptest.NewServer(s)
+	testServer := httptest.NewServer(demoHandler(t))
 	defer testServer.Close()
 	w := NewWalker()
 	conf := &config.Config{
@@ -41,10 +40,10 @@ func TestWalker(t *testing.T) {
 				"/",
 			},
 		},
-		GroupHeader:  example.GroupHeader,
+		GroupHeader:  server.GroupHeader,
 		IgnoreRobots: true,
 		Concurrency:  1,
-		SchemaRoot:   getExampleDir("htmlschema", "example", "schema", "groups"),
+		SchemaRoot:   demoSchemaRoot(),
 	}
 	chanStatus, errWalk := w.Walk(conf, nil, nil, nil, nil)
 	assert.NoError(t, errWalk)
@@ -67,13 +66,11 @@ StatusLoop:
 						groupScore = &score{}
 						groupScores[r.Group] = groupScore
 					}
-					groupScore.score += r.ValidationReport.Score
+					groupScore.score += r.ValidationReport.Score.Points
+					groupScore.penalty += r.ValidationReport.Penalty
 					groupScore.pages++
-					for _, v := range r.ValidationReport.Validations {
-						groupScore.penalty += v.Penalty
-					}
 				} else {
-					fmt.Println("validation error", r.ValidionError)
+					fmt.Println("validation error", r.ValidationError)
 				}
 			}
 			spew.Dump(groupScores)
@@ -97,7 +94,9 @@ func waitForLoop(t *testing.T, chanLoopComplete chan vo.Status, timeout time.Dur
 
 func scheduleTestConf(url string, interval time.Duration) *config.Config {
 	return &config.Config{
-		Target:       config.Target{BaseURL: url, Paths: []string{"/"}},
+		Target: config.Target{BaseURL: url, Paths: []string{"/"}},
+		// only the home page and its css - the overrun test delays every request
+		Ignore:       []string{"/category", "/product", "/images"},
 		IgnoreRobots: true,
 		Concurrency:  2,
 		Interval:     interval,
@@ -106,7 +105,7 @@ func scheduleTestConf(url string, interval time.Duration) *config.Config {
 
 func TestWalkerSchedule(t *testing.T) {
 	interval := 2 * time.Second
-	testServer := httptest.NewServer(example.NewServer(getExampleDir("htmlschema", "example", "htdocs")))
+	testServer := httptest.NewServer(demoHandler(t))
 	defer testServer.Close()
 	w := NewWalker()
 	defer w.Stop()
@@ -139,10 +138,10 @@ func TestWalkerSchedule(t *testing.T) {
 
 func TestWalkerScheduleOverrun(t *testing.T) {
 	interval := time.Second
-	htdocs := example.NewServer(getExampleDir("htmlschema", "example", "htdocs"))
+	shop := demoHandler(t)
 	testServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		time.Sleep(interval + 200*time.Millisecond)
-		htdocs.ServeHTTP(rw, r)
+		shop.ServeHTTP(rw, r)
 	}))
 	defer testServer.Close()
 	w := NewWalker()
@@ -155,4 +154,28 @@ func TestWalkerScheduleOverrun(t *testing.T) {
 	assert.True(t, status.Running, "an overrun cycle must restart immediately")
 	assert.True(t, status.CycleStart.Equal(cycleSlot(status.CycleStart, interval, 0)), "restarted cycle must resync to the schedule")
 	assert.True(t, status.CycleDeadline.After(time.Now().Add(-interval)))
+}
+
+func TestWalkerRestart(t *testing.T) {
+	testServer := httptest.NewServer(demoHandler(t))
+	defer testServer.Close()
+	w := NewWalker()
+	defer w.Stop()
+	assert.False(t, w.Restart(), "nothing to restart before a walk")
+	// scheduled once an hour - without a restart there is no second cycle
+	chanLoopComplete, errWalk := w.Walk(scheduleTestConf(testServer.URL, time.Hour), nil, nil, nil, nil)
+	assert.NoError(t, errWalk)
+	first := waitForLoop(t, chanLoopComplete, 10*time.Second)
+
+	assert.True(t, w.Restart())
+	assert.True(t, w.GetStatus().Running, "the restart starts a cycle right away")
+	second := waitForLoop(t, chanLoopComplete, 10*time.Second)
+	assert.True(t, second.Started.After(first.Started))
+	assert.Equal(t, len(first.Results), len(second.Results))
+
+	// aborting a running cycle: the results of its requests in flight are dropped
+	assert.True(t, w.Restart())
+	assert.True(t, w.Restart())
+	third := waitForLoop(t, chanLoopComplete, 10*time.Second)
+	assert.Equal(t, len(first.Results), len(third.Results))
 }
