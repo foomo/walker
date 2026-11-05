@@ -203,12 +203,20 @@ final class SchemaHighlighter {
     /// how many locators were found in the page, nil removes the highlight.
     @discardableResult
     func highlight(_ node: HTMLSchemaVO.TraceNode?, scroll: Bool = true) async -> (found: Int, total: Int) {
+        await highlight(
+            locators: node?.locators ?? [],
+            color: node.map { $0.status.cssColor } ?? "",
+            missing: node.map { !$0.found } ?? false,
+            scroll: scroll
+        )
+    }
+
+    /// highlight outlines the elements at the locators in a css color
+    @discardableResult
+    func highlight(locators: [String], color: String, missing: Bool = false, scroll: Bool) async -> (found: Int, total: Int) {
         guard let webView else { return (0, 0) }
-        let locators = node?.locators ?? []
         let encoder = JSONEncoder()
         guard let locatorsJSON = try? String(data: encoder.encode(locators), encoding: .utf8) else { return (0, 0) }
-        let color = node.map { $0.status.cssColor } ?? ""
-        let missing = node.map { !$0.found } ?? false
         let script = Self.script + "(\(locatorsJSON), '\(color)', \(missing), \(scroll))"
         let found = await withCheckedContinuation { continuation in
             webView.evaluateJavaScript(script) { result, _ in

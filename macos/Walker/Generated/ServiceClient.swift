@@ -329,6 +329,32 @@ extension Walker {
             return (result.r0, result.r1)
         }
 
+        public func getSemanticDocument(targetURL: String, html: String, content: Bool) async throws -> WalkerVO.SemanticDocument {
+            struct _Args: Encodable {
+                let a0: String
+                let a1: String
+                let a2: Bool
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.unkeyedContainer()
+                    try container.encode(a0)
+                    try container.encode(a1)
+                    try container.encode(a2)
+                }
+            }
+
+            struct _Result: Decodable {
+                let r0: WalkerVO.SemanticDocument
+
+                init(from decoder: Decoder) throws {
+                    var container = try decoder.unkeyedContainer()
+                    r0 = try container.decode(WalkerVO.SemanticDocument.self)
+                }
+            }
+
+            return try await transport.call(endpoint: endpoint, method: "GetSemanticDocument", args: _Args(a0: targetURL, a1: html, a2: content), result: _Result.self).r0
+        }
+
         public func getStatus() async throws -> WalkerVO.ServiceStatus {
             struct _Result: Decodable {
                 let r0: WalkerVO.ServiceStatus

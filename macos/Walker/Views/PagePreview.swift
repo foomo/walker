@@ -268,32 +268,38 @@ final class ZoomingWebView: WKWebView {
     }
 }
 
-/// PreviewController reaches into the page of a preview - it highlights a
-/// heading of the page, as walker extracted it.
+/// PreviewController reaches into the page of a preview - it highlights an
+/// element or link of the page's outline, as walker extracted it.
 @MainActor
 final class PreviewController {
     weak var webView: WKWebView?
 
-    /// highlightHeading outlines the heading and scrolls it into view - nil
-    /// removes the highlight
-    func highlightHeading(_ heading: HeadingOutline.Position?) {
+    /// highlight outlines the element at the selector and scrolls it into
+    /// view - nil removes the highlight. A heading of the outline is looked up
+    /// by its text, if the selector misses it.
+    func highlight(selector: String?, element: SemanticScrapeVO.DocumentElement? = nil) {
         guard let webView else { return }
         let arguments: String
-        if let heading,
-           let text = try? String(data: JSONEncoder().encode(heading.text), encoding: .utf8) {
-            arguments = "\(heading.level), \(text), \(heading.occurrence), \(heading.levelIndex)"
+        if let selector,
+           let selectorJSON = Self.json(selector),
+           let text = Self.json(element?.text ?? "") {
+            arguments = "\(selectorJSON), \(element?.headingLevel ?? 0), \(text)"
         } else {
-            arguments = "0, '', 0, 0"
+            arguments = "'', 0, ''"
         }
         webView.evaluateJavaScript(Self.script + "(\(arguments))")
     }
 
-    /// script finds the heading by level and text - whitespace collapsed, the
-    /// live page may differ from the scraped html - and falls back to the
-    /// n-th heading of the level
+    private static func json(_ string: String) -> String? {
+        try? String(data: JSONEncoder().encode(string), encoding: .utf8)
+    }
+
+    /// script finds the element by its selector. The server fetched its own
+    /// copy of the page, the live page may differ - a heading the selector
+    /// misses is looked up by level and text instead, whitespace collapsed.
     private static let script = """
-    (function(level, text, occurrence, levelIndex) {
-        const css = 'walker-heading-highlight'
+    (function(selector, level, text) {
+        const css = 'walker-outline-highlight'
         if (!document.getElementById(css)) {
             const style = document.createElement('style')
             style.id = css
@@ -301,12 +307,15 @@ final class PreviewController {
             document.head.appendChild(style)
         }
         document.querySelectorAll('.' + css).forEach((el) => el.classList.remove(css))
-        if (!level) return
-        const norm = (s) => (s || '').replace(/\\s+/g, ' ').trim()
-        const wanted = norm(text)
-        const candidates = Array.from(document.querySelectorAll('h' + level))
-        const matches = candidates.filter((el) => norm(el.textContent) === wanted)
-        const el = matches[occurrence] || candidates[levelIndex]
+        if (!selector) return
+        let el = null
+        try { el = document.querySelector(selector) } catch (e) {}
+        const headings = 'h1, h2, h3, h4, h5, h6, [role~=heading]'
+        if (level && text && !(el && el.matches(headings))) {
+            const norm = (s) => (s || '').replace(/\\s+/g, ' ').trim()
+            const wanted = norm(text)
+            el = Array.from(document.querySelectorAll(headings)).find((h) => norm(h.textContent) === wanted) || null
+        }
         if (!el) return
         el.classList.add(css)
         el.scrollIntoView({ block: 'center', behavior: 'smooth' })

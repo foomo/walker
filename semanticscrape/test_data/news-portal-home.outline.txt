@@ -1,0 +1,69 @@
+main
+  section
+    h2 Green large
+    article [Tram plan coach local old garden valley airport old]
+      h2 Tram plan coach local old garden valley airport old
+      section
+    article [Debate rent large coast teachers first regional budget]
+      h2 Debate rent large coast teachers first regional budget
+  section
+    h2 Harbour train weather summer final
+    article [Housing first coach housing weather history library archive island season plan festival column history tram match small early teachers]
+      h2 Housing first coach housing weather history library archive island season plan festival column history tram match small early teachers
+      section
+    article [Travel quiet archive summer kitchen open village large episode ferry valley archive podcast recipe airport column forest festival teachers coach]
+      h2 Travel quiet archive summer kitchen open village large episode ferry valley archive podcast recipe airport column forest festival teachers coach City coach report school wind
+    article [Column market mayor archive report new]
+      h2 Column market mayor archive report new Train coast coast school science
+  section
+  section
+  section
+    section
+      h2 Orchestra plan school
+  section
+    h2 Energy teachers history
+    article [Match report solar interview debate festival early quiet column school final teachers green football travel]
+      h2 League tram old archive Match report solar interview debate festival early quiet column school final teachers green football travel Match report solar interview debate festival early quiet column school final teachers green football travel
+      section
+    article [Mayor valley mayor open council market history opinion plan]
+      h2 Tram weather budget podcast Mayor valley mayor open council market history opinion plan Mayor valley mayor open council market history opinion plan
+      section
+  section
+    div
+      h3 School weather season weather late coach forest coach valley
+      section
+    div
+      h3 Letters first week storm school season national league science history
+      section
+  section
+    h2 Local
+    article [Teachers small]
+      h2 Library league: Orchestra ferry debate solar week early
+    article [Bridge harbour]
+      h2 Island students: Wind library forest energy season plan bakery bicycle
+  section
+    h2 Final bicycle
+    div
+      h2 Housing station
+      div
+        h3 Science
+      div
+        h3 Week podcast
+  section
+    h2 Ferry
+    article [Harbour final plan forest students regional]
+      h2 Harbour final plan forest students regional
+    article [Coast travel match]
+      h2 Coast travel match
+    nav
+      - New review (https://www.example.com/section-9/article-74)
+  section
+    article [Mountain podcast museum market letters farmers wind valley bridge interview]
+      h3 Debate bicycle train museum football coast small travel forest
+      section
+    article [Housing ferry kitchen national coach recipe council archive station archive]
+      h3 Wind students mayor storm coach energy plan football weather
+      section
+  section
+    article [Summer review letters]
+      h2 Summer review letters

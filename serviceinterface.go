@@ -32,6 +32,9 @@ type Service interface {
 	GetSchemaRoot(schemaRoot string) (info vo.SchemaRootInfo)
 	GetSchemaRootVersion(schemaRoot string) string
 	ValidateSchema(schemaRoot, group, targetURL, html string) (validation vo.SchemaValidation)
+
+	// semantic scrape
+	GetSemanticDocument(targetURL, html string, content bool) (result vo.SemanticDocument)
 }
 
 var _ Service = (*service)(nil)

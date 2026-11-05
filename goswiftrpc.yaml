@@ -15,6 +15,9 @@ mappings:
   github.com/foomo/walker/htmlschema:
     out: macos/Walker/Generated/HTMLSchemaVO.swift
     namespace: HTMLSchemaVO
+  github.com/foomo/walker/semanticscrape:
+    out: macos/Walker/Generated/SemanticScrapeVO.swift
+    namespace: SemanticScrapeVO
   github.com/foomo/walker:
     out: macos/Walker/Generated/Walker.swift
     namespace: Walker

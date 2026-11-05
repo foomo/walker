@@ -154,18 +154,14 @@ extension String {
 /// and the folder inspector.
 struct ResultSections: View {
     let result: WalkerVO.ScrapeResult
-    /// preview shows the page of the result - hovering a heading highlights it there
+    /// preview shows the page of the result - hovering the outline highlights it there
     var preview: PreviewController?
 
     var body: some View {
         Group {
             // right below the preview: the outline and the links of the page
-            if let headings = result.structure.headings, !headings.isEmpty {
-                Section("Headings") {
-                    HeadingOutline(headings: headings) { position in
-                        preview?.highlightHeading(position)
-                    }
-                }
+            if result.previewURL != nil {
+                SemanticOutlineSection(url: result.targetURL, preview: preview)
             }
 
             Section("Links") {
@@ -179,6 +175,7 @@ struct ResultSections: View {
                         .foregroundStyle(StatusClass.color(for: result.code))
                 }
                 LabeledContent("Duration", value: result.duration.formatted)
+                LabeledContent("Time to first byte", value: result.ttfb.formatted)
                 LabeledContent("Scraped", value: result.time.formatted(.dateTime))
                 LabeledContent("Group", value: result.group.isEmpty ? "–" : result.group)
                 LabeledContent("Content type", value: result.contentType)
@@ -321,138 +318,6 @@ struct LinksDisclosure: View {
             Text(links.isEmpty ? "No links" : "\(links.count) links")
         }
         .disabled(links.isEmpty)
-    }
-}
-
-/// HeadingOutline renders the headings of a page as an indented outline -
-/// sized by level - and marks what search engines dislike: empty headings,
-/// skipped levels and more than one h1.
-struct HeadingOutline: View {
-    let headings: [WalkerVO.Heading]
-    /// onHover reports the heading under the mouse - nil, when it left
-    var onHover: ((Position?) -> Void)?
-
-    /// Position identifies a heading in the page: its level and text, which of
-    /// the headings with that text it is, and which of its level
-    struct Position {
-        let level: Int
-        let text: String
-        let occurrence: Int
-        let levelIndex: Int
-    }
-
-    private var positions: [Position] {
-        var occurrences: [String: Int] = [:]
-        var levelIndices: [Int: Int] = [:]
-        return headings.map { heading in
-            let key = "\(heading.level)|\(heading.text)"
-            let position = Position(
-                level: heading.level,
-                text: heading.text,
-                occurrence: occurrences[key, default: 0],
-                levelIndex: levelIndices[heading.level, default: 0]
-            )
-            occurrences[key, default: 0] += 1
-            levelIndices[heading.level, default: 0] += 1
-            return position
-        }
-    }
-
-    private static let indent: CGFloat = 14
-
-    /// Issue of a heading in the outline
-    enum Issue {
-        case empty
-        case skipped(Int)
-        case anotherH1
-
-        var help: String {
-            switch self {
-            case .empty: "empty heading"
-            case let .skipped(level): "skips h\(level)"
-            case .anotherH1: "more than one h1"
-            }
-        }
-    }
-
-    /// issues per heading index
-    private var issues: [Int: Issue] {
-        var issues: [Int: Issue] = [:]
-        var previous = 0
-        var hasH1 = false
-        for (index, heading) in headings.enumerated() {
-            if heading.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                issues[index] = .empty
-            } else if heading.level == 1 && hasH1 {
-                issues[index] = .anotherH1
-            } else if heading.level > previous + 1 {
-                issues[index] = .skipped(previous + 1)
-            }
-            hasH1 = hasH1 || heading.level == 1
-            previous = heading.level
-        }
-        return issues
-    }
-
-    var body: some View {
-        let issues = issues
-        let positions = positions
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(headings.enumerated()), id: \.offset) { index, heading in
-                row(heading, issue: issues[index])
-                    .contentShape(.rect)
-                    .onHover { inside in
-                        onHover?(inside ? positions[index] : nil)
-                    }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
-    }
-
-    private func row(_ heading: WalkerVO.Heading, issue: Issue?) -> some View {
-        let depth = max(min(heading.level, 6) - 1, 0)
-        return HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("H\(heading.level)")
-                .font(.caption2.monospaced().weight(.semibold))
-                .foregroundStyle(issue == nil ? Color.secondary : Color.orange)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(issue == nil ? Color.secondary.opacity(0.12) : Color.orange.opacity(0.15), in: .rect(cornerRadius: 3))
-                .help(issue?.help ?? "")
-            if case .empty = issue {
-                Text("(empty)")
-                    .italic()
-                    .foregroundStyle(.orange)
-            } else {
-                Text(verbatim: heading.text.trimmingCharacters(in: .whitespacesAndNewlines))
-                    .font(Self.font(for: heading.level))
-                    .foregroundStyle(heading.level >= 5 ? .secondary : .primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(.leading, CGFloat(depth) * Self.indent)
-        .overlay(alignment: .leading) {
-            // guide lines for the nesting
-            HStack(spacing: Self.indent - 1) {
-                ForEach(0..<depth, id: \.self) { _ in
-                    Rectangle()
-                        .fill(.quaternary)
-                        .frame(width: 1)
-                }
-            }
-            .padding(.leading, 4)
-        }
-    }
-
-    private static func font(for level: Int) -> Font {
-        switch level {
-        case 1: .title3.weight(.bold)
-        case 2: .headline
-        case 3: .body.weight(.medium)
-        case 4: .body
-        default: .callout
-        }
     }
 }
 

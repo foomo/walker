@@ -107,6 +107,7 @@ enum PreviewData {
                 contentType: "text/html",
                 length: 0,
                 duration: GoTime.Duration(rawValue: row.ms * 1_000_000),
+                ttfb: GoTime.Duration(rawValue: row.ms * 800_000),
                 time: .now,
                 structure: WalkerVO.Structure(title: row.title, description: "", robots: "", canonical: "", linkPrev: "", linkNext: ""),
                 data: .null,
@@ -144,24 +145,59 @@ enum PreviewData {
     .padding()
 }
 
-#Preview("Headings") {
-    Form {
-        Section("Headings") {
-            HeadingOutline(headings: [
-                WalkerVO.Heading(level: 1, text: "Bestseller von ACME für Damen"),
-                WalkerVO.Heading(level: 2, text: "Neu eingetroffen"),
-                WalkerVO.Heading(level: 3, text: "Jeans"),
-                WalkerVO.Heading(level: 3, text: "Hosen"),
-                WalkerVO.Heading(level: 2, text: "Marken"),
-                WalkerVO.Heading(level: 4, text: "ACME Jeans Parla"),
-                WalkerVO.Heading(level: 3, text: "  "),
-                WalkerVO.Heading(level: 5, text: "Newsletter abonnieren"),
-                WalkerVO.Heading(level: 1, text: "Service"),
+#Preview("Document outline") {
+    func element(_ type: String, _ selector: String, text: String = "", label: String = "", links: [SemanticScrapeVO.Link]? = nil, src: String = "", _ children: [SemanticScrapeVO.DocumentElement]? = nil) -> SemanticScrapeVO.DocumentElement {
+        SemanticScrapeVO.DocumentElement(elementType: SemanticScrapeVO.ElementType(rawValue: type), selector: selector, text: text, label: label, links: links, src: src, children: children)
+    }
+    func link(_ text: String, _ href: String) -> SemanticScrapeVO.Link {
+        SemanticScrapeVO.Link(text: text, href: href, selector: href)
+    }
+    return Form {
+        Section("Document outline") {
+            SemanticOutline(elements: [
+                element("header", "h", [
+                    element("nav", "hn", label: "Main", links: [link("Home", "/"), link("Guides", "/guides"), link("", "/search")]),
+                ]),
+                element("main", "m", [
+                    element("article", "a", [
+                        element("h1", "a1", text: "Keeping a sourdough starter alive"),
+                        element("text", "a2", text: "October 21, 2026, by Lena Huber", links: [link("Lena Huber", "/authors/lena")]),
+                        element("section", "s1", label: "Feeding", [
+                            element("h2", "s1h", text: "Feeding"),
+                            element("text", "s1p", text: "Discard half, then add equal weights of flour and water. Do this once a day at room temperature."),
+                            element("figure", "s1f", text: "A starter at its peak, about six hours after feeding.", [
+                                element("img", "s1i", text: "A jar of bubbly starter", src: "https://example.com/starter.jpg"),
+                            ]),
+                            element("img", "s1d", src: "https://example.com/divider.png"),
+                        ]),
+                        element("ul", "l", [
+                            element("li", "l1", text: "It doubles within 4–8 hours."),
+                            element("li", "l2", text: "It smells tangy, not sharp.", [
+                                element("ol", "l2o", [element("li", "l2o1", text: "Sniff"), element("li", "l2o2", text: "Taste")]),
+                            ]),
+                        ]),
+                        element("table", "t", text: "Feeding schedule", [
+                            element("tr", "t1", [element("th", "t1a", text: "Day"), element("th", "t1b", text: "Flour")]),
+                            element("tr", "t2", [element("td", "t2a", text: "Monday"), element("td", "t2b", text: "50 g")]),
+                            element("tr", "t3", [element("td", "t3a", text: "Tuesday"), element("td", "t3b", text: "50 g", links: [link("50 g", "/flour")])]),
+                        ]),
+                        element("section", "s2", label: "Signs it’s healthy", [
+                            element("h2", "s2h", text: "Signs it’s healthy"),
+                            element("h4", "s2h4", text: "Bubbles"),
+                        ]),
+                        element("section", "s3", [element("h2", "s3h", text: "  ")]),
+                    ]),
+                    element("aside", "b", label: "Related guides", [element("h2", "bh", text: "Related guides")]),
+                    element("div", "c", [element("h1", "ch", text: "Newsletter")]),
+                ]),
+                element("footer", "f", [
+                    element("nav", "fn", label: "Footer", links: [link("Privacy", "/privacy"), link("Contact", "/contact")]),
+                ]),
             ])
         }
     }
     .formStyle(.grouped)
-    .frame(width: 640, height: 420)
+    .frame(width: 640, height: 820)
 }
 
 #Preview("Strip") {

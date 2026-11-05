@@ -24,6 +24,8 @@ struct SchemaDevView: View {
     @State private var model: SchemaDevModel
     /// showsPageData shows the head and the JSON-LD between the schema and the page
     @AppStorage("schemaDevShowsPageData") private var showsPageData = true
+    /// showsOutline shows the semantic outline of the page right of it
+    @AppStorage("schemaDevShowsOutline") private var showsOutline = false
 
     init(server: Server) {
         _model = State(initialValue: SchemaDevModel(server: server))
@@ -41,6 +43,10 @@ struct SchemaDevView: View {
             }
             page
                 .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+            if showsOutline {
+                OutlinePane(model: model)
+                    .frame(minWidth: 280, idealWidth: 380, maxWidth: 700, maxHeight: .infinity, alignment: .top)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Schema – \(model.server.name)")
@@ -140,6 +146,12 @@ struct SchemaDevView: View {
             .help(showsPageData ? "Hide the head and the JSON-LD of the validated html" : "Show the head and the JSON-LD of the validated html")
         }
         ToolbarItem {
+            Toggle(isOn: $showsOutline) {
+                Label("Document Outline", systemImage: "list.bullet.indent")
+            }
+            .help(showsOutline ? "Hide the outline of the page" : "Show the outline of the page: landmarks, articles, sections, headings - and its content")
+        }
+        ToolbarItem {
             Button("Web Inspector", systemImage: "hammer") {
                 model.highlighter.showInspector()
             }
@@ -202,6 +214,72 @@ private struct SchemaRootMenu: View {
         }
         if panel.runModal() == .OK, let url = panel.url {
             model.chooseRoot(url.path(percentEncoded: false))
+        }
+    }
+}
+
+/// OutlinePane shows the semantic outline of the page, from the same source as
+/// the validation - hovering an element highlights it in the page
+private struct OutlinePane: View {
+    let model: SchemaDevModel
+    /// showsContent adds texts, links, images and figures - shared with the result inspector
+    @AppStorage("outlineShowsContent") private var showsContent = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        // a new page, source or content setting loads again - schema edits don't change the page
+        .task(id: "\(model.pageVersion) \(model.source.rawValue) \(showsContent)") {
+            await model.loadOutline(content: showsContent)
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Document Outline")
+                    .font(.headline)
+                Text(model.source == .server ? "fetched by the server" : "rendered DOM")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Toggle("Content", isOn: $showsContent)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .help(showsContent ? "Show the structure only" : "Show the texts, links, images and figures too")
+        }
+        .padding(10)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch model.outline {
+        case .idle:
+            ContentUnavailableView("No Page", systemImage: "globe", description: Text("Load a page to see its outline."))
+        case .loading:
+            ProgressView()
+                .controlSize(.small)
+                .padding()
+        case let .failed(message):
+            Label(message, systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.red)
+                .padding(10)
+        case let .loaded(result):
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    SemanticDocumentContent(result: result, pageURL: model.highlighter.pageURL ?? model.pageURL) { selector, _ in
+                        model.hoverOutline(selector)
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+            }
         }
     }
 }

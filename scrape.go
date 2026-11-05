@@ -5,8 +5,10 @@ import (
 	"context"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -58,7 +60,8 @@ func scrape(
 		req.URL.User = baseURL.User
 	}
 	req.Header.Set("User-Agent", pc.agent)
-	req = req.WithContext(context.TODO())
+	ttfb := &ttfbTrace{}
+	req = req.WithContext(httptrace.WithClientTrace(context.TODO(), ttfb.clientTrace()))
 	resp, errGet := pc.client.Do(req)
 	if errGet != nil {
 		result.Error = errGet.Error()
@@ -66,6 +69,7 @@ func scrape(
 		return
 	}
 	result.Duration = time.Since(start)
+	result.TTFB = ttfb.get()
 	result.Code = resp.StatusCode
 	result.Status = resp.Status
 	result.Redirects = getRedirectsFromRequest(resp.Request)
@@ -156,6 +160,36 @@ func scrape(
 	r.doc = doc
 	r.docURL = req.URL
 	chanResult <- r
+}
+
+// ttfbTrace measures the time to first byte of the last request of a redirect
+// chain: the trace hooks run for every hop, each hop restarts the clock.
+type ttfbTrace struct {
+	mu        sync.Mutex
+	hopStart  time.Time
+	firstByte time.Duration
+}
+
+func (t *ttfbTrace) clientTrace() *httptrace.ClientTrace {
+	return &httptrace.ClientTrace{
+		GetConn: func(string) {
+			t.mu.Lock()
+			t.hopStart = time.Now()
+			t.firstByte = 0
+			t.mu.Unlock()
+		},
+		GotFirstResponseByte: func() {
+			t.mu.Lock()
+			t.firstByte = time.Since(t.hopStart)
+			t.mu.Unlock()
+		},
+	}
+}
+
+func (t *ttfbTrace) get() time.Duration {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.firstByte
 }
 
 func extractLinks(doc *goquery.Document, baseURL *url.URL) (linkList, normalizedLinkList vo.LinkList, err error) {

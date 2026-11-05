@@ -50,6 +50,10 @@ struct ServerDetailView: View {
                 PerformanceView(model: model)
             }
         }
+        // the result inspectors of all sections load outlines from this server
+        .environment(\.semanticDocumentLoader) { [model] url, content in
+            try await model.semanticDocument(url, content: content)
+        }
         // the window keeps its title, the toolbar shows the server in its group
         .navigationTitle(model.server.name)
         .navigationSubtitle(model.server.baseURL.absoluteString)

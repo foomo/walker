@@ -28,10 +28,14 @@ type ScrapeResult struct {
 	Length           int
 	Links            LinkList
 	NormalizedLinks  LinkList
-	Duration         time.Duration
-	Time             time.Time
-	Structure        Structure
-	Validations      []ResultValidation
-	Data             interface{}
-	Group            string
+	// Duration is the time until the response headers arrived, redirects included.
+	Duration time.Duration
+	// TTFB (time to first byte) of the final response: from the start of its
+	// request, connection setup included, to the first byte of the response.
+	TTFB        time.Duration
+	Time        time.Time
+	Structure   Structure
+	Validations []ResultValidation
+	Data        interface{}
+	Group       string
 }

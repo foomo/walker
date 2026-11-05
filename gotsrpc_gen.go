@@ -25,6 +25,7 @@ const (
 	ServiceGoTSRPCProxyGetSchemaRoot        = "GetSchemaRoot"
 	ServiceGoTSRPCProxyGetSchemaRootVersion = "GetSchemaRootVersion"
 	ServiceGoTSRPCProxyGetScrapes           = "GetScrapes"
+	ServiceGoTSRPCProxyGetSemanticDocument  = "GetSemanticDocument"
 	ServiceGoTSRPCProxyGetStatus            = "GetStatus"
 	ServiceGoTSRPCProxyRestartScrape        = "RestartScrape"
 	ServiceGoTSRPCProxyValidateSchema       = "ValidateSchema"
@@ -334,6 +335,29 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		getScrapesComplete, getScrapesCurrent := p.service.GetScrapes()
 		call.ExecutionEnd()
 		rets = []any{getScrapesComplete, getScrapesCurrent}
+		if err := gotsrpc.Reply(rets, call, r, w); err != nil {
+			call.SetError(err)
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		return
+	case ServiceGoTSRPCProxyGetSemanticDocument:
+		var rets []any
+		var (
+			arg_targetURL string
+			arg_html      string
+			arg_content   bool
+		)
+		args := []any{&arg_targetURL, &arg_html, &arg_content}
+		if err := gotsrpc.LoadArgs(&args, call, r); err != nil {
+			call.SetError(err)
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		call.ExecutionStart()
+		getSemanticDocumentResult := p.service.GetSemanticDocument(arg_targetURL, arg_html, arg_content)
+		call.ExecutionEnd()
+		rets = []any{getSemanticDocumentResult}
 		if err := gotsrpc.Reply(rets, call, r, w); err != nil {
 			call.SetError(err)
 			gotsrpc.ErrorCouldNotReply(w)

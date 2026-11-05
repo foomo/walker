@@ -49,6 +49,17 @@ final class SchemaDevModel {
     private(set) var schemaReloadedAt: Date?
     /// highlighted is how many locators of the selection were found in the page - nil without selection
     private(set) var highlighted: (found: Int, total: Int)?
+    /// pageVersion counts the pages the web view loaded - the outline reloads with it
+    private(set) var pageVersion = 0
+    /// outline is the semantic document of the page, from the same source as the validation
+    private(set) var outline: OutlineState = .idle
+
+    enum OutlineState {
+        case idle
+        case loading
+        case loaded(WalkerVO.SemanticDocument)
+        case failed(String)
+    }
 
     /// selection is the id of the selected trace item
     var selection: TraceItem.ID? {
@@ -190,6 +201,7 @@ final class SchemaDevModel {
     func pageDidLoad(_ url: URL) async {
         address = url.absoluteString
         save()
+        pageVersion += 1
         await loadRoot()
         await validate()
     }
@@ -358,6 +370,50 @@ final class SchemaDevModel {
     func pageDidFail(_ message: String) {
         error = message
     }
+
+    /// loadOutline extracts the semantic document of the page in the web view:
+    /// the server fetches it, or it gets the snapshot of the rendered DOM
+    func loadOutline(content: Bool) async {
+        guard let url = highlighter.pageURL ?? pageURL else {
+            outline = .idle
+            return
+        }
+        if source == .rendered, !highlighter.isPageLoaded {
+            return
+        }
+        outline = .loading
+        do {
+            var html = ""
+            if source == .rendered {
+                guard let snapshot = await highlighter.snapshot() else {
+                    outline = .failed("the page has no DOM yet")
+                    return
+                }
+                html = snapshot
+            }
+            let document = try await client.getSemanticDocument(targetURL: url.absoluteString, html: html, content: content)
+            guard !Task.isCancelled else { return }
+            outline = .loaded(document)
+        } catch is CancellationError {
+            return
+        } catch {
+            outline = .failed(error.localizedDescription)
+        }
+    }
+
+    /// hoverOutline highlights an element of the outline in the page, nil
+    /// brings back the highlight of the selected schema node
+    func hoverOutline(_ selector: String?) {
+        guard let selector else {
+            highlightSelection()
+            return
+        }
+        Task {
+            await highlighter.highlight(locators: [selector], color: Self.outlineColor, scroll: true)
+        }
+    }
+
+    private static let outlineColor = "#af52de"
 
     private func highlightSelection() {
         let node = item(selection)?.node

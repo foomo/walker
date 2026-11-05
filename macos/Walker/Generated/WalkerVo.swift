@@ -521,13 +521,14 @@ extension WalkerVO {
         public var links: WalkerVO.LinkList?
         public var normalizedLinks: WalkerVO.LinkList?
         public var duration: GoTime.Duration
+        public var ttfb: GoTime.Duration
         public var time: Date
         public var structure: WalkerVO.Structure
         public var validations: [WalkerVO.ResultValidation]?
         public var data: GotsRPCJSONValue
         public var group: String
 
-        public init(targetURL: String, redirects: [WalkerVO.Redirect]? = nil, error: String, code: Int, validationReport: HTMLSchemaVO.Report? = nil, validationError: String, status: String, contentType: String, length: Int, links: WalkerVO.LinkList? = nil, normalizedLinks: WalkerVO.LinkList? = nil, duration: GoTime.Duration, time: Date, structure: WalkerVO.Structure, validations: [WalkerVO.ResultValidation]? = nil, data: GotsRPCJSONValue, group: String) {
+        public init(targetURL: String, redirects: [WalkerVO.Redirect]? = nil, error: String, code: Int, validationReport: HTMLSchemaVO.Report? = nil, validationError: String, status: String, contentType: String, length: Int, links: WalkerVO.LinkList? = nil, normalizedLinks: WalkerVO.LinkList? = nil, duration: GoTime.Duration, ttfb: GoTime.Duration, time: Date, structure: WalkerVO.Structure, validations: [WalkerVO.ResultValidation]? = nil, data: GotsRPCJSONValue, group: String) {
             self.targetURL = targetURL
             self.redirects = redirects
             self.error = error
@@ -540,6 +541,7 @@ extension WalkerVO {
             self.links = links
             self.normalizedLinks = normalizedLinks
             self.duration = duration
+            self.ttfb = ttfb
             self.time = time
             self.structure = structure
             self.validations = validations
@@ -560,6 +562,7 @@ extension WalkerVO {
             case links = "Links"
             case normalizedLinks = "NormalizedLinks"
             case duration = "Duration"
+            case ttfb = "TTFB"
             case time = "Time"
             case structure = "Structure"
             case validations = "Validations"
@@ -614,6 +617,31 @@ extension WalkerVO {
             case scrapeSpeedAverage = "ScrapeSpeedAverage"
             case paths = "Paths"
             case performance = "Performance"
+        }
+    }
+
+    // github.com/foomo/walker/vo.SemanticDocument
+    public struct SemanticDocument: Codable, Sendable, Equatable {
+        public var url: String
+        public var source: String
+        public var statusCode: Int
+        public var document: SemanticScrapeVO.Document?
+        public var error: String
+
+        public init(url: String, source: String, statusCode: Int, document: SemanticScrapeVO.Document? = nil, error: String) {
+            self.url = url
+            self.source = source
+            self.statusCode = statusCode
+            self.document = document
+            self.error = error
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case url = "URL"
+            case source = "Source"
+            case statusCode = "StatusCode"
+            case document = "Document"
+            case error = "Error"
         }
     }
 

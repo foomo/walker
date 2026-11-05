@@ -236,6 +236,12 @@ final class ServerModel {
         try await client.getResult(scrape: scrape.rawValue, targetURL: url)
     }
 
+    /// semanticDocument has the server fetch a page, like the crawler does, and
+    /// extract its semantic outline - with content: texts, links and images
+    func semanticDocument(_ url: String, content: Bool) async throws -> WalkerVO.SemanticDocument {
+        try await client.getSemanticDocument(targetURL: url, html: "", content: content)
+    }
+
     func loadResults() async {
         isLoadingResults = true
         defer { isLoadingResults = false }

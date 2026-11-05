@@ -1,12 +1,10 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(ServerStore.self) private var store
     @Environment(LocalWalkers.self) private var walkers
     @State private var selection: Server.ID?
     @State private var isAddingServer = false
-    @State private var isAddingConfig = false
 
     var body: some View {
         NavigationSplitView {
@@ -36,7 +34,7 @@ struct ContentView: View {
                         isAddingServer = true
                     }
                     Button("Add Local Config…", systemImage: "doc.badge.plus") {
-                        isAddingConfig = true
+                        addLocalConfigs()
                     }
                 }
             }
@@ -58,16 +56,18 @@ struct ContentView: View {
                 selection = server.id
             }
         }
-        .fileImporter(isPresented: $isAddingConfig, allowedContentTypes: [.yaml], allowsMultipleSelection: true) { result in
-            guard case let .success(urls) = result else { return }
-            for url in urls {
-                selection = store.addLocal(configURL: url).id
-            }
-        }
         .onAppear {
             if selection == nil {
                 selection = store.servers.first?.id
             }
+        }
+    }
+
+    /// addLocalConfigs adds existing configs or a new one, created in the file browser
+    private func addLocalConfigs() {
+        let usedPorts = Set(store.localServers.compactMap(\.baseURL.port))
+        for url in LocalConfigPanel.choose(usedPorts: usedPorts) {
+            selection = store.addLocal(configURL: url).id
         }
     }
 

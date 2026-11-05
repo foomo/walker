@@ -25,6 +25,7 @@ type ServiceGoTSRPCClient interface {
 	GetSchemaRoot(ctx go_context.Context, schemaRoot string) (info github_com_foomo_walker_vo.SchemaRootInfo, clientErr error)
 	GetSchemaRootVersion(ctx go_context.Context, schemaRoot string) (retGetSchemaRootVersion_0 string, clientErr error)
 	GetScrapes(ctx go_context.Context) (complete *github_com_foomo_walker_vo.ScrapeSummary, current *github_com_foomo_walker_vo.ScrapeSummary, clientErr error)
+	GetSemanticDocument(ctx go_context.Context, targetURL string, html string, content bool) (result github_com_foomo_walker_vo.SemanticDocument, clientErr error)
 	GetStatus(ctx go_context.Context) (retGetStatus_0 github_com_foomo_walker_vo.ServiceStatus, clientErr error)
 	RestartScrape(ctx go_context.Context) (retRestartScrape_0 bool, clientErr error)
 	ValidateSchema(ctx go_context.Context, schemaRoot string, group string, targetURL string, html string) (validation github_com_foomo_walker_vo.SchemaValidation, clientErr error)
@@ -178,6 +179,16 @@ func (tsc *HTTPServiceGoTSRPCClient) GetScrapes(ctx go_context.Context) (complet
 	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetScrapes", rpcArgs, rpcReply)
 	if rpcErr != nil {
 		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetScrapes")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetSemanticDocument(ctx go_context.Context, targetURL string, html string, content bool) (result github_com_foomo_walker_vo.SemanticDocument, clientErr error) {
+	rpcArgs := []any{targetURL, html, content}
+	rpcReply := []any{&result}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetSemanticDocument", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call walker.ServiceGoTSRPCProxy GetSemanticDocument")
 	}
 	return
 }
