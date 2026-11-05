@@ -6,6 +6,6 @@ targets:
   basic:
     services:
       /service: Service
-    package: github.com/foomo/walker/go/internal/walker
+    package: github.com/foomo/walker/go/internal/service
     tsrpc:
       - Service

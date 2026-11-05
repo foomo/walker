@@ -3,5 +3,5 @@ agent: foomo walker
 addr: :3001
 usecookies: false
 interval: 1h
-schemaroot: /Users/jan/go/src/github.com/foomo/walker/go/internal/htmlschema/demo/schema/
+schemaroot: /Users/jan/go/src/github.com/foomo/walker/go/internal/demoshop/schema/
 groupheader: x-next-js-app

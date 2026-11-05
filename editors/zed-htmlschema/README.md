@@ -19,7 +19,7 @@ directory with `groups/` or `default.html` - every other html file is left alone
 2. In Zed: `zed: install dev extension` and choose this directory
    (`editors/zed-htmlschema`). Zed builds it with your rustup toolchain.
 
-3. Open a schema file, e.g. `go/internal/htmlschema/demo/schema/groups/product.html`.
+3. Open a schema file, e.g. `go/internal/demoshop/schema/groups/product.html`.
 
 If the server does not start for html files, enable it explicitly in the
 settings:

@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/foomo/walker/go/internal/htmlschema/demo/server"
+	"github.com/foomo/walker/go/internal/demoshop"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 	embedded := flag.Bool("embedded", false, "serve the files compiled into the binary, even if the sources are at hand")
 	flag.Parse()
 	slog.Info("htmlschema demo shop", "addr", *addr)
-	if err := server.Run(*addr, *embedded); err != nil {
+	if err := demoshop.Run(*addr, *embedded); err != nil {
 		slog.Error("demo shop stopped", "error", err)
 		os.Exit(1)
 	}

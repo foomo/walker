@@ -22,8 +22,8 @@ mistake" (score 90 %, penalty 50) and "little content, no mistakes" (score 20 %,
 penalty 0) are different situations and stay distinguishable.
 
 Examples referenced throughout come from the demo shop: the schemas live in
-[`demo/schema`](demo/schema), the pages are rendered by
-[`demo/server`](demo/server) (`go run ./cmd/demo`). They are worked through in
+[`demoshop/schema`](../demoshop/schema), the pages are rendered by
+[`demoshop`](../demoshop) (`go run ./cmd/demo`). They are worked through in
 [section 14](#14-worked-examples).
 
 ## 1. Concepts
@@ -86,7 +86,7 @@ including component recognition and the component schemas used on the page.
 
 `<val:include path="/partials/head"/>` inserts the content of a file in place, as
 if it were written there. The file may contain any number of top level elements
-([partials/head.html](demo/schema/partials/head.html) holds the `meta`s and the canonical `link` of every page).
+([partials/head.html](../demoshop/schema/partials/head.html) holds the `meta`s and the canonical `link` of every page).
 Everything about the include site applies to the inserted elements, including the
 wildcard scope. Includes may nest. Cycles are a lint error.
 
@@ -104,7 +104,7 @@ the root element.
 The root decides what the instance does:
 
 - a **`val:component`** root: a recognized component, see [section 5](#5-components)
-- any **other element**: an element template, matched like the element written in place. [partials/site-header.html](demo/schema/partials/site-header.html), a `<header>` with the logo link and the main navigation, is used as `<val:comp path="/partials/site-header"/>` in every group. A site could relax it for one group with `<val:comp path="../partials/site-header" val:severity="warn"/>`.
+- any **other element**: an element template, matched like the element written in place. [partials/site-header.html](../demoshop/schema/partials/site-header.html), a `<header>` with the logo link and the main navigation, is used as `<val:comp path="/partials/site-header"/>` in every group. A site could relax it for one group with `<val:comp path="../partials/site-header" val:severity="warn"/>`.
 
 ## 3. Matching
 
@@ -169,7 +169,7 @@ semantic elements deep in wrapper `div`s, so schemas declare where wrappers are 
 - An element matching `for` can still be matched itself, e.g. `<div class="x">` inside `for="div"`. The search continues below it either way.
 - `val:wildcard` doesn't match a page node itself, and it doesn't appear in paths.
 
-What the `article` of a [product page](demo/server/templates/product.html) looks like through `<val:wildcard for="div">`:
+What the `article` of a [product page](../demoshop/templates/product.html) looks like through `<val:wildcard for="div">`:
 
 ```
 article
@@ -186,7 +186,7 @@ article
 `<val:selector for="css">` matches all elements the CSS selector finds in
 the subtree of the context node, **ignoring wildcards and component borders**.
 At the top of `<body>` it searches the whole page, including inside components.
-Typical use is page-wide rules, shared through a partial ([partials/page-baseline.html](demo/schema/partials/page-baseline.html)): `<val:selector for="h1" count=1/>`.
+Typical use is page-wide rules, shared through a partial ([partials/page-baseline.html](../demoshop/schema/partials/page-baseline.html)): `<val:selector for="h1" count=1/>`.
 
 The rules of the `val:selector` element itself apply to every selected node. Its
 children match the children of each selected node (wildcards apply as usual).
@@ -526,15 +526,15 @@ Pages are still parsed with the HTML5 parser, as browsers do.
 
 ## 14. Worked examples
 
-Root: [`demo/schema`](demo/schema). The pages are rendered by the demo shop
-([`demo/server`](demo/server)) for `https://shop.example`, and the group comes
+Root: [`demoshop/schema`](../demoshop/schema). The pages are rendered by the demo shop
+([`demoshop`](../demoshop)) for `https://shop.example`, and the group comes
 from its `x-next-js-app` response header. These numbers are the expected
 results, checked by `examples_test.go`.
 
 ### 14.1 `index`: the home page `/`
 
 A lead paragraph, two category tiles and a section about the demo. Schema:
-[groups/index.html](demo/schema/groups/index.html).
+[groups/index.html](../demoshop/schema/groups/index.html).
 
 Findings: none.
 
@@ -556,7 +556,7 @@ Components: category-tile 14/14 (100 %).
 
 Ten product tiles and an `ItemList` in JSON-LD, a host carousel where every
 item is a complete product. The station wagon has a name of 75 characters.
-Schema: [groups/category.html](demo/schema/groups/category.html).
+Schema: [groups/category.html](../demoshop/schema/groups/category.html).
 
 Findings:
 
@@ -588,7 +588,7 @@ The same schema on `/category/robots`: no findings, `val:ld(ItemList)` 10, **sco
 
 Clanky the Butlerbot: complete merchant listing data in the `Product` JSON-LD,
 the product info in wrapper `div`s and two feature sections. Schema:
-[groups/product.html](demo/schema/groups/product.html).
+[groups/product.html](../demoshop/schema/groups/product.html).
 
 Findings: none.
 
@@ -662,7 +662,7 @@ The category schema allows `DOGE` in its `ItemList`, so `/category/cars` has no 
 ### 14.5 Fallback: the 404 page
 
 The 404 page sends no group header, so it is validated with
-[default.html](demo/schema/default.html). No findings, **score 41 / 44, penalty
+[default.html](../demoshop/schema/default.html). No findings, **score 41 / 44, penalty
 0**. The optional `og:image` is missing: 0 of 3 points, no finding.
 
 ## 15. Decision log

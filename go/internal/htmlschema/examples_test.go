@@ -4,19 +4,16 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
-	"runtime"
 	"testing"
 
-	"github.com/foomo/walker/go/internal/htmlschema/demo/server"
+	"github.com/foomo/walker/go/internal/demoshop"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func loadDemoRoot(t *testing.T) *Root {
 	t.Helper()
-	_, filename, _, _ := runtime.Caller(0)
-	root, err := LoadRoot(filepath.Join(filepath.Dir(filename), "demo", "schema"))
+	root, err := LoadRoot(demoshop.SchemaDir())
 	require.NoError(t, err)
 	return root
 }
@@ -25,11 +22,11 @@ func loadDemoRoot(t *testing.T) *Root {
 // comes from its response header, as walker reads it
 func renderDemo(t *testing.T, path string) (group string, html []byte) {
 	t.Helper()
-	handler, err := server.NewHandler(server.EmbeddedFiles(), false)
+	handler, err := demoshop.NewHandler(demoshop.EmbeddedFiles(), false)
 	require.NoError(t, err)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "https://shop.example"+path, nil))
-	return w.Header().Get(server.GroupHeader), w.Body.Bytes()
+	return w.Header().Get(demoshop.GroupHeader), w.Body.Bytes()
 }
 
 func validateDemo(t *testing.T, root *Root, path string) *Report {

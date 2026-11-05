@@ -2,7 +2,7 @@
 import Foundation
 
 extension Walker {
-    // github.com/foomo/walker/go/internal/walker.Service
+    // github.com/foomo/walker/go/internal/service.Service
     public struct ServiceClient: Sendable {
         public static let defaultEndpoint = "/service"
 

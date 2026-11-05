@@ -2,7 +2,7 @@ module: ./
 runtime: ../macos/Walker/Generated/GotsRPC.swift
 
 services:
-  github.com/foomo/walker/go/internal/walker:
+  github.com/foomo/walker/go/internal/service:
     out: ../macos/Walker/Generated/ServiceClient.swift
     namespace: WalkerClient
     services:
@@ -18,7 +18,7 @@ mappings:
   github.com/foomo/walker/go/internal/semanticscrape:
     out: ../macos/Walker/Generated/SemanticScrapeVO.swift
     namespace: SemanticScrapeVO
-  github.com/foomo/walker/go/internal/walker:
+  github.com/foomo/walker/go/internal/service:
     out: ../macos/Walker/Generated/Walker.swift
     namespace: Walker
   time:

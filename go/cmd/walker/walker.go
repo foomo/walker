@@ -10,15 +10,17 @@ import (
 	"strings"
 
 	"github.com/foomo/walker/go/internal/config"
+	"github.com/foomo/walker/go/internal/crawler"
+	"github.com/foomo/walker/go/internal/metrics"
 	"github.com/foomo/walker/go/internal/reports"
+	"github.com/foomo/walker/go/internal/service"
 	"github.com/foomo/walker/go/internal/vo"
-	"github.com/foomo/walker/go/internal/walker"
 	yaml "gopkg.in/yaml.v3"
 )
 
 type server struct {
-	serviceProxy  *walker.ServiceGoTSRPCProxy
-	walker        *walker.Walker
+	serviceProxy  *service.ServiceGoTSRPCProxy
+	walker        *crawler.Walker
 	conf          string
 	reportHandler func(
 		w http.ResponseWriter, r *http.Request,
@@ -76,7 +78,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/status" {
 		w.Write([]byte(":::::::::::::::::: STATUS ::::::::::::::::::\n"))
 		w.Write([]byte("\nrunning with config:\n\n" + s.conf + "\n"))
-		s.walker.PrintStatus(w, s.walker.GetStatus())
+		reports.PrintStatus(w, s.walker.GetStatus())
 		return
 	}
 	switch {
@@ -150,8 +152,12 @@ func main() {
 	)
 	slog.Debug("config", "yaml", string(yamlConfBytes))
 
-	s, w, chanLoopComplete, errS := walker.NewService(conf, nil, nil, nil, nil)
-	must("could not start the service", errS)
+	m := metrics.New()
+	w := crawler.New(m)
+	m.Collect(w.GetStatuses)
+	// no custom link filter, scrape, validation or result modifier funcs
+	chanLoopComplete, errWalk := w.Walk(conf, nil, nil, nil, nil)
+	must("could not start walking", errWalk)
 	// the scrape loop logs its cycles, completed statuses are not needed here
 	go func() {
 		for range chanLoopComplete {
@@ -160,10 +166,10 @@ func main() {
 
 	err := http.ListenAndServe(conf.Addr, &server{
 		conf:           string(yamlConfBytes),
-		serviceProxy:   walker.NewDefaultServiceGoTSRPCProxy(s),
+		serviceProxy:   service.NewDefaultServiceGoTSRPCProxy(service.New(w, conf)),
 		walker:         w,
 		reportHandler:  reports.GetReportHandler(pathReports),
-		metricsHandler: w.MetricsHandler().ServeHTTP,
+		metricsHandler: m.Handler().ServeHTTP,
 	})
 	must("could not serve on "+conf.Addr, err)
 }

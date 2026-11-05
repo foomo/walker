@@ -33,7 +33,7 @@ with `groups/` or `default.html` - every other html file is left alone.
    `npx @vscode/vsce package` and `code --install-extension htmlschema-0.1.0.vsix`.
    For development open this directory in VS Code and press F5.
 
-3. Open a schema file, e.g. `go/internal/htmlschema/demo/schema/groups/product.html`.
+3. Open a schema file, e.g. `go/internal/demoshop/schema/groups/product.html`.
 
 ## Settings
 

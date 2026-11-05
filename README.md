@@ -90,7 +90,7 @@ WIP
 - `GetResult(scrape, url)` the result for a url as a browser sees it: exact match, then ignoring the fragment and credentials, then a result redirecting to the url - `null` if it was not scraped
 - `GetStatus()` open / done / pending counts
 
-The Go proxy (`gotsrpc_gen.go`) is generated from `go/gotsrpc.yaml`, the Swift client (`macos/Walker/Generated/`) from `go/goswiftrpc.yaml`:
+The Go proxy (`go/internal/service/gotsrpc_gen.go`) is generated from `go/gotsrpc.yaml`, the Swift client (`macos/Walker/Generated/`) from `go/goswiftrpc.yaml`:
 
 ```sh
 cd go
@@ -111,7 +111,7 @@ open macos/Walker.xcodeproj                 # then run the Walker scheme
 
 ## metrics
 
-Exposed on `/metrics`. Each walker has its own registry (`Walker.MetricsHandler()`), including the go and process collectors.
+Exposed on `/metrics`. Each walker has its own registry (`metrics.New()`), including the go and process collectors.
 
 The same metrics are exposed for the ongoing scrape and the last completed one, distinguished by the label `scrape="current"|"complete"`. `current` is absent while walker waits for the next scheduled cycle, `complete` is absent until the first cycle has completed.
 
