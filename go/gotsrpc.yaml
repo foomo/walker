@@ -1,0 +1,11 @@
+module:
+  name: github.com/foomo/walker/go
+  path: ./
+
+targets:
+  basic:
+    services:
+      /service: Service
+    package: github.com/foomo/walker/go/internal/walker
+    tsrpc:
+      - Service

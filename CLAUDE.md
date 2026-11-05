@@ -6,21 +6,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Walker crawls a website and collects performance, SEO and broken-link data. It serves the results through a minimal web UI (`/`, `/status`, `/reports/...`) and as Prometheus metrics (`/metrics`). Aggressive settings (high `concurrency`) can take a target site down, so keep that in mind when you run it against real hosts.
 
+## Layout
+
+A monorepo. All Go code is one module in `go/` (module path `github.com/foomo/walker/go`, release tags `go/vX.Y.Z`): binaries in `go/cmd/`, every package in `go/internal/` - there is no public Go API. Next to it: the macOS app (`macos/`), the editor extensions for the htmlschema language server (`editors/`), `mise.toml`, `Dockerfile` and the `Makefile` at the root. Package paths below are relative to `go/internal/` unless they start with `go/`, `macos/` or `editors/`.
+
 ## Commands
+
+Run Go commands in `go/` (or `go -C go …` from the root); the mise tasks do that themselves.
 
 ```sh
 go build ./...                                   # build everything
 go run ./cmd/walker path/to/config.yaml          # run the crawler + web UI (default addr :3001), -exit-on-stdin-close for the macOS app
 go run ./cmd/validator schema-root group https://host/page   # validate one page, exit 3 on error findings
 go test ./...                                    # all tests
-go test ./config -run TestLoad                   # single test
-go test ./htmlschema/... -v                      # syntax, lint, rules + golden tests of the SPEC.md examples
+go test ./internal/config -run TestLoad          # single test
+go test ./internal/htmlschema/... -v             # syntax, lint, rules + golden tests of the SPEC.md examples
 go install ./cmd/htmlschema-lsp                  # language server for schema files, extensions in editors/zed-htmlschema and editors/vscode-htmlschema
 go run ./cmd/configvalidator config.yaml         # validate a walker config: unknown keys, types, schema root - exit 3 on errors
-go run ./cmd/demo                                # demo shop on :8080 (reads templates, css, catalogue from source on every request), schema in htmlschema/demo/schema, group header x-next-js-app
+go run ./cmd/demo                                # demo shop on :8080 (reads templates, css, catalogue from source on every request), schema in internal/htmlschema/demo/schema, group header x-next-js-app
 ```
 
-`mise.toml` pins Go and `gotsrpc` (keep it in sync with `go.mod`) and wraps the commands above as tasks (`mise tasks`; `mise run generate` regenerates the Go proxy and the Swift client; `goswiftrpc` is pre-alpha without mise support, so `generate:swift` runs `go install github.com/foomo/goswiftrpc/cmd/goswiftrpc@latest` first). The `Makefile` holds only ad-hoc deploy targets (cross-compile, then scp to a stage host); it isn't a build system. The `Dockerfile` builds both binaries and bakes in `cmd/walker/config-example.yaml`.
+`mise.toml` pins Go and `gotsrpc` (keep it in sync with `go/go.mod`) and wraps the commands above as tasks that run in `go/` (`mise tasks`; `mise run generate` regenerates the Go proxy and the Swift client; `goswiftrpc` is pre-alpha without mise support, so `generate:swift` runs `go install github.com/foomo/goswiftrpc/cmd/goswiftrpc@latest` first). The generator configs `go/gotsrpc.yaml` and `go/goswiftrpc.yaml` are run from `go/`; the Swift namespaces are fixed there, independent of the Go package paths. The `Makefile` holds only ad-hoc deploy targets (cross-compile, then scp to a stage host); it isn't a build system. The `Dockerfile` (build context: the repo root) builds both binaries and bakes in `go/cmd/walker/config-example.yaml`.
 
 ## Configuration
 
@@ -30,7 +36,7 @@ go run ./cmd/demo                                # demo shop on :8080 (reads tem
 - `interval` / `offset` (durations): wall-clock-aligned scrape schedule, see `schedule.go`. `0` means restart immediately.
 - Other keys: `ignore` (path prefixes), `ignorequerieswith`, `ignoreallqueries`, `ignorerobots`, `depth`, `paging`, `groupheader`, `schemaroot`.
 
-Most `cmd/walker/*.yaml` files are local, site-specific configs and are usually untracked. `config.Validate` checks a config file with line numbers (`Load` silently ignores unknown keys), `config.ReadForm`/`WriteForm` turn it into a form and back while keeping comments and unknown keys.
+Most `go/cmd/walker/*.yaml` files are local, site-specific configs and are usually untracked. `config.Validate` checks a config file with line numbers (`Load` silently ignores unknown keys), `config.ReadForm`/`WriteForm` turn it into a form and back while keeping comments and unknown keys.
 
 ## Architecture
 
@@ -56,7 +62,7 @@ Most `cmd/walker/*.yaml` files are local, site-specific configs and are usually 
 - go's `time.Duration` (nanoseconds) is `GoTime.Duration`; a bare `Duration` is `Swift.Duration`.
 - The app has no graph view for now - the 3D graph was removed, the Go side (`GetGraph`, `GetPageGraph`, `GetPageFolderLinks`, `GetFolderPages`) stays and the generated Swift client still has those calls.
 - The schema developer window (`SchemaDevView`, `SchemaDevModel`, `SchemaWebView`) iterates on an html schema against a live page. It calls `GetSchemaRoot`/`ValidateSchema`/`GetSchemaRootVersion` (`schemaservice.go`; the app polls the version every second and validates again when a schema file changes), which load the schema root from a path on the server (client and server share a file system) and return an `htmlschema.TraceNode` tree (`Root.Trace`). Selecting a node highlights its locators in the WKWebView. "Load Config" takes the site (base url + first path) and the schema root (resolved against the config's directory) of a local config (`SchemaDevModel.load`); the window of a local server starts with its own config. The tree (`SchemaTreeView`) writes rules as plain-language chips, marks elements from other schema files (`Source`) and wildcards (`TraceNode.Via`), and shows the details of the selected node inline - neutral selection, a click on the selected row toggles the details, keyboard navigation is its own (List without selection binding). Source references open the editor chosen in the settings at the line (`SourceLink`, `zed://file…`, `vscode://file…`). The middle column (`PageDataView`) shows a link preview from the OpenGraph data (`OpenGraphView`), the head and the JSON-LD of the validated html (`htmlschema.ExtractPageData`, same locators as the trace), linked with the tree in both directions. The right column (`OutlinePane`, toolbar toggle, hidden by default) shows the semantic outline of the page from the same source as the validation - for "Rendered" the DOM snapshot goes to `GetSemanticDocument` as html, so selectors match the web view; it reloads with the page (`SchemaDevModel.pageVersion`), the source and the content switch, not with schema edits, and hovering highlights in the page via `SchemaHighlighter.highlight(locators:color:)`.
-- The app is **not sandboxed** (hardened runtime only): local walkers read configs and schema roots by path. The "helpers" run script phase builds `cmd/walker` and `cmd/configvalidator` into `Contents/Helpers` (with the Go pinned in `mise.toml`, resolved via `mise which go` with `GOTOOLCHAIN=local` - the build fails if mise is missing or `mise trust && mise install` hasn't run; target `ENABLE_USER_SCRIPT_SANDBOXING = NO`, go needs its module cache).
+- The app is **not sandboxed** (hardened runtime only): local walkers read configs and schema roots by path. The "helpers" run script phase builds `go/cmd/walker` and `go/cmd/configvalidator` (`go build -C "$ROOT/go"`) into `Contents/Helpers` (with the Go pinned in `mise.toml`, resolved via `mise which go` with `GOTOOLCHAIN=local` - the build fails if mise is missing or `mise trust && mise install` hasn't run; target `ENABLE_USER_SCRIPT_SANDBOXING = NO`, go needs its module cache).
 - Configs are edited only in the main window, in the overview of a local server: `LocalConfigForm` is the config form (`ConfigFormView`, fields with notes on the resulting crawl behaviour - keep them in sync with the Go side) with the walker's state on top. It saves to the file right away and rereads it when it changes on disk. Its yaml backend is the `configvalidator` helper; `ConfigTool` talks to it over stdin/stdout JSON.
 - Local walkers: a `Server` with a `configPath` is a local config (sidebar section "Local"), its `baseURL` follows the config's `addr` (`ServerStore.refreshLocal`, not while its walker runs). `LocalWalkers` (owned by the `AppDelegate`, which stops them on quit) runs the walker helper per config with `-exit-on-stdin-close`, in the config's directory, and keeps state and log (`LocalWalkers.logLines`, a setting, default 10000 lines). Local servers get the normal `ServerDetailView`; their `OverviewView` puts the scrape cards above the log (`LocalWalkerLogPane`) and the config form beside them.
 - Live metrics (top of the Performance view, `LiveMetrics`, `LiveMetricsView`): the `AppDelegate` (owner of `ServerStore` and `LocalWalkers`) runs `ServerStore.sampleMetrics` for the app's lifetime: every refresh interval it reads the `/metrics` of all servers in parallel (local ones only while running, 5 s timeout) (`PromText` parses the text format) and keeps the charted series for 30 minutes in memory - a local debugging tool. Each `MetricsChart` is evaluated locally (rate, gauge, histogram quantile over bucket increases) and carries the equivalent PromQL, so a Prometheus server backend can answer the same charts later. Charts use one axis each; new metrics need a `kept` entry, a chart case and its PromQL.

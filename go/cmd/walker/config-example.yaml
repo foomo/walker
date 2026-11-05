@@ -1,0 +1,7 @@
+target: http://localhost:8080
+agent: foomo walker
+addr: :3001
+usecookies: false
+interval: 1h
+schemaroot: /Users/jan/go/src/github.com/foomo/walker/go/internal/htmlschema/demo/schema/
+groupheader: x-next-js-app

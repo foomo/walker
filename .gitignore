@@ -2,7 +2,7 @@
 !.git*
 /frontend/.next
 /frontend/node_modules
-/cmd/walker/*.yaml
+/go/cmd/walker/*.yaml
 xcuserdata/
 DerivedData/
 gotsrpc

@@ -4,6 +4,10 @@ Walker walkes aka as crawls through websites and collects performance and SEO re
 
 **Be careful when crawling your website with walker with aggressive settings, it might take your site down**
 
+## Layout
+
+A monorepo: all Go code is one module in `go/` (`github.com/foomo/walker/go`, binaries in `go/cmd`, every package in `go/internal`), next to the macOS app (`macos/`) and the editor extensions for the htmlschema language server (`editors/`).
+
 ## Development
 
 [mise](https://mise.jdx.dev) installs Go and `gotsrpc` from `mise.toml` and runs the common tasks:
@@ -12,7 +16,7 @@ Walker walkes aka as crawls through websites and collects performance and SEO re
 mise install
 mise tasks                                   # list all tasks
 mise run test
-mise run walker cmd/walker/config-example.yaml
+mise run walker cmd/walker/config-example.yaml   # tasks run in go/
 mise run generate                            # Go proxy + Swift client
 ```
 
@@ -86,9 +90,10 @@ WIP
 - `GetResult(scrape, url)` the result for a url as a browser sees it: exact match, then ignoring the fragment and credentials, then a result redirecting to the url - `null` if it was not scraped
 - `GetStatus()` open / done / pending counts
 
-The Go proxy (`gotsrpc_gen.go`) is generated from `gotsrpc.yaml`, the Swift client (`macos/Walker/Generated/`) from `goswiftrpc.yaml`:
+The Go proxy (`gotsrpc_gen.go`) is generated from `go/gotsrpc.yaml`, the Swift client (`macos/Walker/Generated/`) from `go/goswiftrpc.yaml`:
 
 ```sh
+cd go
 gotsrpc gotsrpc.yaml
 goswiftrpc generate goswiftrpc.yaml
 ```
@@ -100,7 +105,7 @@ goswiftrpc generate goswiftrpc.yaml
 `macos/Walker.xcodeproj` is a native SwiftUI app (macOS 26) for one or more walker servers. It shows the current and the last complete scrape and browses the results. It compiles the generated client from `macos/Walker/Generated/` directly. The app bundles the `walker` and `configvalidator` binaries, built with the Go from `mise.toml` - run `mise trust && mise install` once before building in Xcode.
 
 ```sh
-go run ./cmd/walker path/to/config.yaml   # serves on :3001 by default
+go -C go run ./cmd/walker path/to/config.yaml   # serves on :3001 by default
 open macos/Walker.xcodeproj                 # then run the Walker scheme
 ```
 
