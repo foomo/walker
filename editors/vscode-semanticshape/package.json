@@ -1,0 +1,56 @@
+{
+  "name": "semanticshape",
+  "displayName": "Semantic Shape",
+  "description": "Completion, hover and lint diagnostics for foomo walker semantic shape files (*.shape.html)",
+  "version": "0.2.0",
+  "publisher": "foomo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/foomo/walker",
+    "directory": "editors/vscode-semanticshape"
+  },
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.shape.html",
+    "onLanguage:html"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "semanticshape.restartServer",
+        "title": "Semantic Shape: Restart Language Server"
+      }
+    ],
+    "configuration": {
+      "title": "Semantic Shape",
+      "properties": {
+        "semanticshape.serverPath": {
+          "type": "string",
+          "default": "semanticshape-lsp",
+          "markdownDescription": "Path of the `semanticshape-lsp` binary. A bare name is looked up on the `PATH`, then in `$GOBIN`, `$GOPATH/bin` and `~/go/bin`."
+        },
+        "semanticshape.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

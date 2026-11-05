@@ -29,11 +29,11 @@ func TestGetSchemaRoot(t *testing.T) {
 	assert.Equal(t, demoshop.GroupHeader, info.GroupHeader)
 
 	broken := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(broken, "default.html"), []byte(`<html><body><h1 score=1/></body></html>`), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(broken, "default.shape.html"), []byte(`<html><body><h1 score=1/></body></html>`), 0o644))
 	info = s.GetSchemaRoot(broken)
 	assert.Equal(t, "the schema root has errors", info.Error)
 	require.Len(t, info.LintErrors, 1)
-	assert.Equal(t, "default.html", info.LintErrors[0].File)
+	assert.Equal(t, "default.shape.html", info.LintErrors[0].File)
 
 	assert.Equal(t, "no schema root", s.GetSchemaRoot("").Error)
 }

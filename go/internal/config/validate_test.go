@@ -60,13 +60,13 @@ func TestValidate(t *testing.T) {
 func TestValidateSchemaRoot(t *testing.T) {
 	base := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(base, "schema"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(base, "schema", "default.html"), []byte("<html><body><h1 score=1/></body></html>"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(base, "schema", "default.shape.html"), []byte("<html><body><h1 score=1/></body></html>"), 0o644))
 
 	// relative to the config file, with the lint errors of the schema
 	list := Validate([]byte("target: https://example.com\ngroupheader: x-group\nschemaroot: schema\n"), base)
 	require.Len(t, list, 1)
 	assert.Equal(t, problem{SeverityError, "schemaroot", 3}, problems(list)[0])
-	assert.Contains(t, list[0].Message, `schema default.html:1: attribute "score" looks like a rule`)
+	assert.Contains(t, list[0].Message, `schema default.shape.html:1: attribute "score" looks like a rule`)
 
 	list = Validate([]byte("target: https://example.com\nschemaroot: nope\n"), base)
 	assert.Equal(t, []problem{{SeverityInfo, "schemaroot", 2}, {SeverityError, "schemaroot", 2}}, problems(list))

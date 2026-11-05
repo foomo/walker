@@ -3,7 +3,7 @@ package vo
 import (
 	"time"
 
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 )
 
 type LinkList map[string]int
@@ -21,7 +21,7 @@ type ScrapeResult struct {
 	Redirects        []Redirect
 	Error            string
 	Code             int
-	ValidationReport *htmlschema.Report
+	ValidationReport *semanticshape.Report
 	ValidationError  string
 	Status           string
 	ContentType      string

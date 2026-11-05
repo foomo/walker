@@ -164,7 +164,7 @@ private struct SchemaTreeRows: View {
     }
 }
 
-/// TraceSource reads the source of a trace node: file.html:line
+/// TraceSource reads the source of a trace node: file.shape.html:line
 enum TraceSource {
     static func file(_ source: String) -> String {
         guard let colon = source.lastIndex(of: ":"), source[source.index(after: colon)...].allSatisfy(\.isNumber) else {
@@ -173,9 +173,10 @@ enum TraceSource {
         return String(source[..<colon])
     }
 
-    /// schemaPath is how schemas refer to a file: /partials/head
+    /// schemaPath is how schemas refer to a file: partials/head.shape.html is /partials/head
     static func schemaPath(_ file: String) -> String {
-        "/" + (file.hasSuffix(".html") ? String(file.dropLast(5)) : file)
+        let suffix = ".shape.html"
+        return "/" + (file.hasSuffix(suffix) ? String(file.dropLast(suffix.count)) : file)
     }
 }
 

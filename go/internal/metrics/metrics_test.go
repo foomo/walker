@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 	"github.com/foomo/walker/go/internal/vo"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -16,15 +16,15 @@ func testStatus(running bool, started time.Time) *vo.Status {
 	status := &vo.Status{
 		Results: map[string]vo.ScrapeResult{
 			"http://example.com/": {TargetURL: "http://example.com/", Group: "content", Code: 200, Duration: 40 * time.Millisecond},
-			"http://example.com/shop/a": {TargetURL: "http://example.com/shop/a", Group: "product", Code: 200, Duration: 150 * time.Millisecond, ValidationReport: &htmlschema.Report{
-				Score:      &htmlschema.ScoreNode{Points: 10, Max: 20},
+			"http://example.com/shop/a": {TargetURL: "http://example.com/shop/a", Group: "product", Code: 200, Duration: 150 * time.Millisecond, ValidationReport: &semanticshape.Report{
+				Score:      &semanticshape.ScoreNode{Points: 10, Max: 20},
 				Penalty:    4,
-				Findings:   []*htmlschema.Finding{{Severity: htmlschema.SeverityWarn, Penalty: 4}},
-				Components: map[string]*htmlschema.ComponentSummary{"/components/teaser": {Instances: 2, Points: 3, Max: 4}},
+				Findings:   []*semanticshape.Finding{{Severity: semanticshape.SeverityWarn, Penalty: 4}},
+				Components: map[string]*semanticshape.ComponentSummary{"/components/teaser": {Instances: 2, Points: 3, Max: 4}},
 			}},
-			"http://example.com/shop/b": {TargetURL: "http://example.com/shop/b", Group: "product", Code: 200, Duration: 2 * time.Second, ValidationReport: &htmlschema.Report{
-				Score:      &htmlschema.ScoreNode{Points: 20, Max: 20},
-				Components: map[string]*htmlschema.ComponentSummary{"/components/teaser": {Instances: 1, Points: 2, Max: 2}},
+			"http://example.com/shop/b": {TargetURL: "http://example.com/shop/b", Group: "product", Code: 200, Duration: 2 * time.Second, ValidationReport: &semanticshape.Report{
+				Score:      &semanticshape.ScoreNode{Points: 20, Max: 20},
+				Components: map[string]*semanticshape.ComponentSummary{"/components/teaser": {Instances: 1, Points: 2, Max: 2}},
 			}},
 			"http://example.com/missing": {TargetURL: "http://example.com/missing", Group: "content", Code: 404, Duration: 10 * time.Millisecond},
 		},

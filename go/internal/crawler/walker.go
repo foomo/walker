@@ -9,13 +9,13 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/foomo/walker/go/internal/config"
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 	"github.com/foomo/walker/go/internal/vo"
 )
 
 type start struct {
 	conf                     config.Config
-	schemaRoot               *htmlschema.Root
+	schemaRoot               *semanticshape.Root
 	linkListFilterFunc       LinkListFilterFunc
 	validationFunc           ValidationFunc
 	scrapeFunc               ScrapeFunc
@@ -112,9 +112,9 @@ func (w *Walker) Walk(
 	validationFunc ValidationFunc,
 	scrapeResultModifierFunc ScrapeResultModifierFunc,
 ) (chanLoopStatus chan vo.Status, err error) {
-	var schemaRoot *htmlschema.Root
+	var schemaRoot *semanticshape.Root
 	if conf.SchemaRoot != "" {
-		root, errLoad := htmlschema.LoadRoot(conf.SchemaRoot)
+		root, errLoad := semanticshape.LoadRoot(conf.SchemaRoot)
 		if errLoad != nil {
 			return nil, errLoad
 		}

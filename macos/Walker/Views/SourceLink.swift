@@ -33,7 +33,7 @@ enum Editor: String, CaseIterable, Identifiable {
     }
 }
 
-/// SourceLink is a schema source - file.html:line, relative to the schema root
+/// SourceLink is a schema source - file.shape.html:line, relative to the schema root
 /// - that opens in the editor of the settings
 struct SourceLink: View {
     let root: String

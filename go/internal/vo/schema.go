@@ -1,6 +1,6 @@
 package vo
 
-import "github.com/foomo/walker/go/internal/htmlschema"
+import "github.com/foomo/walker/go/internal/semanticshape"
 
 // SchemaRootInfo describes a schema root for the schema developer
 type SchemaRootInfo struct {
@@ -8,7 +8,7 @@ type SchemaRootInfo struct {
 	HasDefault bool
 	// GroupHeader is the response header the walker reads a page's group from
 	GroupHeader string
-	LintErrors  []htmlschema.LintError
+	LintErrors  []semanticshape.LintError
 	Error       string
 }
 
@@ -21,10 +21,10 @@ type SchemaValidation struct {
 	StatusCode int
 	// DetectedGroup is the value of the group header of the fetched page
 	DetectedGroup string
-	Report        *htmlschema.Report
-	Trace         *htmlschema.TraceNode
+	Report        *semanticshape.Report
+	Trace         *semanticshape.TraceNode
 	// Page is the head and the JSON-LD of the validated html
-	Page       *htmlschema.PageData
-	LintErrors []htmlschema.LintError
+	Page       *semanticshape.PageData
+	LintErrors []semanticshape.LintError
 	Error      string
 }

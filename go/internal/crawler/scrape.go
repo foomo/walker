@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 	"github.com/foomo/walker/go/internal/vo"
 )
 
@@ -39,7 +39,7 @@ func scrape(
 	groupHeader string,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
-	schemaRoot *htmlschema.Root,
+	schemaRoot *semanticshape.Root,
 	chanResult chan scrapeResultAndClient,
 ) {
 	result := vo.ScrapeResult{

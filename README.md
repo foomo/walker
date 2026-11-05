@@ -6,7 +6,7 @@ Walker walkes aka as crawls through websites and collects performance and SEO re
 
 ## Layout
 
-A monorepo: all Go code is one module in `go/` (`github.com/foomo/walker/go`, binaries in `go/cmd`, every package in `go/internal`), next to the macOS app (`macos/`) and the editor extensions for the htmlschema language server (`editors/`).
+A monorepo: all Go code is one module in `go/` (`github.com/foomo/walker/go`, binaries in `go/cmd`, every package in `go/internal`), next to the macOS app (`macos/`) and the editor extensions for the semantic shape language server (`editors/`).
 
 ## Development
 
@@ -70,9 +70,26 @@ With an `interval`, walker idles after a complete scrape cycle until the next bo
 - missing title, description, h1
 - duplication title, description, h1
 
-### seo validation schemata
+### semantic shapes
 
-WIP
+With `schemaroot` (and usually `groupheader`) every page is validated against the *semantic shape* of its group: an html file named `*.shape.html` that describes which landmarks, headings, components, links and JSON-LD a page of that group must have, how strictly, and how it scores. The language is specified in [`go/internal/semanticshape/SPEC.md`](go/internal/semanticshape/SPEC.md), the demo shop (`mise run demo`) comes with a complete example in `go/internal/demoshop/schema`. Writing shapes is easier with the [editor support](#editor-support).
+
+## Editor support
+
+`semanticshape-lsp` (`go/cmd/semanticshape-lsp`) is a language server for shape files: completion of the `val:*` elements, rules and values, hover docs, and the lint errors of the whole schema root as diagnostics while typing - unsaved buffers included. It speaks LSP over stdio and only acts on `*.shape.html` files inside a schema root (a directory with `groups/` or `default.shape.html`), so it runs next to the editor's own html support. The extensions in `editors/` start it from the `PATH`:
+
+```sh
+mise run lsp                      # install semanticshape-lsp into ~/go/bin
+mise run editors                  # the language server + both extensions below
+mise run editors:zed              # check that the Zed extension compiles (wasm32-wasip2)
+mise run editors:vscode           # package editors/vscode-semanticshape/semanticshape-<version>.vsix
+mise run editors:vscode:install   # package and install it into VS Code
+```
+
+- **Zed** (`editors/zed-semanticshape`): `zed: install dev extension` and choose the directory - Zed builds it with your rustup toolchain. After changes: `zed: rebuild dev extension`.
+- **VS Code** (`editors/vscode-semanticshape`): `mise run editors:vscode:install`, or for development `npm install` in the directory and `ln -s "$PWD" ~/.vscode/extensions/foomo.semanticshape-0.2.0`, then `Developer: Reload Window`. The setting `semanticshape.serverPath` points to the binary if it isn't on the `PATH`, `$GOBIN`, `$GOPATH/bin` or `~/go/bin`.
+
+After changes to the server, run `mise run lsp` again and restart the language server (`Semantic Shape: Restart Language Server` in VS Code, `editor: restart language server` in Zed). The extensions' READMEs have the details.
 
 ## service API
 

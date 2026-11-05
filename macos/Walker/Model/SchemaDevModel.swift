@@ -28,7 +28,7 @@ final class SchemaDevModel {
     var schemaRoot: String {
         didSet { save() }
     }
-    /// group to validate with - "" is the group the page reports, then default.html
+    /// group to validate with - "" is the group the page reports, then default.shape.html
     var group: String {
         didSet { save() }
     }

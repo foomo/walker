@@ -12,7 +12,7 @@ mappings:
   github.com/foomo/walker/go/internal/vo:
     out: ../macos/Walker/Generated/WalkerVo.swift
     namespace: WalkerVO
-  github.com/foomo/walker/go/internal/htmlschema:
+  github.com/foomo/walker/go/internal/semanticshape:
     out: ../macos/Walker/Generated/HTMLSchemaVO.swift
     namespace: HTMLSchemaVO
   github.com/foomo/walker/go/internal/semanticscrape:

@@ -22,7 +22,7 @@ var files embed.FS
 // GroupHeader tells walker the page group of a page: index, category or product
 const GroupHeader = "x-next-js-app"
 
-const siteName = "htmlschema Demo Shop"
+const siteName = "Semantic Shape Demo Shop"
 
 // Run serves the demo shop on addr. With the sources at hand - go run in the
 // repository - templates, css and catalogue are read from disk on every
@@ -62,8 +62,8 @@ func SourceFiles() (fs.FS, bool) {
 	return os.DirFS(dir), true
 }
 
-// SchemaDir is the htmlschema root of the shop, in the source directory -
-// the golden tests of htmlschema/SPEC.md and the walker tests validate against it
+// SchemaDir is the shape root of the shop, in the source directory -
+// the golden tests of semanticshape/SPEC.md and the walker tests validate against it
 func SchemaDir() string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "schema")
@@ -167,7 +167,7 @@ func (s *site) index(w http.ResponseWriter, r *http.Request) {
 	base := baseURL(r)
 	p := &page{
 		Title:       siteName + " – Robots and Cars",
-		Description: "A small shop for funny robots and unusual cars, built to demonstrate how htmlschema validates and scores the SEO of every page group.",
+		Description: "A small shop for funny robots and unusual cars, built to demonstrate how semantic shapes validate and scores the SEO of every page group.",
 		Canonical:   base + "/",
 		OGType:      "website",
 		OGImage:     base + categorySocialImage(s.directory.Categories[0]),

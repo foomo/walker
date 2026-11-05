@@ -619,7 +619,7 @@ func normalize(s string) string {
 }
 
 // locator is a CSS path to n, usable with document.querySelector, the same
-// scheme as htmlschema's locators
+// scheme as semanticshape's locators
 func locator(n *html.Node) string {
 	var parts []string
 	for ; n != nil && n.Type == html.ElementNode; n = n.Parent {

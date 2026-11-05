@@ -90,10 +90,10 @@ struct ConfigFormView<Header: View, Footer: View>: View {
                         Button("Choose…", action: chooseSchemaRoot)
                     }
                 }
-                FieldNote("A directory with `default.html` and `groups/`. Every page is validated against the schema of its group, and gets findings, a score and a penalty. Empty: no validation.")
+                FieldNote("A directory of semantic shapes, `*.shape.html`: `default.shape.html` and `groups/`. Every page is validated against the shape of its group, and gets findings, a score and a penalty. Empty: no validation.")
                 ProblemList(problems: problems(for: "schemaroot"))
                 TextField("Group header", text: $form.groupHeader, prompt: Text("x-next-js-app"))
-                FieldNote("The response header that names the group of a page: `x-next-js-app: product` validates with `groups/product.html`. Pages without it are validated with `default.html`.")
+                FieldNote("The response header that names the group of a page: `x-next-js-app: product` validates with `groups/product.shape.html`. Pages without it are validated with `default.shape.html`.")
                 ProblemList(problems: problems(for: "groupheader"))
             }
             Section("Server") {
@@ -170,7 +170,7 @@ struct ConfigFormView<Header: View, Footer: View>: View {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        panel.message = "Choose the schema root - the directory with default.html and groups/"
+        panel.message = "Choose the schema root - the directory with default.shape.html and groups/"
         if !base.isEmpty {
             panel.directoryURL = URL(filePath: base)
         }

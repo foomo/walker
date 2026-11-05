@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	}
 	schemaRoot, group, target := flag.Arg(0), flag.Arg(1), flag.Arg(2)
 
-	root, errLoad := htmlschema.LoadRoot(schemaRoot)
+	root, errLoad := semanticshape.LoadRoot(schemaRoot)
 	if errLoad != nil {
 		slog.Error("could not load the schema root", "root", schemaRoot)
 		// the lint errors, one per line - file:line message
@@ -45,7 +45,7 @@ func main() {
 		os.Exit(2)
 	}
 	report.Print(os.Stdout)
-	if report.Count(htmlschema.SeverityError) > 0 {
+	if report.Count(semanticshape.SeverityError) > 0 {
 		os.Exit(3)
 	}
 }

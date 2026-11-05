@@ -1,0 +1,13 @@
+id = "semanticshape"
+name = "Semantic Shape"
+description = "Completion, hover and lint diagnostics for foomo walker semantic shape files (*.shape.html)"
+version = "0.2.0"
+schema_version = 1
+authors = ["Jan Halfar <jan@bestbytes.com>"]
+repository = "https://github.com/foomo/walker"
+
+# runs next to the html language server - it only acts on *.shape.html files
+# in schema roots, directories with groups/ or default.shape.html
+[language_servers.semanticshape-lsp]
+name = "semanticshape"
+languages = ["HTML"]

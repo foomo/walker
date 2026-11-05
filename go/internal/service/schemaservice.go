@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 	"github.com/foomo/walker/go/internal/vo"
 )
 
@@ -59,7 +59,7 @@ func (s *service) GetSchemaRootVersion(schemaRoot string) string {
 	if schemaRoot == "" {
 		return ""
 	}
-	version, err := htmlschema.RootVersion(schemaRoot)
+	version, err := semanticshape.RootVersion(schemaRoot)
 	if err != nil {
 		return ""
 	}
@@ -69,7 +69,7 @@ func (s *service) GetSchemaRootVersion(schemaRoot string) string {
 // ValidateSchema validates a page against a schema root, which is loaded on
 // every call to pick up changes. Without html the server fetches targetURL,
 // otherwise html is a snapshot of the page in a browser. An empty group is
-// the group the page reports in the group header, or default.html.
+// the group the page reports in the group header, or default.shape.html.
 func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (validation vo.SchemaValidation) {
 	var (
 		start                       = time.Now()
@@ -103,9 +103,9 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 			"points", r.Score.Points,
 			"max", r.Score.Max,
 			"penalty", r.Penalty,
-			"errors", r.Count(htmlschema.SeverityError),
-			"warnings", r.Count(htmlschema.SeverityWarn),
-			"infos", r.Count(htmlschema.SeverityInfo),
+			"errors", r.Count(semanticshape.SeverityError),
+			"warnings", r.Count(semanticshape.SeverityWarn),
+			"infos", r.Count(semanticshape.SeverityInfo),
 		)
 		slog.Info("schema validated", attrs...)
 	}()
@@ -144,7 +144,7 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 	validation.Group = group
 	htmlLength = len(htmlBytes)
 	// the head and the JSON-LD are shown even if the validation fails
-	validation.Page, _ = htmlschema.ExtractPageData(htmlBytes)
+	validation.Page, _ = semanticshape.ExtractPageData(htmlBytes)
 	validateStart := time.Now()
 	report, trace, err := root.Trace(group, htmlBytes)
 	validateDuration = time.Since(validateStart)
@@ -159,18 +159,18 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 
 // logLintErrors logs every problem of a schema root on debug level, the
 // summaries only count them
-func logLintErrors(schemaRoot string, lintErrors []htmlschema.LintError) {
+func logLintErrors(schemaRoot string, lintErrors []semanticshape.LintError) {
 	for _, e := range lintErrors {
 		slog.Debug("schema lint error", "root", schemaRoot, "file", e.File, "line", e.Line, "message", e.Message)
 	}
 }
 
-func loadSchemaRoot(schemaRoot string) (*htmlschema.Root, []htmlschema.LintError, error) {
+func loadSchemaRoot(schemaRoot string) (*semanticshape.Root, []semanticshape.LintError, error) {
 	if schemaRoot == "" {
 		return nil, nil, errors.New("no schema root")
 	}
-	root, err := htmlschema.LoadRoot(schemaRoot)
-	var lintErrors htmlschema.LintErrors
+	root, err := semanticshape.LoadRoot(schemaRoot)
+	var lintErrors semanticshape.LintErrors
 	if errors.As(err, &lintErrors) {
 		return nil, lintErrors, errors.New("the schema root has errors")
 	}

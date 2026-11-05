@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -272,7 +272,7 @@ func (v *validator) schema(values map[string]*yaml.Node, base string) {
 		return
 	}
 	if !hasHeader || header.Value == "" {
-		v.add(SeverityInfo, "schemaroot", root, "without a groupheader every page is validated with default.html")
+		v.add(SeverityInfo, "schemaroot", root, "without a groupheader every page is validated with default.shape.html")
 	}
 	dir := root.Value
 	if !filepath.IsAbs(dir) && base != "" {
@@ -291,8 +291,8 @@ func (v *validator) schema(values map[string]*yaml.Node, base string) {
 		v.add(SeverityError, "schemaroot", root, fmt.Sprintf("schemaroot %s is not a directory", dir))
 		return
 	}
-	_, errLoad := htmlschema.LoadRoot(dir)
-	var lintErrors htmlschema.LintErrors
+	_, errLoad := semanticshape.LoadRoot(dir)
+	var lintErrors semanticshape.LintErrors
 	switch {
 	case errors.As(errLoad, &lintErrors):
 		for _, e := range lintErrors {

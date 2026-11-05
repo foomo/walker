@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/foomo/walker/go/internal/htmlschema"
+	"github.com/foomo/walker/go/internal/semanticshape"
 	"github.com/foomo/walker/go/internal/vo"
 	"github.com/temoto/robotstxt"
 )
@@ -117,7 +117,7 @@ func (w *Walker) scrapeloop() {
 	paths := []string{}
 	var cp *clientPool
 	var robotsGroup *robotstxt.Group
-	var schemaRoot *htmlschema.Root
+	var schemaRoot *semanticshape.Root
 
 	// scheduling
 	var interval, offset time.Duration

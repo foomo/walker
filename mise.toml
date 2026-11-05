@@ -53,6 +53,34 @@ description = "Regenerate the Go proxy and the Swift client"
 depends = ["generate:go", "generate:swift"]
 
 [tasks.lsp]
-description = "Install the htmlschema language server"
+description = "Install the semantic shape language server"
 dir = "go"
-run = "go install ./cmd/htmlschema-lsp"
+run = "go install ./cmd/semanticshape-lsp"
+
+# editor extensions for the semantic shape language server - both start
+# semanticshape-lsp from the PATH, `mise run lsp` installs it
+[tasks."editors:zed"]
+description = "Build the Zed extension to wasm - Zed builds it itself on `zed: install dev extension`, this checks it compiles"
+dir = "editors/zed-semanticshape"
+run = """
+rustup target add wasm32-wasip2
+cargo build --release --target wasm32-wasip2
+"""
+
+[tasks."editors:vscode"]
+description = "Package the VS Code extension as editors/vscode-semanticshape/semanticshape-<version>.vsix"
+dir = "editors/vscode-semanticshape"
+run = """
+npm install --no-audit --no-fund
+npx --yes @vscode/vsce package --skip-license
+"""
+
+[tasks."editors:vscode:install"]
+description = "Package the VS Code extension and install it into VS Code"
+depends = ["editors:vscode"]
+dir = "editors/vscode-semanticshape"
+run = 'code --install-extension "semanticshape-$(node -p "require(\"./package.json\").version").vsix"'
+
+[tasks.editors]
+description = "Install the language server and build both editor extensions"
+depends = ["lsp", "editors:zed", "editors:vscode"]

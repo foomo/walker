@@ -208,7 +208,7 @@ private struct SchemaRootMenu: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a schema root - the directory with default.html and groups/"
+        panel.message = "Choose a schema root - the directory with default.shape.html and groups/"
         if !model.schemaRoot.isEmpty {
             panel.directoryURL = URL(filePath: model.schemaRoot)
         }
