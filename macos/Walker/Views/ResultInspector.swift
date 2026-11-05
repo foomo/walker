@@ -215,8 +215,8 @@ struct ResultSections: View {
             }
 
             if let report = result.validationReport {
-                Section("Schema validation") {
-                    LabeledContent("Schema", value: report.schema)
+                Section("Shape validation") {
+                    LabeledContent("Shape", value: report.shape)
                     if let score = report.score {
                         LabeledContent("Score", value: score.summary)
                     }
@@ -230,7 +230,7 @@ struct ResultSections: View {
                     }
                 }
             } else if !result.validationError.isEmpty {
-                Section("Schema validation") {
+                Section("Shape validation") {
                     Text(result.validationError)
                 }
             }
@@ -321,7 +321,7 @@ struct LinksDisclosure: View {
     }
 }
 
-extension HTMLSchemaVO.ScoreNode {
+extension SemanticShapeVO.ScoreNode {
     /// summary shows the points of the maximum and the share in percent
     var summary: String {
         guard max > 0 else {

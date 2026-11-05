@@ -82,18 +82,18 @@ struct ConfigFormView<Header: View, Footer: View>: View {
                 FieldNote("Shifts the boundaries: `24h` with `3h` crawls at 03:00 at night, `1h` with `15m` at a quarter past every hour.")
                 ProblemList(problems: problems(for: "offset"))
             }
-            Section("HTML Schema") {
-                LabeledContent("Schema root") {
+            Section("Semantic Shapes") {
+                LabeledContent("Shape root") {
                     HStack {
-                        TextField("Schema root", text: $form.schemaRoot, prompt: Text("relative to this file"))
+                        TextField("Shape root", text: $form.shapeRoot, prompt: Text("relative to this file"))
                             .labelsHidden()
-                        Button("Choose…", action: chooseSchemaRoot)
+                        Button("Choose…", action: chooseShapeRoot)
                     }
                 }
-                FieldNote("A directory of semantic shapes, `*.shape.html`: `default.shape.html` and `groups/`. Every page is validated against the shape of its group, and gets findings, a score and a penalty. Empty: no validation.")
-                ProblemList(problems: problems(for: "schemaroot"))
+                FieldNote("A directory of semantic shapes, `*.semanticshape.html`: `default.semanticshape.html` and `groups/`. Every page is validated against the shape of its group, and gets findings, a score and a penalty. Empty: no validation.")
+                ProblemList(problems: problems(for: "shaperoot"))
                 TextField("Group header", text: $form.groupHeader, prompt: Text("x-next-js-app"))
-                FieldNote("The response header that names the group of a page: `x-next-js-app: product` validates with `groups/product.shape.html`. Pages without it are validated with `default.shape.html`.")
+                FieldNote("The response header that names the group of a page: `x-next-js-app: product` validates with `groups/product.semanticshape.html`. Pages without it are validated with `default.semanticshape.html`.")
                 ProblemList(problems: problems(for: "groupheader"))
             }
             Section("Server") {
@@ -166,11 +166,11 @@ struct ConfigFormView<Header: View, Footer: View>: View {
         }
     }
 
-    private func chooseSchemaRoot() {
+    private func chooseShapeRoot() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        panel.message = "Choose the schema root - the directory with default.shape.html and groups/"
+        panel.message = "Choose the shape root - the directory with default.semanticshape.html and groups/"
         if !base.isEmpty {
             panel.directoryURL = URL(filePath: base)
         }
@@ -178,9 +178,9 @@ struct ConfigFormView<Header: View, Footer: View>: View {
         let path = url.path(percentEncoded: false)
         // inside the config's directory the path is written relative, like walker resolves it
         if !base.isEmpty, path.hasPrefix(base + "/") {
-            form.schemaRoot = String(path.dropFirst(base.count + 1))
+            form.shapeRoot = String(path.dropFirst(base.count + 1))
         } else {
-            form.schemaRoot = path
+            form.shapeRoot = path
         }
     }
 }

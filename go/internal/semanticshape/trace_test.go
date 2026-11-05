@@ -97,7 +97,7 @@ func TestRootGroups(t *testing.T) {
 }
 
 func TestTraceSurplus(t *testing.T) {
-	root, err := LoadRoot(writeRoot(t, map[string]string{"default.shape.html": body(`<div><a val:score=1/></div>`)}))
+	root, err := LoadRoot(writeRoot(t, map[string]string{"default.semanticshape.html": body(`<div><a val:score=1/></div>`)}))
 	require.NoError(t, err)
 	_, trace, err := root.Trace("x", []byte(pageBody(`<div><a>first</a><a>second</a></div>`)))
 	require.NoError(t, err)

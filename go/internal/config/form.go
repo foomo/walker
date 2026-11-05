@@ -24,7 +24,7 @@ type Form struct {
 	Depth             int      `json:"depth"`
 	Paging            bool     `json:"paging"`
 	GroupHeader       string   `json:"groupHeader"`
-	SchemaRoot        string   `json:"schemaRoot"`
+	ShapeRoot         string   `json:"shapeRoot"`
 	Interval          string   `json:"interval"`
 	Offset            string   `json:"offset"`
 }
@@ -65,8 +65,13 @@ func ReadForm(data []byte) (Form, error) {
 			form.Agent = scalar(n, form.Agent)
 		case "groupheader":
 			form.GroupHeader = scalar(n, form.GroupHeader)
+		case "shaperoot":
+			form.ShapeRoot = scalar(n, form.ShapeRoot)
 		case "schemaroot":
-			form.SchemaRoot = scalar(n, form.SchemaRoot)
+			// the old name of shaperoot
+			if form.ShapeRoot == "" {
+				form.ShapeRoot = scalar(n, form.ShapeRoot)
+			}
 		case "interval":
 			form.Interval = scalar(n, form.Interval)
 		case "offset":
@@ -118,7 +123,9 @@ func WriteForm(data []byte, form Form) ([]byte, error) {
 	w.int("depth", form.Depth, defaults.Depth)
 	w.bool("paging", form.Paging, defaults.Paging)
 	w.str("groupheader", form.GroupHeader, "")
-	w.str("schemaroot", form.SchemaRoot, "")
+	// schemaroot is the old name of shaperoot - renamed in place, its comments stay
+	w.rename("schemaroot", "shaperoot")
+	w.str("shaperoot", form.ShapeRoot, "")
 	w.str("interval", form.Interval, "")
 	w.str("offset", form.Offset, "")
 
@@ -146,6 +153,19 @@ func (w *formWriter) value(key string) *yaml.Node {
 		}
 	}
 	return nil
+}
+
+// rename renames the key from to to, unless to exists already
+func (w *formWriter) rename(from, to string) {
+	if w.value(to) != nil {
+		return
+	}
+	for i := 0; i+1 < len(w.root.Content); i += 2 {
+		if w.root.Content[i].Value == from {
+			w.root.Content[i].Value = to
+			return
+		}
+	}
 }
 
 func (w *formWriter) remove(key string) {

@@ -15,7 +15,7 @@ const (
 	TraceStatusAbsent TraceStatus = "absent"
 )
 
-// TraceNode is a schema element evaluated in one context - the schema as a
+// TraceNode is a shape element evaluated in one context - the shape as a
 // tree, for tools that show how a page was validated
 type TraceNode struct {
 	// Kind is page, element, selector, choice, sequence, component, ld, prop or match
@@ -23,7 +23,7 @@ type TraceNode struct {
 	Label  string
 	Path   string
 	Source string
-	// Rules are the attributes of the schema element as written
+	// Rules are the attributes of the shape element as written
 	Rules string
 	// Status is the worst severity of the node's own findings, absent if an
 	// optional element was not found
@@ -42,7 +42,7 @@ type TraceNode struct {
 	Via string
 }
 
-// Trace validates a page like Validate and returns the evaluated schema as a tree
+// Trace validates a page like Validate and returns the evaluated shape as a tree
 func (r *Root) Trace(group string, htmlBytes []byte) (*Report, *TraceNode, error) {
 	return r.validate(group, htmlBytes, true)
 }

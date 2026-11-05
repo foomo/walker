@@ -7,9 +7,9 @@ are the golden tests in `examples_test.go`.
 
 Semantic shapes make an SEO specification machine readable and executable. For every
 *group* of pages (typically one Next.js route such as `/products/[slug]`) an SEO
-expert writes a shape: an HTML file named `*.shape.html` that describes the
-semantic structure a page of the group must have. This document still calls a
-shape file a *schema* and its directory the *schema root*. Validating a page against it yields three independent
+expert writes a shape: an HTML file named `*.semanticshape.html` that describes the
+semantic structure a page of the group must have. The directory of the shapes is the *shape root*. Validating a page against it
+yields three independent
 results:
 
 - **findings**: rules the page breaks. Each finding has a **severity** (`error`,
@@ -23,8 +23,8 @@ Score and penalty are **never combined**. "Lots of good content, but one heavy
 mistake" (score 90 %, penalty 50) and "little content, no mistakes" (score 20 %,
 penalty 0) are different situations and stay distinguishable.
 
-Examples referenced throughout come from the demo shop: the schemas live in
-[`demoshop/schema`](../demoshop/schema), the pages are rendered by
+Examples referenced throughout come from the demo shop: the shapes live in
+[`demoshop/shapes`](../demoshop/shapes), the pages are rendered by
 [`demoshop`](../demoshop) (`go run ./cmd/demo`). They are worked through in
 [section 14](#14-worked-examples).
 
@@ -33,11 +33,11 @@ Examples referenced throughout come from the demo shop: the schemas live in
 | term | meaning |
 |---|---|
 | group | name of a page type, e.g. `content/landing`. Passed in by the caller. |
-| schema | an HTML file describing the semantic outline a page of a group must have |
-| component | a reusable schema for a block that can appear on many pages (teaser, gallery, …), recognized in the page by a marker attribute or a CSS selector |
-| wildcard | a schema scope in which layout wrapper elements (`div`, `span`, …) between the described elements are skipped |
+| shape | an HTML file describing the semantic outline a page of a group must have |
+| component | a reusable shape for a block that can appear on many pages (teaser, gallery, …), recognized in the page by a marker attribute or a CSS selector |
+| wildcard | a shape scope in which layout wrapper elements (`div`, `span`, …) between the described elements are skipped |
 | finding | a broken rule: severity, penalty, rule, path, message |
-| score | points earned by matched content, summed up to the page. The schema defines the maximum. |
+| score | points earned by matched content, summed up to the page. The shape defines the maximum. |
 | penalty | points lost through findings, summed up to the page. No maximum. |
 
 **Input.** The library validates whatever HTML it is given. The intended input
@@ -48,28 +48,28 @@ Rendered DOM snapshots (e.g. from Playwright in CI) work the same way.
 
 ```
 <root>/
-  default.shape.html            fallback for groups without a schema
-  groups/<group>.shape.html     e.g. groups/content/landing.shape.html for group "content/landing"
+  default.semanticshape.html            fallback for groups without a shape
+  groups/<group>.semanticshape.html     e.g. groups/content/landing.semanticshape.html for group "content/landing"
   …                             everything else is organized freely, e.g. components/, partials/
 ```
 
-- Only files named `*.shape.html` belong to the root; every other file, a plain `.html` included, is ignored. A root that has plain `.html` files but no shape files at all is a lint error that names the rename (shape files before `*.shape.html`).
-- A group resolves to `groups/<group>.shape.html`. Then `default.shape.html`. Neither existing is an error. These two are the only fixed locations.
-- `default.shape.html` is only a fallback. It is **not** combined with group schemas.
-- **Paths** in `val:include` and `val:comp` are written without the `.shape.html` suffix. A leading `/` starts at the schema root (`/partials/head`). Anything else is relative to the file that contains it (`../../partials/head`).
+- Only files named `*.semanticshape.html` belong to the root; every other file, a plain `.html` included, is ignored. A root that has plain `.html` files but no shape files at all is a lint error that names the rename (shape files before `*.semanticshape.html`).
+- A group resolves to `groups/<group>.semanticshape.html`. Then `default.semanticshape.html`. Neither existing is an error. These two are the only fixed locations.
+- `default.semanticshape.html` is only a fallback. It is **not** combined with group shapes.
+- **Paths** in `val:include` and `val:comp` are written without the `.semanticshape.html` suffix. A leading `/` starts at the shape root (`/partials/head`). Anything else is relative to the file that contains it (`../../partials/head`).
 - Any file can be [included](#22-valinclude). A file with a single top level element can be [instantiated](#23-valcomp).
-- At load time all files under the root are read. Every file whose root is `val:component` is a **recognized component**, identified by its root-relative path (`/components/teaser`), however it is referenced. Every recognized component can be found on every page, not only on pages whose schema instantiates it (needed for [closed contexts](#63-closed-and-open-contexts) and [ambiguity](#32-component-recognition)).
+- At load time all files under the root are read. Every file whose root is `val:component` is a **recognized component**, identified by its root-relative path (`/components/teaser`), however it is referenced. Every recognized component can be found on every page, not only on pages whose shape instantiates it (needed for [closed contexts](#63-closed-and-open-contexts) and [ambiguity](#32-component-recognition)).
 
 Library API sketch:
 
 ```go
-root, err := semanticshape.LoadRoot("schema")
+root, err := semanticshape.LoadRoot("shape")
 report, err := root.Validate("content/landing", htmlBytes)
 ```
 
 ### 2.1 Settings
 
-Settings belong to each schema. They are written as a `<val:settings>` element,
+Settings belong to each shape. They are written as a `<val:settings>` element,
 a direct child of `<html>`. That makes them shareable through `val:include`.
 
 ```html
@@ -82,14 +82,14 @@ a direct child of `<html>`. That makes them shareable through `val:include`.
 | `marker-attribute` | `data-component` | attribute that marks component instances |
 | `penalty-error`, `penalty-warn`, `penalty-info` | 10, 3, 0 | penalty of a finding without explicit `val:penalty` |
 
-When a page is validated, the settings of the group schema apply to everything,
-including component recognition and the component schemas used on the page.
+When a page is validated, the settings of the group shape apply to everything,
+including component recognition and the component shapes used on the page.
 
 ### 2.2 `val:include`
 
 `<val:include path="/partials/head"/>` inserts the content of a file in place, as
 if it were written there. The file may contain any number of top level elements
-([partials/head.shape.html](../demoshop/schema/partials/head.shape.html) holds the `meta`s and the canonical `link` of every page).
+([partials/head.semanticshape.html](../demoshop/shapes/partials/head.semanticshape.html) holds the `meta`s and the canonical `link` of every page).
 Everything about the include site applies to the inserted elements, including the
 wildcard scope. Includes may nest. Cycles are a lint error.
 
@@ -107,12 +107,12 @@ the root element.
 The root decides what the instance does:
 
 - a **`val:component`** root: a recognized component, see [section 5](#5-components)
-- any **other element**: an element template, matched like the element written in place. [partials/site-header.shape.html](../demoshop/schema/partials/site-header.shape.html), a `<header>` with the logo link and the main navigation, is used as `<val:comp path="/partials/site-header"/>` in every group. A site could relax it for one group with `<val:comp path="../partials/site-header" val:severity="warn"/>`.
+- any **other element**: an element template, matched like the element written in place. [partials/site-header.semanticshape.html](../demoshop/shapes/partials/site-header.semanticshape.html), a `<header>` with the logo link and the main navigation, is used as `<val:comp path="/partials/site-header"/>` in every group. A site could relax it for one group with `<val:comp path="../partials/site-header" val:severity="warn"/>`.
 
 ## 3. Matching
 
 Validating a page runs in three steps: exclusion, component recognition, then
-matching the schema tree against the page tree.
+matching the shape tree against the page tree.
 
 ### 3.1 Exclusion
 
@@ -132,28 +132,28 @@ contains two `nav`s, and `header > nav` (exactly one) fails without
 
 Every element of the (excluded) page is checked against all components:
 
-1. An element whose marker attribute is set is an instance of the component with that `marker` value. If no component has that marker, the marker is ignored, as if it was not there: the element is matched like any other element, and its content is visible to the schema.
-2. An element without a marker attribute is an instance of the component whose `selector` matches it. If **several** selectors match, the element gets a `component-ambiguous` finding (error) naming all of them. It is treated as an opaque unknown instance: not validated, earns nothing. This can only be detected on concrete pages, not when loading schemas. Example: `[class*='Teaser_root']` also matches `VideoTeaser_root__v7k`. The author fixes it with plain CSS (`[class*='Teaser_root']:not([class*='VideoTeaser_root'])`), or the frontend adds a marker.
+1. An element whose marker attribute is set is an instance of the component with that `marker` value. If no component has that marker, the marker is ignored, as if it was not there: the element is matched like any other element, and its content is visible to the shape.
+2. An element without a marker attribute is an instance of the component whose `selector` matches it. If **several** selectors match, the element gets a `component-ambiguous` finding (error) naming all of them. It is treated as an opaque unknown instance: not validated, earns nothing. This can only be detected on concrete pages, not when loading shapes. Example: `[class*='Teaser_root']` also matches `VideoTeaser_root__v7k`. The author fixes it with plain CSS (`[class*='Teaser_root']:not([class*='VideoTeaser_root'])`), or the frontend adds a marker.
 3. A selector match inside an instance of the same component is part of that instance, not a nested one. Marker and CSS module class often sit on different wrappers: `<div data-component="text"><div class="RichText_root__r1">…` is one `text` instance.
 4. Otherwise, recognition continues inside an instance. Nested instances belong to the content of the outer instance.
 
 From the outside, an instance is **opaque**: one node named after the component
 (`teaser`, `gallery`, …), whatever its root element is. Its content is only
-visible to the component's own schema (and to [`val:selector`](#34-valselector)).
+visible to the component's own shape (and to [`val:selector`](#34-valselector)).
 
 ### 3.3 Elements and wildcards
 
-A schema element matches the **children of its context node** (the page node
-its parent schema element matched; the document for `<html>`) that have
+A shape element matches the **children of its context node** (the page node
+its parent shape element matched; the document for `<html>`) that have
 
 - the same tag name, and
-- every *literal* attribute of the schema element: `rel="canonical"` must be equal, `hreflang="*"` must be present and non-empty. Attributes starting with `val:` are not literals.
+- every *literal* attribute of the shape element: `rel="canonical"` must be equal, `hreflang="*"` must be present and non-empty. Attributes starting with `val:` are not literals.
 
-Page elements not mentioned in the schema are ignored. The schema describes what
+Page elements not mentioned in the shape are ignored. The shape describes what
 must or may be there, not everything that is there.
 
 Without a wildcard, matching is strict: only direct children. React layouts nest
-semantic elements deep in wrapper `div`s, so schemas declare where wrappers are allowed:
+semantic elements deep in wrapper `div`s, so shapes declare where wrappers are allowed:
 
 ```html
 <body>
@@ -166,7 +166,7 @@ semantic elements deep in wrapper `div`s, so schemas declare where wrappers are 
 </body>
 ```
 
-- Inside `<val:wildcard for="…">`, a schema element matches elements reachable from the context node through **any number (0..n) of elements matching `for`**. `for` is a CSS selector list, matched against each element on its own: `for="div, span"`, `for="div, section:not([aria-label])"`. `for="*"` skips any element.
+- Inside `<val:wildcard for="…">`, a shape element matches elements reachable from the context node through **any number (0..n) of elements matching `for`**. `for` is a CSS selector list, matched against each element on its own: `for="div, span"`, `for="div, section:not([aria-label])"`. `for="*"` skips any element.
 - The scope is **lexical and inherited**. In the example, `main` is found through the wrappers below `body`, and `h1` is found through the wrappers below `main`. A nested `val:wildcard` replaces the set for its content. `for=""` makes a part strict again.
 - Component instances are never skipped and never searched through, even when their root is a `div`.
 - An element matching `for` can still be matched itself, e.g. `<div class="x">` inside `for="div"`. The search continues below it either way.
@@ -189,7 +189,7 @@ article
 `<val:selector for="css">` matches all elements the CSS selector finds in
 the subtree of the context node, **ignoring wildcards and component borders**.
 At the top of `<body>` it searches the whole page, including inside components.
-Typical use is page-wide rules, shared through a partial ([partials/page-baseline.shape.html](../demoshop/schema/partials/page-baseline.shape.html)): `<val:selector for="h1" count=1/>`.
+Typical use is page-wide rules, shared through a partial ([partials/page-baseline.semanticshape.html](../demoshop/shapes/partials/page-baseline.semanticshape.html)): `<val:selector for="h1" count=1/>`.
 
 The rules of the `val:selector` element itself apply to every selected node. Its
 children match the children of each selected node (wildcards apply as usual).
@@ -286,7 +286,7 @@ Occurrence penalties scale with the deviation:
 A component is a file whose single root is `val:component`:
 
 ```html
-<!-- /components/teaser.shape.html -->
+<!-- /components/teaser.semanticshape.html -->
 <val:component marker="teaser" selector="[class*='Teaser_root']">
     <val:wildcard for="div, span">
         <img val:optional val:score=2 val:penalty=5 val:attr-alt="min-length:5"/>
@@ -300,7 +300,7 @@ A component is a file whose single root is `val:component`:
 - Its identity is its root-relative path, `/components/teaser`. Reports and `component-not-allowed` use it. Finding paths use the file name (`teaser[2]`), or the full path if two recognized components share a file name.
 - `marker`: the value of the marker attribute (`data-component="teaser"`). This is the reliable way and needs the frontend team's cooperation. Markers must be unique among all recognized components (lint).
 - `selector`: fallback for markup without a marker, e.g. CSS module classes such as `Teaser_root__t9q`. This is brittle across refactorings, so it's only a fallback.
-- Children are matched against the children of the instance root. The root itself can be any element. Wildcards from the instantiating schema do **not** reach into a component, so a component declares its own.
+- Children are matched against the children of the instance root. The root itself can be any element. Wildcards from the instantiating shape do **not** reach into a component, so a component declares its own.
 - A component can instantiate other components (`val:comp`, `val:choice`, `val:sequence`), and it can contain `val:ld`, e.g. an FAQ component requiring an `FAQPage` JSON-LD.
 - Including a component file with `val:include` inserts the `val:component` element itself, so it still finds instances. To reuse only its rules, put them in a separate file and include that.
 
@@ -310,7 +310,7 @@ A component is a file whose single root is `val:component`:
 
 `<val:comp path="/components/gallery"/>` with a `val:component` root matches the
 instances of that component among the children of the context node (wildcards
-apply), and validates each against the component schema. Occurrence attributes
+apply), and validates each against the component shape. Occurrence attributes
 work as on elements. Outside of `val:choice` the default is exactly 1.
 
 `val:severity` at the site is a **ceiling** for all findings inside the
@@ -339,7 +339,7 @@ A context may hold several choices and sequences. They contain only `val:comp`s 
 
 ### 6.3 Closed and open contexts
 
-A schema element containing any `val:comp` of a recognized component, `val:choice` or `val:sequence` is a
+A shape element containing any `val:comp` of a recognized component, `val:choice` or `val:sequence` is a
 *component context*. By default it is **closed**:
 
 | instance found in the context | finding |
@@ -347,7 +347,7 @@ A schema element containing any `val:comp` of a recognized component, `val:choic
 | a component it uses | validated |
 | a known component it does not use | `component-not-allowed`, error |
 
-Markers without a component schema are not components (see [3.2](#32-component-recognition)), they produce no finding.
+Markers without a component shape are not components (see [3.2](#32-component-recognition)), they produce no finding.
 
 `val:open` on the context element turns `component-not-allowed` into info.
 Instances outside component contexts are opaque and ignored. Only
@@ -363,7 +363,7 @@ Instances outside component contexts are opaque and ignored. Only
 </val:ld>
 ```
 
-- Matches JSON-LD objects with `@type` equal to (or containing) `type`, from all `script[type="application/ld+json"]` of the page, including `@graph` arrays. The position of `val:ld` in the schema doesn't matter (page-wide), except inside a component, where only scripts inside the instance count.
+- Matches JSON-LD objects with `@type` equal to (or containing) `type`, from all `script[type="application/ld+json"]` of the page, including `@graph` arrays. The position of `val:ld` in the shape doesn't matter (page-wide), except inside a component, where only scripts inside the instance count.
 - Occurrence as for elements (default exactly 1). Finding rule: `ld-occurrence`.
 - `val:prop path="a.b"`: dot path into the object. If a step hits an array, any element may satisfy it. With `every`, every element has to pass - and has to have the property, unless it is `optional` - and each failing element is a finding of its own, indexed in document order: `itemListElement.item.offers.priceCurrency[2]`. Use it for lists, where one good entry must not hide a bad one:
 
@@ -381,9 +381,9 @@ error  10  attr:min-length   html/body/main/teaser[2]/img@alt   got 0, expected 
 ```
 
 - Locator: a CSS path to the page node, usable with `document.querySelector` in the browser's dev tools, e.g. `html > body > div > div > main > div:nth-of-type(2) > section`. `:nth-of-type(n)` is added where a node has siblings with the same tag. It is computed on the page as delivered, before exclusion. For missing nodes, the locator is the context node they are missing from.
-- Path: schema path with page positions. Stable across layout changes, so findings can be compared over time. The locator is for finding the node. Components appear by name. `[n]` counts matched nodes of that schema element within one context node, starting at 1, and is omitted when there is only one. Literal attributes in head paths identify the element: `meta[name=description]`.
-- Order: schema document order, then page order. Deterministic.
-- A finding does not embed the schema element (v1 did, including its whole subtree).
+- Path: shape path with page positions. Stable across layout changes, so findings can be compared over time. The locator is for finding the node. Components appear by name. `[n]` counts matched nodes of that shape element within one context node, starting at 1, and is omitted when there is only one. Literal attributes in head paths identify the element: `meta[name=description]`.
+- Order: shape document order, then page order. Deterministic.
+- A finding does not embed the shape element (v1 did, including its whole subtree).
 
 ## 9. Score and penalty
 
@@ -393,13 +393,13 @@ error  10  attr:min-length   html/body/main/teaser[2]/img@alt   got 0, expected 
 - Only the first `max` nodes (document order) earn. Surplus nodes produce an `occurrence` finding and nothing else.
 - `val:score-per="words:k"` (or `chars:k`): the node earns `n × floor(units / k)` instead of `n`. This rewards amount: `val:score=2 val:score-per="words:20"` = 2 points per full 20 words.
 - `val:score-max=m`: caps everything the element earns **including its subtree, summed over all its nodes**.
-- `val:comp` of a component earns what its instances earn under the component schema. `val:choice` and `val:sequence` earn the sum of their `val:comp`s, capped by their own `val:score-max`.
+- `val:comp` of a component earns what its instances earn under the component shape. `val:choice` and `val:sequence` earn the sum of their `val:comp`s, capped by their own `val:score-max`.
 - Component instances that are not allowed, or unknown, earn nothing.
 - There are no negative points. Mistakes are measured by the penalty.
 
 ### 9.2 Maximum
 
-The maximum is computed from the schema alone, so it is the same for every page of a group:
+The maximum is computed from the shape alone, so it is the same for every page of a group:
 
 ```
 max(E)          = min( score-max(E),  maxCount(E) × (score(E) + Σ max(child)) )
@@ -448,7 +448,7 @@ type Finding struct {
 	Locator   string // "html > body > div > div > main > … > img"
 	Message   string // "got 0, expected at least 5"
 	Component string // innermost component instance, "/components/teaser", "" on page level
-	Source    string // "components/teaser.shape.html:6"
+	Source    string // "components/teaser.semanticshape.html:6"
 }
 
 type ScoreNode struct {
@@ -467,7 +467,7 @@ type ComponentSummary struct {
 
 type Report struct {
 	Group      string
-	Schema     string
+	Shape     string
 	Findings   []*Finding
 	Score      *ScoreNode
 	Penalty    int
@@ -475,7 +475,7 @@ type Report struct {
 }
 ```
 
-## 11. Schema lint
+## 11. Shape lint
 
 Loading fails with a list of all problems, each with file and line:
 
@@ -483,7 +483,7 @@ Loading fails with a list of all problems, each with file and line:
 - on HTML elements, attributes that look like a forgotten prefix: `score=…`, `optional`, `val=optional`, `min-length=…` (v1 examples contain both)
 - `val:`-prefixed attributes on `val:*` elements other than `val:comp`
 - duplicate attributes on an element
-- unclosed or mismatched elements (see [section 12](#12-schema-syntax))
+- unclosed or mismatched elements (see [section 12](#12-shape-syntax))
 - `min > max`, non-numeric values, `val:optional` together with `val:min`
 - `val:include` / `val:comp` to missing files, include cycles
 - `val:comp` of a file without exactly one top level element; overriding `marker`/`selector`
@@ -492,14 +492,14 @@ Loading fails with a list of all problems, each with file and line:
 - unbounded maximum without `val:score-max`
 - a component listed in two choices/sequences of the same context
 
-## 12. Schema syntax
+## 12. Shape syntax
 
-Schemas look like HTML but are **not** parsed with the HTML5 parser. Its error
+Shapes look like HTML but are **not** parsed with the HTML5 parser. Its error
 recovery would restructure them: a `val:*` element in `<head>` ends the head,
 `<val:comp/>` swallows its following siblings, `<p><div>` is split. Instead,
-schemas are read with the x/net/html *tokenizer* and a simple tree builder:
+shapes are read with the x/net/html *tokenizer* and a simple tree builder:
 
-- The tree is exactly as written. Nothing is moved and nothing is inserted (a schema that describes `<head>` writes it).
+- The tree is exactly as written. Nothing is moved and nothing is inserted (a shape that describes `<head>` writes it).
 - `<x/>` closes any element, including `val:*`. Elements without children are written self-closing: `<h2 val:score=3 val:min-length=3/>`. That's the convention in all examples; `<h2 …></h2>` is equivalent.
 - Void elements (`img`, `meta`, `link`, `br`, `hr`, `input`, …) close themselves and can't have children.
 - Every other element must be closed explicitly. Unclosed or mismatched end tags are lint errors with line numbers.
@@ -513,9 +513,9 @@ Pages are still parsed with the HTML5 parser, as browsers do.
 
 | v1 | v2 |
 |---|---|
-| HTML5 parser for schemas | own tree builder, tree exactly as written |
+| HTML5 parser for shapes | own tree builder, tree exactly as written |
 | strict direct-child matching everywhere | still the default; `val:wildcard` allows wrappers explicitly |
-| `<root>/<group>/<page>.html`, root = the groups dir | `<root>/groups/<group>.shape.html`, everything else organized freely, unknown group → `default.shape.html`; only `*.shape.html` files count |
+| `<root>/<group>/<page>.html`, root = the groups dir | `<root>/groups/<group>.semanticshape.html`, everything else organized freely, unknown group → `default.semanticshape.html`; only `*.semanticshape.html` files count |
 | `<ref>path</ref>`, file relative, exactly one top level element | `<val:include path=…/>` (any number of elements) and `<val:comp path=…/>` (one element, attribute overrides); `/` = root, otherwise relative |
 | `val:attr="name;…"`, one per element | `val:attr-<name>="…"`; the old form still works for one attribute |
 | attribute `min-length`/`max-length` exclusive (`max-length:0` never passes) | inclusive |
@@ -525,19 +525,19 @@ Pages are still parsed with the HTML5 parser, as browsers do.
 | penalty = element score, subtracted from the score in `Print` | severity (gate) + penalty (weight) per finding; score separate, never combined |
 | `val:optional` → 0..unbounded | 0..1 |
 | unknown `val:*` silently ignored, typos become literal attributes | lint error |
-| no fallback for unknown groups | `default.shape.html` |
+| no fallback for unknown groups | `default.semanticshape.html` |
 
 ## 14. Worked examples
 
-Root: [`demoshop/schema`](../demoshop/schema). The pages are rendered by the demo shop
+Root: [`demoshop/shapes`](../demoshop/shapes). The pages are rendered by the demo shop
 ([`demoshop`](../demoshop)) for `https://shop.example`, and the group comes
 from its `x-next-js-app` response header. These numbers are the expected
 results, checked by `examples_test.go`.
 
 ### 14.1 `index`: the home page `/`
 
-A lead paragraph, two category tiles and a section about the demo. Schema:
-[groups/index.shape.html](../demoshop/schema/groups/index.shape.html).
+A lead paragraph, two category tiles and a section about the demo. Shape:
+[groups/index.semanticshape.html](../demoshop/shapes/groups/index.semanticshape.html).
 
 Findings: none.
 
@@ -559,7 +559,7 @@ Components: category-tile 14/14 (100 %).
 
 Ten product tiles and an `ItemList` in JSON-LD, a host carousel where every
 item is a complete product. The station wagon has a name of 75 characters.
-Schema: [groups/category.shape.html](../demoshop/schema/groups/category.shape.html).
+Shape: [groups/category.semanticshape.html](../demoshop/shapes/groups/category.semanticshape.html).
 
 Findings:
 
@@ -585,13 +585,13 @@ Result: **score 130 / 182 = 71.4 %, penalty 6**
 
 Components: product-tile 58/60 (96.7 %, penalty 3).
 
-The same schema on `/category/robots`: no findings, `val:ld(ItemList)` 10, **score 142 / 182, penalty 0**.
+The same shape on `/category/robots`: no findings, `val:ld(ItemList)` 10, **score 142 / 182, penalty 0**.
 
 ### 14.3 `product`: a clean product `/product/robot-01`
 
 Clanky the Butlerbot: complete merchant listing data in the `Product` JSON-LD,
-the product info in wrapper `div`s and two feature sections. Schema:
-[groups/product.shape.html](../demoshop/schema/groups/product.shape.html).
+the product info in wrapper `div`s and two feature sections. Shape:
+[groups/product.semanticshape.html](../demoshop/shapes/groups/product.semanticshape.html).
 
 Findings: none.
 
@@ -614,7 +614,7 @@ Components: feature-section 12/20 (60 %).
 
 ### 14.4 `product`: four flawed products
 
-Same group and schema as 14.3. Each product has one deliberate flaw, and it
+Same group and shape as 14.3. Each product has one deliberate flaw, and it
 shows up wherever the page repeats it.
 
 **Tiny Tim** (`/product/robot-07`): a description of one word, "Beeps.".
@@ -660,12 +660,12 @@ The title and the h1 carry their own `val:penalty`, so one long name weighs 90.
 | error | 10 | `ld-prop:one-of` | `html/body/val:ld(Product)/offers.priceCurrency` | "DOGE" is not one of EUR\|USD\|CHF |
 | error | 10 | `ld-prop:one-of` | `html/body/val:ld(Product)/offers.shippingDetails.shippingRate.currency` | "DOGE" is not one of EUR\|USD\|CHF |
 
-The category schema allows `DOGE` in its `ItemList`, so `/category/cars` has no currency finding.
+The category shape allows `DOGE` in its `ItemList`, so `/category/cars` has no currency finding.
 
 ### 14.5 Fallback: the 404 page
 
 The 404 page sends no group header, so it is validated with
-[default.shape.html](../demoshop/schema/default.shape.html). No findings, **score 41 / 44, penalty
+[default.semanticshape.html](../demoshop/shapes/default.semanticshape.html). No findings, **score 41 / 44, penalty
 0**. The optional `og:image` is missing: 0 of 3 points, no finding.
 
 ## 15. Decision log
@@ -673,13 +673,13 @@ The 404 page sends no group header, so it is validated with
 First feedback round:
 
 1. **Wrappers**: no global projection. `val:wildcard for="…"` instead, with lexical, inherited scope. It replaces the draft's `val:deep`, `val:strict` and `val:transparent`.
-2. **Settings**: per schema (`val:settings`, shareable via `val:include`). `aria-hidden` is not excluded by default.
-3. **Shared rules**: `default.shape.html` is a fallback only. Shared rules live in partials (see [14](#14-worked-examples)).
+2. **Settings**: per shape (`val:settings`, shareable via `val:include`). `aria-hidden` is not excluded by default.
+3. **Shared rules**: `default.semanticshape.html` is a fallback only. Shared rules live in partials (see [14](#14-worked-examples)).
 4. **Component contexts**: closed by default, error. `val:open` relaxes to info.
 5. **Score vs penalty**: two separate measures, never combined. Nodes earn independently of their children. No negative points. Penalty per finding from `val:penalty`, otherwise a default per severity.
 6. **Component overrides**: `val:severity` at the instantiation site is a ceiling. Penalties unchanged.
 7. **Choice maximum**: exact, greedy best combination.
-8. **Schema syntax**: own tree builder on the x/net/html tokenizer, no HTML5 error recovery, line numbers.
+8. **Shape syntax**: own tree builder on the x/net/html tokenizer, no HTML5 error recovery, line numbers.
 9. **Input**: any HTML. The server response is the intended input, and rendered snapshots work too.
 10. **Marker attribute**: `data-component` by default.
 
@@ -691,13 +691,13 @@ Second feedback round:
 
 Third feedback round:
 
-14. **Includes and instances**: `<ref>` and `val:use` are replaced by `val:include` (insert any file) and `val:comp` (instantiate a single-root file, attributes override the root's). Paths are `/`-rooted or relative, without `.shape.html`. File organization is free. Recognized components are the files with a `val:component` root, identified by path. `marker`/`selector` can't be overridden.
+14. **Includes and instances**: `<ref>` and `val:use` are replaced by `val:include` (insert any file) and `val:comp` (instantiate a single-root file, attributes override the root's). Paths are `/`-rooted or relative, without `.semanticshape.html`. File organization is free. Recognized components are the files with a `val:component` root, identified by path. `marker`/`selector` can't be overridden.
 
 15. **Spelling**: no `val:` prefix on attributes of `val:*` elements, except `val:comp`. `for` is a CSS selector everywhere (`val:selector for="h1"`, `val:wildcard for="div, span"`). Page-wide rules live in `/partials/page-baseline`, kept lean to avoid double findings with component rules.
 
 Fourth feedback round:
 
-16. **Unknown markers**: a `data-component` value without a component schema is ignored entirely - no `component-unknown` finding, and the element is not opaque. Projects mark many UI components (`Icon`, `Picture`, `Link`) that the SEO schema does not care about.
+16. **Unknown markers**: a `data-component` value without a component shape is ignored entirely - no `component-unknown` finding, and the element is not opaque. Projects mark many UI components (`Icon`, `Picture`, `Link`) that the SEO shape does not care about.
 
 Fifth feedback round:
 

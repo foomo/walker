@@ -28,10 +28,10 @@ type Service interface {
 	RestartScrape() bool
 	GetStatus() vo.ServiceStatus
 
-	// schema developer
-	GetSchemaRoot(schemaRoot string) (info vo.SchemaRootInfo)
-	GetSchemaRootVersion(schemaRoot string) string
-	ValidateSchema(schemaRoot, group, targetURL, html string) (validation vo.SchemaValidation)
+	// shape developer
+	GetShapeRoot(shapeRoot string) (info vo.ShapeRootInfo)
+	GetShapeRootVersion(shapeRoot string) string
+	ValidateShape(shapeRoot, group, targetURL, html string) (validation vo.ShapeValidation)
 
 	// semantic scrape
 	GetSemanticDocument(targetURL, html string, content bool) (result vo.SemanticDocument)

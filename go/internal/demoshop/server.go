@@ -62,11 +62,11 @@ func SourceFiles() (fs.FS, bool) {
 	return os.DirFS(dir), true
 }
 
-// SchemaDir is the shape root of the shop, in the source directory -
+// ShapesDir is the shape root of the shop, in the source directory -
 // the golden tests of semanticshape/SPEC.md and the walker tests validate against it
-func SchemaDir() string {
+func ShapesDir() string {
 	_, file, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(file), "schema")
+	return filepath.Join(filepath.Dir(file), "shapes")
 }
 
 // NewHandler serves the shop from fsys - with reload, catalogue and

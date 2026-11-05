@@ -20,37 +20,37 @@ func demoHandler(t *testing.T) http.Handler {
 	return handler
 }
 
-func TestGetSchemaRoot(t *testing.T) {
+func TestGetShapeRoot(t *testing.T) {
 	s := &service{conf: &config.Config{GroupHeader: demoshop.GroupHeader}}
-	info := s.GetSchemaRoot(demoshop.SchemaDir())
+	info := s.GetShapeRoot(demoshop.ShapesDir())
 	assert.Empty(t, info.Error)
 	assert.Equal(t, []string{"category", "index", "product"}, info.Groups)
 	assert.True(t, info.HasDefault)
 	assert.Equal(t, demoshop.GroupHeader, info.GroupHeader)
 
 	broken := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(broken, "default.shape.html"), []byte(`<html><body><h1 score=1/></body></html>`), 0o644))
-	info = s.GetSchemaRoot(broken)
-	assert.Equal(t, "the schema root has errors", info.Error)
+	require.NoError(t, os.WriteFile(filepath.Join(broken, "default.semanticshape.html"), []byte(`<html><body><h1 score=1/></body></html>`), 0o644))
+	info = s.GetShapeRoot(broken)
+	assert.Equal(t, "the shape root has errors", info.Error)
 	require.Len(t, info.LintErrors, 1)
-	assert.Equal(t, "default.shape.html", info.LintErrors[0].File)
+	assert.Equal(t, "default.semanticshape.html", info.LintErrors[0].File)
 
-	assert.Equal(t, "no schema root", s.GetSchemaRoot("").Error)
+	assert.Equal(t, "no shape root", s.GetShapeRoot("").Error)
 }
 
-func TestValidateSchemaRendered(t *testing.T) {
+func TestValidateShapeRendered(t *testing.T) {
 	w := httptest.NewRecorder()
 	demoHandler(t).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://localhost/product/car-04", nil))
 	s := &service{}
-	validation := s.ValidateSchema(demoshop.SchemaDir(), "product", "http://localhost/product/car-04", w.Body.String())
+	validation := s.ValidateShape(demoshop.ShapesDir(), "product", "http://localhost/product/car-04", w.Body.String())
 	assert.Empty(t, validation.Error)
-	assert.Equal(t, SchemaSourceRendered, validation.Source)
+	assert.Equal(t, ShapeSourceRendered, validation.Source)
 	require.NotNil(t, validation.Report)
 	assert.Equal(t, 90, validation.Report.Penalty)
 	assert.Equal(t, 90, validation.Trace.Penalty)
 }
 
-func TestValidateSchemaServer(t *testing.T) {
+func TestValidateShapeServer(t *testing.T) {
 	shop := demoHandler(t)
 	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "test-agent", r.UserAgent())
@@ -58,18 +58,18 @@ func TestValidateSchemaServer(t *testing.T) {
 	}))
 	defer page.Close()
 	s := &service{conf: &config.Config{GroupHeader: demoshop.GroupHeader, Agent: "test-agent"}}
-	validation := s.ValidateSchema(demoshop.SchemaDir(), "", page.URL+"/product/robot-01", "")
+	validation := s.ValidateShape(demoshop.ShapesDir(), "", page.URL+"/product/robot-01", "")
 	assert.Empty(t, validation.Error)
-	assert.Equal(t, SchemaSourceServer, validation.Source)
+	assert.Equal(t, ShapeSourceServer, validation.Source)
 	assert.Equal(t, http.StatusOK, validation.StatusCode)
 	assert.Equal(t, "product", validation.Group, "the group comes from the header")
 	assert.Equal(t, 121, validation.Report.Score.Points)
 }
 
-func TestValidateSchemaServerErrorPage(t *testing.T) {
+func TestValidateShapeServerErrorPage(t *testing.T) {
 	page := httptest.NewServer(http.NotFoundHandler())
 	defer page.Close()
-	validation := (&service{}).ValidateSchema(demoshop.SchemaDir(), "product", page.URL+"/product/robot-01", "")
+	validation := (&service{}).ValidateShape(demoshop.ShapesDir(), "product", page.URL+"/product/robot-01", "")
 	assert.Equal(t, http.StatusNotFound, validation.StatusCode)
 	assert.Equal(t, "the page returned 404 Not Found - nothing validated", validation.Error)
 	assert.Nil(t, validation.Report)

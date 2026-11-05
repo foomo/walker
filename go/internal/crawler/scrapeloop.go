@@ -117,7 +117,7 @@ func (w *Walker) scrapeloop() {
 	paths := []string{}
 	var cp *clientPool
 	var robotsGroup *robotstxt.Group
-	var schemaRoot *semanticshape.Root
+	var shapeRoot *semanticshape.Root
 
 	// scheduling
 	var interval, offset time.Duration
@@ -276,7 +276,7 @@ func (w *Walker) scrapeloop() {
 								jobs[jobURL] = true
 								poolClient.busy = true
 								dispatched[poolClient] = cycle
-								go scrape(poolClient, jobURL, baseURL, groupHeader, scrapeFunc, validationFunc, schemaRoot, w.chanResult)
+								go scrape(poolClient, jobURL, baseURL, groupHeader, scrapeFunc, validationFunc, shapeRoot, w.chanResult)
 								continue JobLoop
 							}
 						}
@@ -351,7 +351,7 @@ func (w *Walker) scrapeloop() {
 			ll.ignorePathPrefixes = st.conf.Ignore
 			ll.depth = st.conf.Depth
 			ll.paging = st.conf.Paging
-			schemaRoot = st.schemaRoot
+			shapeRoot = st.shapeRoot
 			ll.includePathPrefixes = st.conf.Target.Paths
 			ignoreRobots = st.conf.IgnoreRobots
 			ll.ignoreQueriesWith = st.conf.IgnoreQueriesWith
@@ -378,8 +378,8 @@ func (w *Walker) scrapeloop() {
 				"interval", interval,
 				"offset", offset,
 			)
-			if schemaRoot != nil {
-				slog.Info("validating with a schema root", "root", st.conf.SchemaRoot, "groups", schemaRoot.Groups(), "default", schemaRoot.HasDefault(), "groupHeader", groupHeader)
+			if shapeRoot != nil {
+				slog.Info("validating with a shape root", "root", st.conf.ShapeRoot, "groups", shapeRoot.Groups(), "default", shapeRoot.HasDefault(), "groupHeader", groupHeader)
 			}
 
 			var errStart error

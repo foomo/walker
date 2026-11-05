@@ -3,14 +3,14 @@ import SwiftUI
 
 /// PageDataPane shows the invisible part of the validated html: the html
 /// element, the head and the JSON-LD documents. Rows are linked with the
-/// schema tree by their locators - a selected schema node marks the rows it
-/// matched in its status color, clicking a row selects the schema node that
+/// shape tree by their locators - a selected shape node marks the rows it
+/// matched in its status color, clicking a row selects the shape node that
 /// matched it.
 struct PageDataPane: View {
-    let model: SchemaDevModel
+    let model: ShapeDevModel
     @State private var collapsedBlocks: Set<String> = []
     /// showsAll shows every head element and JSON-LD document, not only the validated ones
-    @AppStorage("schemaDevPageDataShowsAll") private var showsAll = false
+    @AppStorage("shapeDevPageDataShowsAll") private var showsAll = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,7 +54,7 @@ struct PageDataPane: View {
                             let all = (page.linkedData ?? []).compactMap { $0 }
                             let blocks = all.filter { isShown($0.locator) }
                             if blocks.isEmpty {
-                                Text(all.isEmpty ? "No application/ld+json scripts" : "\(all.count) not validated by the schema")
+                                Text(all.isEmpty ? "No application/ld+json scripts" : "\(all.count) not validated by the shape")
                                     .foregroundStyle(.secondary)
                             }
                             ForEach(blocks, id: \.locator) { block in
@@ -116,7 +116,7 @@ struct PageDataPane: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
-            .help("Validated: title, description, canonical and what the schema validates - All: the complete head and every JSON-LD document")
+            .help("Validated: title, description, canonical and what the shape validates - All: the complete head and every JSON-LD document")
         }
         .padding(10)
     }
@@ -125,14 +125,14 @@ struct PageDataPane: View {
         showsAll || model.validatedLocators.contains(locator)
     }
 
-    /// headElements are the basics - title, description, canonical - and what the schema validated
-    private func headElements(_ page: HTMLSchemaVO.PageData) -> [HTMLSchemaVO.HeadElement] {
+    /// headElements are the basics - title, description, canonical - and what the shape validated
+    private func headElements(_ page: SemanticShapeVO.PageData) -> [SemanticShapeVO.HeadElement] {
         (page.head ?? []).compactMap { $0 }.filter { element in
             isShown(element.locator) || Self.isBasic(element)
         }
     }
 
-    private static func isBasic(_ element: HTMLSchemaVO.HeadElement) -> Bool {
+    private static func isBasic(_ element: SemanticShapeVO.HeadElement) -> Bool {
         let attributes = element.attributes ?? []
         func value(_ key: String) -> String {
             attributes.first { $0.key == key }?.value.lowercased() ?? ""
@@ -151,7 +151,7 @@ struct PageDataPane: View {
 
     private static let missingID = "#missing"
 
-    private func headRow(_ element: HTMLSchemaVO.HeadElement, mark: HeadMark?) -> some View {
+    private func headRow(_ element: SemanticShapeVO.HeadElement, mark: HeadMark?) -> some View {
         let isMarked = mark?.locators.contains(element.locator) ?? false
         return HeadRow(
             element: element,
@@ -165,7 +165,7 @@ struct PageDataPane: View {
     }
 }
 
-/// MissingHeadRow is a head element the selected schema node did not find -
+/// MissingHeadRow is a head element the selected shape node did not find -
 /// dashed like the outline of a missing element in the page
 private struct MissingHeadRow: View {
     let source: String
@@ -190,10 +190,10 @@ private struct MissingHeadRow: View {
 
 /// HeadRow is an element of the head, written like in the html source
 private struct HeadRow: View {
-    let element: HTMLSchemaVO.HeadElement
-    /// isValidated is false for a basic element the schema does not check
+    let element: SemanticShapeVO.HeadElement
+    /// isValidated is false for a basic element the shape does not check
     let isValidated: Bool
-    /// mark of the selected schema node, if it matched this element
+    /// mark of the selected shape node, if it matched this element
     let mark: HeadMark?
 
     var body: some View {
@@ -208,7 +208,7 @@ private struct HeadRow: View {
                     .lineLimit(3)
             }
             if !isValidated {
-                Label("not in the schema", systemImage: "questionmark.circle")
+                Label("not in the shape", systemImage: "questionmark.circle")
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
@@ -226,12 +226,12 @@ private struct HeadRow: View {
         }
     }
 
-    private var attributes: [HTMLSchemaVO.HeadAttribute] {
+    private var attributes: [SemanticShapeVO.HeadAttribute] {
         element.attributes ?? []
     }
 
     /// source shows the tag purple, attribute names secondary and the values -
-    /// the attributes the selected schema node checks get a background
+    /// the attributes the selected shape node checks get a background
     private var source: Text {
         var result = AttributedString()
         func append(_ text: String, _ color: Color? = nil, background: Color? = nil) {
@@ -267,8 +267,8 @@ private struct HeadRow: View {
 
 /// LDBlockRow is a JSON-LD document, indented, under its types
 private struct LDBlockRow: View {
-    let block: HTMLSchemaVO.LDBlock
-    /// mark is the selected schema node in this document
+    let block: SemanticShapeVO.LDBlock
+    /// mark is the selected shape node in this document
     let mark: JSONMark?
     @Binding var isExpanded: Bool
     let onSelect: () -> Void

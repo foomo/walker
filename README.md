@@ -72,11 +72,11 @@ With an `interval`, walker idles after a complete scrape cycle until the next bo
 
 ### semantic shapes
 
-With `schemaroot` (and usually `groupheader`) every page is validated against the *semantic shape* of its group: an html file named `*.shape.html` that describes which landmarks, headings, components, links and JSON-LD a page of that group must have, how strictly, and how it scores. The language is specified in [`go/internal/semanticshape/SPEC.md`](go/internal/semanticshape/SPEC.md), the demo shop (`mise run demo`) comes with a complete example in `go/internal/demoshop/schema`. Writing shapes is easier with the [editor support](#editor-support).
+With `shaperoot` (and usually `groupheader`) every page is validated against the *semantic shape* of its group: an html file named `*.semanticshape.html` that describes which landmarks, headings, components, links and JSON-LD a page of that group must have, how strictly, and how it scores. The language is specified in [`go/internal/semanticshape/SPEC.md`](go/internal/semanticshape/SPEC.md), the demo shop (`mise run demo`) comes with a complete example in `go/internal/demoshop/shapes`. Writing shapes is easier with the [editor support](#editor-support).
 
 ## Editor support
 
-`semanticshape-lsp` (`go/cmd/semanticshape-lsp`) is a language server for shape files: completion of the `val:*` elements, rules and values, hover docs, and the lint errors of the whole schema root as diagnostics while typing - unsaved buffers included. It speaks LSP over stdio and only acts on `*.shape.html` files inside a schema root (a directory with `groups/` or `default.shape.html`), so it runs next to the editor's own html support. The extensions in `editors/` start it from the `PATH`:
+`semanticshape-lsp` (`go/cmd/semanticshape-lsp`) is a language server for shape files: completion of the `val:*` elements, rules and values, hover docs, and the lint errors of the whole shape root as diagnostics while typing - unsaved buffers included. It speaks LSP over stdio and only acts on `*.semanticshape.html` files inside a shape root (a directory with `groups/` or `default.semanticshape.html`), so it runs next to the editor's own html support. The extensions in `editors/` start it from the `PATH`:
 
 ```sh
 mise run lsp                      # install semanticshape-lsp into ~/go/bin
@@ -128,7 +128,7 @@ open macos/Walker.xcodeproj                 # then run the Walker scheme
 
 ## metrics
 
-Exposed on `/metrics`. Each walker has its own registry (`metrics.New()`), including the go and process collectors.
+Exposed on `/metrics`. Each walker has its own registry (`metrics.New()`), including the go and process collectors. The `walker_scrape_shape_*` metrics only exist with a `shaperoot`.
 
 The same metrics are exposed for the ongoing scrape and the last completed one, distinguished by the label `scrape="current"|"complete"`. `current` is absent while walker waits for the next scheduled cycle, `complete` is absent until the first cycle has completed.
 
@@ -140,8 +140,10 @@ The same metrics are exposed for the ongoing scrape and the last completed one, 
 | `walker_scrape_started_timestamp_seconds` | gauge | `scrape` |
 | `walker_scrape_completed_timestamp_seconds` | gauge | `scrape` (complete only) |
 | `walker_scrape_duration_seconds` | gauge, elapsed while running | `scrape` |
-| `walker_scrape_validation_score` | gauge, average per page | `scrape`, `group`, `path` |
-| `walker_scrape_validation_penalty` | gauge, average per page | `scrape`, `group`, `path`, `type` |
+| `walker_scrape_shape_score_ratio` | gauge, average share of the maximum shape score per page | `scrape`, `group`, `path` |
+| `walker_scrape_shape_penalty` | gauge, average shape penalty per page | `scrape`, `group`, `path` |
+| `walker_scrape_shape_findings` | gauge, average number of shape findings per page | `scrape`, `group`, `path`, `severity` |
+| `walker_scrape_shape_component_score_ratio` | gauge, share of the maximum score the instances of a component reached | `scrape`, `group`, `component` |
 | `walker_scrape_running` | gauge 0/1 | |
 | `walker_scrape_next_start_timestamp_seconds` | gauge, only while waiting | |
 | `walker_requests_total` | counter | `group`, `status` |
@@ -156,7 +158,8 @@ Migrating from the previous metrics:
 | `walker_scrape_running_total`, `walker_progress_status_code_total` | `walker_scrape_pages`, `walker_requests_total` |
 | `walker_scrape_counter_total` | `sum(walker_requests_total)` |
 | `walker_progress_gauge_open` / `_complete` | `walker_scrape_jobs_open` / `sum(walker_scrape_pages{scrape="current"})` |
-| `walker_validation_score` / `_penalty` (summaries) | `walker_scrape_validation_score` / `_penalty` |
+| `walker_validation_score` / `_penalty` (summaries) | `walker_scrape_shape_score_ratio` / `walker_scrape_shape_penalty` |
+| `walker_scrape_schema_score_ratio`, `_penalty`, `_findings`, `_component_score_ratio` | `walker_scrape_shape_score_ratio`, `_penalty`, `_findings`, `_component_score_ratio` |
 | `walker_scrape_cycle_running` | `walker_scrape_running` |
 | `walker_scrape_cycle_duration_seconds` | `walker_scrape_duration_seconds{scrape="complete"}` |
 | `walker_scrape_cycle_overruns_total` | `walker_scrape_overruns_total` |

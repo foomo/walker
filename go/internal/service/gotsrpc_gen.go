@@ -12,23 +12,23 @@ import (
 )
 
 const (
-	ServiceGoTSRPCProxyGetBrokenLinks       = "GetBrokenLinks"
-	ServiceGoTSRPCProxyGetFolderPages       = "GetFolderPages"
-	ServiceGoTSRPCProxyGetGraph             = "GetGraph"
-	ServiceGoTSRPCProxyGetLinkedFrom        = "GetLinkedFrom"
-	ServiceGoTSRPCProxyGetLinks             = "GetLinks"
-	ServiceGoTSRPCProxyGetPageFolderLinks   = "GetPageFolderLinks"
-	ServiceGoTSRPCProxyGetPageGraph         = "GetPageGraph"
-	ServiceGoTSRPCProxyGetRedirects         = "GetRedirects"
-	ServiceGoTSRPCProxyGetResult            = "GetResult"
-	ServiceGoTSRPCProxyGetResults           = "GetResults"
-	ServiceGoTSRPCProxyGetSchemaRoot        = "GetSchemaRoot"
-	ServiceGoTSRPCProxyGetSchemaRootVersion = "GetSchemaRootVersion"
-	ServiceGoTSRPCProxyGetScrapes           = "GetScrapes"
-	ServiceGoTSRPCProxyGetSemanticDocument  = "GetSemanticDocument"
-	ServiceGoTSRPCProxyGetStatus            = "GetStatus"
-	ServiceGoTSRPCProxyRestartScrape        = "RestartScrape"
-	ServiceGoTSRPCProxyValidateSchema       = "ValidateSchema"
+	ServiceGoTSRPCProxyGetBrokenLinks      = "GetBrokenLinks"
+	ServiceGoTSRPCProxyGetFolderPages      = "GetFolderPages"
+	ServiceGoTSRPCProxyGetGraph            = "GetGraph"
+	ServiceGoTSRPCProxyGetLinkedFrom       = "GetLinkedFrom"
+	ServiceGoTSRPCProxyGetLinks            = "GetLinks"
+	ServiceGoTSRPCProxyGetPageFolderLinks  = "GetPageFolderLinks"
+	ServiceGoTSRPCProxyGetPageGraph        = "GetPageGraph"
+	ServiceGoTSRPCProxyGetRedirects        = "GetRedirects"
+	ServiceGoTSRPCProxyGetResult           = "GetResult"
+	ServiceGoTSRPCProxyGetResults          = "GetResults"
+	ServiceGoTSRPCProxyGetScrapes          = "GetScrapes"
+	ServiceGoTSRPCProxyGetSemanticDocument = "GetSemanticDocument"
+	ServiceGoTSRPCProxyGetShapeRoot        = "GetShapeRoot"
+	ServiceGoTSRPCProxyGetShapeRootVersion = "GetShapeRootVersion"
+	ServiceGoTSRPCProxyGetStatus           = "GetStatus"
+	ServiceGoTSRPCProxyRestartScrape       = "RestartScrape"
+	ServiceGoTSRPCProxyValidateShape       = "ValidateShape"
 )
 
 type ServiceGoTSRPCProxy struct {
@@ -287,48 +287,6 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		return
-	case ServiceGoTSRPCProxyGetSchemaRoot:
-		var rets []any
-		var (
-			arg_schemaRoot string
-		)
-		args := []any{&arg_schemaRoot}
-		if err := gotsrpc.LoadArgs(&args, call, r); err != nil {
-			call.SetError(err)
-			gotsrpc.ErrorCouldNotLoadArgs(w)
-			return
-		}
-		call.ExecutionStart()
-		getSchemaRootInfo := p.service.GetSchemaRoot(arg_schemaRoot)
-		call.ExecutionEnd()
-		rets = []any{getSchemaRootInfo}
-		if err := gotsrpc.Reply(rets, call, r, w); err != nil {
-			call.SetError(err)
-			gotsrpc.ErrorCouldNotReply(w)
-			return
-		}
-		return
-	case ServiceGoTSRPCProxyGetSchemaRootVersion:
-		var rets []any
-		var (
-			arg_schemaRoot string
-		)
-		args := []any{&arg_schemaRoot}
-		if err := gotsrpc.LoadArgs(&args, call, r); err != nil {
-			call.SetError(err)
-			gotsrpc.ErrorCouldNotLoadArgs(w)
-			return
-		}
-		call.ExecutionStart()
-		getSchemaRootVersionRet := p.service.GetSchemaRootVersion(arg_schemaRoot)
-		call.ExecutionEnd()
-		rets = []any{getSchemaRootVersionRet}
-		if err := gotsrpc.Reply(rets, call, r, w); err != nil {
-			call.SetError(err)
-			gotsrpc.ErrorCouldNotReply(w)
-			return
-		}
-		return
 	case ServiceGoTSRPCProxyGetScrapes:
 		var rets []any
 		call.ExecutionStart()
@@ -364,6 +322,48 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		return
+	case ServiceGoTSRPCProxyGetShapeRoot:
+		var rets []any
+		var (
+			arg_shapeRoot string
+		)
+		args := []any{&arg_shapeRoot}
+		if err := gotsrpc.LoadArgs(&args, call, r); err != nil {
+			call.SetError(err)
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		call.ExecutionStart()
+		getShapeRootInfo := p.service.GetShapeRoot(arg_shapeRoot)
+		call.ExecutionEnd()
+		rets = []any{getShapeRootInfo}
+		if err := gotsrpc.Reply(rets, call, r, w); err != nil {
+			call.SetError(err)
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		return
+	case ServiceGoTSRPCProxyGetShapeRootVersion:
+		var rets []any
+		var (
+			arg_shapeRoot string
+		)
+		args := []any{&arg_shapeRoot}
+		if err := gotsrpc.LoadArgs(&args, call, r); err != nil {
+			call.SetError(err)
+			gotsrpc.ErrorCouldNotLoadArgs(w)
+			return
+		}
+		call.ExecutionStart()
+		getShapeRootVersionRet := p.service.GetShapeRootVersion(arg_shapeRoot)
+		call.ExecutionEnd()
+		rets = []any{getShapeRootVersionRet}
+		if err := gotsrpc.Reply(rets, call, r, w); err != nil {
+			call.SetError(err)
+			gotsrpc.ErrorCouldNotReply(w)
+			return
+		}
+		return
 	case ServiceGoTSRPCProxyGetStatus:
 		var rets []any
 		call.ExecutionStart()
@@ -388,24 +388,24 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		return
-	case ServiceGoTSRPCProxyValidateSchema:
+	case ServiceGoTSRPCProxyValidateShape:
 		var rets []any
 		var (
-			arg_schemaRoot string
-			arg_group      string
-			arg_targetURL  string
-			arg_html       string
+			arg_shapeRoot string
+			arg_group     string
+			arg_targetURL string
+			arg_html      string
 		)
-		args := []any{&arg_schemaRoot, &arg_group, &arg_targetURL, &arg_html}
+		args := []any{&arg_shapeRoot, &arg_group, &arg_targetURL, &arg_html}
 		if err := gotsrpc.LoadArgs(&args, call, r); err != nil {
 			call.SetError(err)
 			gotsrpc.ErrorCouldNotLoadArgs(w)
 			return
 		}
 		call.ExecutionStart()
-		validateSchemaValidation := p.service.ValidateSchema(arg_schemaRoot, arg_group, arg_targetURL, arg_html)
+		validateShapeValidation := p.service.ValidateShape(arg_shapeRoot, arg_group, arg_targetURL, arg_html)
 		call.ExecutionEnd()
-		rets = []any{validateSchemaValidation}
+		rets = []any{validateShapeValidation}
 		if err := gotsrpc.Reply(rets, call, r, w); err != nil {
 			call.SetError(err)
 			gotsrpc.ErrorCouldNotReply(w)

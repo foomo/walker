@@ -39,7 +39,7 @@ func scrape(
 	groupHeader string,
 	scrapeFunc ScrapeFunc,
 	validationFunc ValidationFunc,
-	schemaRoot *semanticshape.Root,
+	shapeRoot *semanticshape.Root,
 	chanResult chan scrapeResultAndClient,
 ) {
 	result := vo.ScrapeResult{
@@ -103,8 +103,8 @@ func scrape(
 
 		resp.Body = bodyReadCloser
 
-		if schemaRoot != nil {
-			report, errValidate := schemaRoot.Validate(result.Group, bodyBytes)
+		if shapeRoot != nil {
+			report, errValidate := shapeRoot.Validate(result.Group, bodyBytes)
 			result.ValidationReport = report
 			if errValidate != nil {
 				result.ValidationError = errValidate.Error()

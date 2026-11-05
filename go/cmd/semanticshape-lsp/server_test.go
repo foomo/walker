@@ -110,8 +110,8 @@ func TestServer(t *testing.T) {
 	root := t.TempDir()
 	require.NoError(t, os.MkdirAll(filepath.Join(root, "groups"), 0o755))
 	require.NoError(t, os.MkdirAll(filepath.Join(root, "partials"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(root, "partials", "head.shape.html"), []byte(`<title/>`), 0o644))
-	file := filepath.Join(root, "groups", "page.shape.html")
+	require.NoError(t, os.WriteFile(filepath.Join(root, "partials", "head.semanticshape.html"), []byte(`<title/>`), 0o644))
+	file := filepath.Join(root, "groups", "page.semanticshape.html")
 	require.NoError(t, os.WriteFile(file, []byte(""), 0o644))
 	uri := pathToURI(file)
 
@@ -165,9 +165,9 @@ func TestServer(t *testing.T) {
 	assert.Empty(t, diagnostics.Diagnostics)
 }
 
-func TestServerIgnoresFilesOutsideSchemaRoots(t *testing.T) {
+func TestServerIgnoresFilesOutsideShapeRoots(t *testing.T) {
 	dir := t.TempDir()
-	file := filepath.Join(dir, "page.shape.html")
+	file := filepath.Join(dir, "page.semanticshape.html")
 	c := startServer(t)
 	c.request("initialize", map[string]any{}, nil)
 	c.notify("textDocument/didOpen", map[string]any{"textDocument": map[string]any{"uri": pathToURI(file), "text": "<h1 score=1/>"}})

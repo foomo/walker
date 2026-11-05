@@ -13,11 +13,11 @@ import (
 
 type service struct {
 	walker *crawler.Walker
-	// conf of the walker - the schema developer api uses its agent and group header
+	// conf of the walker - the shape developer api uses its agent and group header
 	conf *config.Config
 }
 
-// New is the service of a walker that walks conf - the schema developer and
+// New is the service of a walker that walks conf - the shape developer and
 // semantic scrape calls use its agent and group header
 func New(w *crawler.Walker, conf *config.Config) Service {
 	return &service{walker: w, conf: conf}

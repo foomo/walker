@@ -70,7 +70,7 @@ final class LocalWalkers {
     }
 
     /// start validates the config and launches walker in the config's
-    /// directory - a relative schema root resolves like in the config editor.
+    /// directory - a relative shape root resolves like in the config editor.
     /// It is running once its service answers.
     func start(_ id: Server.ID, store: ServerStore) async {
         guard !isActive(id) else { return }
@@ -141,7 +141,7 @@ final class LocalWalkers {
         processes[id] = process
         stdins[id] = stdin
 
-        // walker loads the config, then listens - up to 15 s, a schema root takes a moment
+        // walker loads the config, then listens - up to 15 s, a shape root takes a moment
         for _ in 0..<50 {
             try? await Task.sleep(for: .milliseconds(300))
             guard state(id) == .starting else { return }
@@ -232,6 +232,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = ServerStore()
     let walkers = LocalWalkers()
     private var sampling: Task<Void, Never>?
+
+    override init() {
+        // before any view reads its settings
+        SettingsMigration.run()
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         sampling = Task { [store, walkers] in

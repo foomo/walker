@@ -2,12 +2,12 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// SchemaDevModel is the state of a schema developer window: a page, a schema
+/// ShapeDevModel is the state of a shape developer window: a page, a shape
 /// root and a group, validated on the walker server. Client and server share
-/// a file system - the schema root is a path on the server.
+/// a file system - the shape root is a path on the server.
 @MainActor
 @Observable
-final class SchemaDevModel {
+final class ShapeDevModel {
     /// Source is the html the server validates
     enum Source: String, CaseIterable, Identifiable {
         /// the server fetches the page itself, like the crawler
@@ -25,10 +25,10 @@ final class SchemaDevModel {
     private(set) var pageURL: URL?
     /// reloadCount changes to reload the page in the web view
     private(set) var reloadCount = 0
-    var schemaRoot: String {
+    var shapeRoot: String {
         didSet { save() }
     }
-    /// group to validate with - "" is the group the page reports, then default.shape.html
+    /// group to validate with - "" is the group the page reports, then default.semanticshape.html
     var group: String {
         didSet { save() }
     }
@@ -37,16 +37,16 @@ final class SchemaDevModel {
     }
     private(set) var recentRoots: [String]
 
-    private(set) var rootInfo: WalkerVO.SchemaRootInfo?
-    private(set) var validation: WalkerVO.SchemaValidation?
+    private(set) var rootInfo: WalkerVO.ShapeRootInfo?
+    private(set) var validation: WalkerVO.ShapeValidation?
     /// items is the trace of the validation as a tree for the outline
     private(set) var items: [TraceItem] = []
-    /// validatedLocators are the page nodes the schema matched
+    /// validatedLocators are the page nodes the shape matched
     private(set) var validatedLocators: Set<String> = []
     private(set) var isValidating = false
     private(set) var error: String?
-    /// schemaReloadedAt is when a change of the schema files was picked up last
-    private(set) var schemaReloadedAt: Date?
+    /// shapeReloadedAt is when a change of the shape files was picked up last
+    private(set) var shapeReloadedAt: Date?
     /// highlighted is how many locators of the selection were found in the page - nil without selection
     private(set) var highlighted: (found: Int, total: Int)?
     /// pageVersion counts the pages the web view loaded - the outline reloads with it
@@ -68,7 +68,7 @@ final class SchemaDevModel {
     /// collapsed trace items - nil until the first trace collapsed the clean subtrees
     var collapsed: Set<TraceItem.ID>?
 
-    @ObservationIgnored let highlighter = SchemaHighlighter()
+    @ObservationIgnored let highlighter = ShapeHighlighter()
     @ObservationIgnored private let client: Walker.ServiceClient
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var itemsByID: [TraceItem.ID: TraceItem] = [:]
@@ -76,24 +76,24 @@ final class SchemaDevModel {
     /// validationCount identifies the latest validation - older ones that finish later are dropped
     @ObservationIgnored private var validationCount = 0
 
-    private static let recentRootsKey = "schemaDevRecentRoots"
+    private static let recentRootsKey = "shapeDevRecentRoots"
 
     init(server: Server, defaults: UserDefaults = .standard) {
         self.server = server
         self.defaults = defaults
         client = Walker.ServiceClient(transport: URLSessionTransport(baseURL: server.baseURL))
-        let prefix = "schemaDev.\(server.id.uuidString)."
+        let prefix = "shapeDev.\(server.id.uuidString)."
         address = defaults.string(forKey: prefix + "address") ?? ""
-        schemaRoot = defaults.string(forKey: prefix + "schemaRoot") ?? ""
+        shapeRoot = defaults.string(forKey: prefix + "shapeRoot") ?? ""
         group = defaults.string(forKey: prefix + "group") ?? ""
         source = Source(rawValue: defaults.string(forKey: prefix + "source") ?? "") ?? .server
         recentRoots = defaults.stringArray(forKey: Self.recentRootsKey) ?? []
     }
 
     private func save() {
-        let prefix = "schemaDev.\(server.id.uuidString)."
+        let prefix = "shapeDev.\(server.id.uuidString)."
         defaults.set(address, forKey: prefix + "address")
-        defaults.set(schemaRoot, forKey: prefix + "schemaRoot")
+        defaults.set(shapeRoot, forKey: prefix + "shapeRoot")
         defaults.set(group, forKey: prefix + "group")
         defaults.set(source.rawValue, forKey: prefix + "source")
     }
@@ -118,7 +118,7 @@ final class SchemaDevModel {
         }
     }
 
-    /// reload reloads the page - pageDidLoad reloads the schema root and validates
+    /// reload reloads the page - pageDidLoad reloads the shape root and validates
     func reload() {
         guard pageURL != nil else {
             open()
@@ -127,23 +127,23 @@ final class SchemaDevModel {
         reloadCount += 1
     }
 
-    /// chooseRoot sets the schema root and remembers it
+    /// chooseRoot sets the shape root and remembers it
     func chooseRoot(_ path: String) {
-        schemaRoot = path
+        shapeRoot = path
         recentRoots.removeAll { $0 == path }
         recentRoots.insert(path, at: 0)
         recentRoots = Array(recentRoots.prefix(8))
         defaults.set(recentRoots, forKey: Self.recentRootsKey)
     }
 
-    /// load takes the site and the schema root of a walker config: the page
-    /// is the base url with the first start path, a relative schema root is
+    /// load takes the site and the shape root of a walker config: the page
+    /// is the base url with the first start path, a relative shape root is
     /// resolved against the directory of the config, like walker does
     func load(_ form: ConfigTool.Form, configURL: URL) {
-        if !form.schemaRoot.isEmpty {
-            let root = form.schemaRoot.hasPrefix("/")
-                ? URL(filePath: form.schemaRoot)
-                : configURL.deletingLastPathComponent().appending(path: form.schemaRoot)
+        if !form.shapeRoot.isEmpty {
+            let root = form.shapeRoot.hasPrefix("/")
+                ? URL(filePath: form.shapeRoot)
+                : configURL.deletingLastPathComponent().appending(path: form.shapeRoot)
             chooseRoot(root.standardizedFileURL.path(percentEncoded: false))
         }
         guard !form.baseURL.isEmpty else { return }
@@ -156,12 +156,12 @@ final class SchemaDevModel {
     }
 
     func loadRoot() async {
-        guard !schemaRoot.isEmpty else {
+        guard !shapeRoot.isEmpty else {
             rootInfo = nil
             return
         }
         do {
-            let info = try await client.getSchemaRoot(schemaRoot: schemaRoot)
+            let info = try await client.getShapeRoot(shapeRoot: shapeRoot)
             guard !Task.isCancelled else { return }
             rootInfo = info
             if !group.isEmpty, !(info.groups ?? []).contains(group) {
@@ -176,17 +176,17 @@ final class SchemaDevModel {
     }
 
     /// pageDidLoad is called by the web view whenever a page finished loading
-    /// watchSchema polls the fingerprint of the schema files on the server and
+    /// watchShape polls the fingerprint of the shape files on the server and
     /// validates again when one is edited, added or removed - it runs until
-    /// the task is cancelled, e.g. by a new schema root
-    func watchSchema() async {
+    /// the task is cancelled, e.g. by a new shape root
+    func watchShape() async {
         var version: String?
         while !Task.isCancelled {
-            if !schemaRoot.isEmpty,
-               let current = try? await client.getSchemaRootVersion(schemaRoot: schemaRoot),
+            if !shapeRoot.isEmpty,
+               let current = try? await client.getShapeRootVersion(shapeRoot: shapeRoot),
                !current.isEmpty {
                 if let version, version != current {
-                    schemaReloadedAt = .now
+                    shapeReloadedAt = .now
                     await loadRoot()
                     await validate()
                 }
@@ -209,8 +209,8 @@ final class SchemaDevModel {
     /// validate validates the page in the web view with the current settings
     func validate() async {
         guard let url = highlighter.pageURL ?? pageURL else { return }
-        guard !schemaRoot.isEmpty else {
-            error = "choose a schema root"
+        guard !shapeRoot.isEmpty else {
+            error = "choose a shape root"
             return
         }
         // a page that is still loading has no DOM worth a snapshot - pageDidLoad validates it
@@ -234,7 +234,7 @@ final class SchemaDevModel {
                 }
                 html = snapshot
             }
-            let validation = try await client.validateSchema(schemaRoot: schemaRoot, group: group, targetURL: url.absoluteString, html: html)
+            let validation = try await client.validateShape(shapeRoot: shapeRoot, group: group, targetURL: url.absoluteString, html: html)
             guard !Task.isCancelled, count == validationCount else { return }
             apply(validation)
             error = nil
@@ -245,7 +245,7 @@ final class SchemaDevModel {
         }
     }
 
-    private func apply(_ validation: WalkerVO.SchemaValidation) {
+    private func apply(_ validation: WalkerVO.ShapeValidation) {
         self.validation = validation
         items = validation.trace.map { [TraceItem(node: $0, parentID: "")] } ?? []
         itemsByID = [:]
@@ -289,7 +289,7 @@ final class SchemaDevModel {
         return node.locators ?? []
     }
 
-    /// headMark marks the selected schema node among the head elements: the
+    /// headMark marks the selected shape node among the head elements: the
     /// rows it matched, the attributes it checks, or what is missing
     var headMark: HeadMark? {
         guard let item = item(selection), ["element", "selector", "match"].contains(item.node.kind) else { return nil }
@@ -324,7 +324,7 @@ final class SchemaDevModel {
         var path: [String] = []
         var missing = false
         var current: TraceItem? = item
-        var located: HTMLSchemaVO.TraceNode?
+        var located: SemanticShapeVO.TraceNode?
         if item.node.kind == "prop" {
             // a missing property marks the object it is missing from
             missing = !item.node.found
@@ -402,7 +402,7 @@ final class SchemaDevModel {
     }
 
     /// hoverOutline highlights an element of the outline in the page, nil
-    /// brings back the highlight of the selected schema node
+    /// brings back the highlight of the selected shape node
     func hoverOutline(_ selector: String?) {
         guard let selector else {
             highlightSelection()
@@ -425,18 +425,18 @@ final class SchemaDevModel {
 }
 
 /// TraceItem is a trace node in the outline - the id is the path of labels
-/// from the root, stable across validations of the same schema
+/// from the root, stable across validations of the same shape
 struct TraceItem: Identifiable, Hashable {
     let id: String
-    let node: HTMLSchemaVO.TraceNode
+    let node: SemanticShapeVO.TraceNode
     let children: [TraceItem]?
     /// worst is the worst status of the node and its subtree
-    let worst: HTMLSchemaVO.TraceStatus
+    let worst: SemanticShapeVO.TraceStatus
     /// chips and literals are computed once - rows render them on every scroll
     let chips: [RuleChip]
     let literals: [(key: String, value: String)]
 
-    init(node: HTMLSchemaVO.TraceNode, parentID: String, suffix: String = "") {
+    init(node: SemanticShapeVO.TraceNode, parentID: String, suffix: String = "") {
         let id = parentID + "/" + node.kind + ":" + node.label + suffix
         self.id = id
         self.node = node
@@ -466,7 +466,7 @@ struct TraceItem: Identifiable, Hashable {
     }
 }
 
-extension HTMLSchemaVO.TraceStatus {
+extension SemanticShapeVO.TraceStatus {
     var rank: Int {
         switch self {
         case .error: 4
@@ -481,7 +481,7 @@ extension HTMLSchemaVO.TraceStatus {
     }
 }
 
-/// HeadMark marks a schema node among the head elements
+/// HeadMark marks a shape node among the head elements
 struct HeadMark {
     /// locators of the head elements the node matched
     let locators: Set<String>
@@ -490,10 +490,10 @@ struct HeadMark {
     let attributes: Set<String>
     /// attributes with a failed attr rule
     let failedAttributes: Set<String>
-    /// missing is the element as the schema describes it, if it is not in the page
+    /// missing is the element as the shape describes it, if it is not in the page
     let missing: String?
 
-    /// rule names of the schema - every other attribute of an element is a literal
+    /// rule names of the shape - every other attribute of an element is a literal
     private static let ruleNames: Set<String> = [
         "min", "max", "count", "optional", "forbidden",
         "min-length", "max-length", "min-words", "max-words",

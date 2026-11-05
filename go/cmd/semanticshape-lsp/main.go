@@ -1,6 +1,6 @@
 // semanticshape-lsp is a language server for semantic shape files: completion of
 // val:* elements, rules and values, hover docs, and the lint errors of the
-// schema root as diagnostics while typing. It speaks lsp over stdio.
+// shape root as diagnostics while typing. It speaks lsp over stdio.
 package main
 
 import (

@@ -103,11 +103,11 @@ struct ServerDetailView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) {
-                Button("Schema Developer", systemImage: "checklist") {
-                    openWindow(id: SchemaDevWindow.id, value: model.server.id)
+                Button("Shape Developer", systemImage: "checklist") {
+                    openWindow(id: ShapeDevWindow.id, value: model.server.id)
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
-                .help("Iterate on an html schema against a page of this server's site")
+                .help("Iterate on a semantic shape against a page of this server's site")
             }
             ToolbarItem(placement: .principal) {
                 Picker("Section", selection: $section) {

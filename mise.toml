@@ -24,7 +24,7 @@ dir = "go"
 run = "go run ./cmd/demo"
 
 [tasks.validator]
-description = "Validate one page: mise run validator schema-root group https://host/page"
+description = "Validate one page: mise run validator shape-root group https://host/page"
 dir = "go"
 run = "go run ./cmd/validator"
 

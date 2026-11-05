@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// validateInline validates a page against a schema root given as file name -> content
+// validateInline validates a page against a shape root given as file name -> content
 func validateInline(t *testing.T, files map[string]string, page string) *Report {
 	t.Helper()
 	root, err := LoadRoot(writeRoot(t, files))
@@ -36,24 +36,24 @@ func pageBody(content string) string {
 }
 
 func TestWildcard(t *testing.T) {
-	schema := body(`<val:wildcard for="div, span">
+	shape := body(`<val:wildcard for="div, span">
 		<main>
 			<h1 val:score=1/>
 			<nav><val:wildcard for=""><a val:score=1/></val:wildcard></nav>
 		</main>
 	</val:wildcard>`)
 	page := pageBody(`<div><div><main><div><span><h1>x</h1></span></div><nav><div><a href="/">a</a></div></nav></main></div></div>`)
-	report := validateInline(t, map[string]string{"default.shape.html": schema}, page)
+	report := validateInline(t, map[string]string{"default.semanticshape.html": shape}, page)
 	// h1 is found through the inherited wildcard, the a is not: for="" makes nav strict
 	assert.Equal(t, []finding{{SeverityError, 10, "occurrence", "html/body/main/nav/a"}}, findings(report))
 	assert.Equal(t, 1, report.Score.Points)
 
-	strict := validateInline(t, map[string]string{"default.shape.html": body(`<main/>`)}, page)
+	strict := validateInline(t, map[string]string{"default.semanticshape.html": body(`<main/>`)}, page)
 	assert.Equal(t, []finding{{SeverityError, 10, "occurrence", "html/body/main"}}, findings(strict))
 }
 
 func TestOccurrencePenaltyScales(t *testing.T) {
-	report := validateInline(t, map[string]string{"default.shape.html": body(`
+	report := validateInline(t, map[string]string{"default.semanticshape.html": body(`
 		<h1 val:penalty=50/>
 		<nav><a val:min=3/></nav>
 		<i val:forbidden val:penalty=20 val:penalty-max=30/>
@@ -69,7 +69,7 @@ func TestOccurrencePenaltyScales(t *testing.T) {
 }
 
 func TestScore(t *testing.T) {
-	report := validateInline(t, map[string]string{"default.shape.html": body(`
+	report := validateInline(t, map[string]string{"default.semanticshape.html": body(`
 		<p val:min=1 val:score=2 val:score-per="words:5" val:score-max=5/>
 		<h2 val:optional val:score=3 val:min-length=10/>
 	`)}, pageBody(`<p>one two three four five six</p><p>one two three four five six seven eight nine ten</p><h2>short</h2>`))
@@ -80,7 +80,7 @@ func TestScore(t *testing.T) {
 }
 
 func TestSeverityAndPenaltyDefaults(t *testing.T) {
-	report := validateInline(t, map[string]string{"default.shape.html": `<html>
+	report := validateInline(t, map[string]string{"default.semanticshape.html": `<html>
 		<val:settings penalty-warn=7/>
 		<head><title val:severity=warn val:min-length=10/></head>
 		<body><a val:attr-href="required; severity:info"/></body>
@@ -92,7 +92,7 @@ func TestSeverityAndPenaltyDefaults(t *testing.T) {
 }
 
 func TestExclusion(t *testing.T) {
-	report := validateInline(t, map[string]string{"default.shape.html": `<html>
+	report := validateInline(t, map[string]string{"default.semanticshape.html": `<html>
 		<val:settings exclude=".mobile-only, [aria-hidden=true]"/>
 		<head/>
 		<body><val:wildcard for="div"><nav/></val:wildcard><val:selector for="p" count=1/></body>
@@ -105,9 +105,9 @@ const video = `<val:component marker="video" selector="[class*='VideoTeaser_root
 
 func TestComponentAmbiguity(t *testing.T) {
 	report := validateInline(t, map[string]string{
-		"default.shape.html": body(`<main><val:choice max=5><val:comp path="/teaser"/><val:comp path="/video"/></val:choice></main>`),
-		"teaser.shape.html":  teaser,
-		"video.shape.html":   video,
+		"default.semanticshape.html": body(`<main><val:choice max=5><val:comp path="/teaser"/><val:comp path="/video"/></val:choice></main>`),
+		"teaser.semanticshape.html":  teaser,
+		"video.semanticshape.html":   video,
 	}, pageBody(`<main><div class="Teaser_root__1"><h3>x</h3></div><div class="VideoTeaser_root__2"><video></video></div><div data-component="video"><video></video></div></main>`))
 	assert.Equal(t, []finding{{SeverityError, 10, "component-ambiguous", ""}}, findings(report))
 	assert.Equal(t, 2, report.Score.Points, "the ambiguous instance is not validated")
@@ -116,12 +116,12 @@ func TestComponentAmbiguity(t *testing.T) {
 
 func TestComponentContexts(t *testing.T) {
 	files := map[string]string{
-		"default.shape.html":           body(`<main><val:sequence><val:comp path="/video"/><val:comp path="/components/teaser" val:optional/></val:sequence></main><aside val:open><val:comp path="/video" val:optional/></aside>`),
-		"components/teaser.shape.html": teaser,
-		"video.shape.html":             video,
+		"default.semanticshape.html":           body(`<main><val:sequence><val:comp path="/video"/><val:comp path="/components/teaser" val:optional/></val:sequence></main><aside val:open><val:comp path="/video" val:optional/></aside>`),
+		"components/teaser.semanticshape.html": teaser,
+		"video.semanticshape.html":             video,
 	}
 	report := validateInline(t, files, pageBody(`<main><div data-component="teaser"><h3>x</h3></div><div data-component="video"><video></video></div><div data-component="nope"></div></main><aside><div data-component="teaser"></div></aside>`))
-	// a marker without a component schema is ignored. The aside is open: a
+	// a marker without a component shape is ignored. The aside is open: a
 	// component it does not use is only info, and it is not validated
 	assert.Equal(t, []finding{
 		{SeverityError, 10, "component-order", "html/body/main/video"},
@@ -132,8 +132,8 @@ func TestComponentContexts(t *testing.T) {
 
 func TestSeverityCeiling(t *testing.T) {
 	report := validateInline(t, map[string]string{
-		"default.shape.html": body(`<main><val:comp path="/teaser" val:severity=warn/></main>`),
-		"teaser.shape.html":  teaser,
+		"default.semanticshape.html": body(`<main><val:comp path="/teaser" val:severity=warn/></main>`),
+		"teaser.semanticshape.html":  teaser,
 	}, pageBody(`<main><div data-component="teaser"></div></main>`))
 	// the missing h3 is an error in the component, capped to warn - its default penalty stays the error's
 	assert.Equal(t, []finding{{SeverityWarn, 10, "occurrence", "html/body/main/teaser/h3"}}, findings(report))
@@ -142,10 +142,10 @@ func TestSeverityCeiling(t *testing.T) {
 
 func TestCompOverrides(t *testing.T) {
 	report := validateInline(t, map[string]string{
-		"default.shape.html":   body(`<val:comp path="/nav" aria-label="Main" val:score=20/><val:comp path="/teaser" val:optional/>`),
-		"nav.shape.html":       `<nav aria-label="x" val:score=10><a val:min=1/></nav>`,
-		"teaser.shape.html":    `<val:component marker="teaser" min=2><h3/></val:component>`,
-		"unrelated.shape.html": `<h1/><h2/>`,
+		"default.semanticshape.html":   body(`<val:comp path="/nav" aria-label="Main" val:score=20/><val:comp path="/teaser" val:optional/>`),
+		"nav.semanticshape.html":       `<nav aria-label="x" val:score=10><a val:min=1/></nav>`,
+		"teaser.semanticshape.html":    `<val:component marker="teaser" min=2><h3/></val:component>`,
+		"unrelated.semanticshape.html": `<h1/><h2/>`,
 	}, pageBody(`<nav aria-label="x"></nav><nav aria-label="Main"><a href="/">a</a></nav>`))
 	// the literal is overridden, the score too, and val:optional replaces min=2 as a group
 	assert.Empty(t, findings(report))
@@ -154,17 +154,17 @@ func TestCompOverrides(t *testing.T) {
 
 func TestChoiceMax(t *testing.T) {
 	root, err := LoadRoot(writeRoot(t, map[string]string{
-		"default.shape.html": body(`<main><val:choice max=3><val:comp path="/a" val:min=1/><val:comp path="/b" val:max=5/></val:choice></main>`),
-		"a.shape.html":       `<val:component marker="a"><h1 val:score=2/></val:component>`,
-		"b.shape.html":       `<val:component marker="b"><h1 val:score=5/></val:component>`,
+		"default.semanticshape.html": body(`<main><val:choice max=3><val:comp path="/a" val:min=1/><val:comp path="/b" val:max=5/></val:choice></main>`),
+		"a.semanticshape.html":       `<val:component marker="a"><h1 val:score=2/></val:component>`,
+		"b.semanticshape.html":       `<val:component marker="b"><h1 val:score=5/></val:component>`,
 	}))
 	require.NoError(t, err)
 	// first the minimum: 1 × a = 2, then the most valuable: 2 × b = 10
-	assert.Equal(t, 12, root.schemas["/default"].max)
+	assert.Equal(t, 12, root.shapes["/default"].max)
 }
 
 func TestLD(t *testing.T) {
-	report := validateInline(t, map[string]string{"default.shape.html": body(`
+	report := validateInline(t, map[string]string{"default.semanticshape.html": body(`
 		<val:ld type="Product" score=10>
 			<val:prop path="name" min-length=5 score=1/>
 			<val:prop path="offers.priceCurrency" value="one-of:EUR|CHF"/>
@@ -182,10 +182,10 @@ func TestLD(t *testing.T) {
 
 func TestUnknownMarkerIsIgnored(t *testing.T) {
 	report := validateInline(t, map[string]string{
-		"default.shape.html": body(`<main><val:wildcard for="div"><a val:min=2/></val:wildcard></main>`),
-		"teaser.shape.html":  teaser,
+		"default.semanticshape.html": body(`<main><val:wildcard for="div"><a val:min=2/></val:wildcard></main>`),
+		"teaser.semanticshape.html":  teaser,
 	}, pageBody(`<main><div data-component="Link"><a href="/a">a</a></div><div data-component="Teaser_root__1"><a href="/b">b</a></div></main>`))
-	// the Link marker has no schema - its content is matched like any other
+	// the Link marker has no shape - its content is matched like any other
 	assert.Empty(t, findings(report))
 }
 
@@ -196,7 +196,7 @@ func TestLDEvery(t *testing.T) {
 		{"@type":"ListItem","item":{"@type":"Product","offers":{}}}
 	]}</script></head><body></body></html>`
 	// one passing element is enough without every
-	report := validateInline(t, map[string]string{"default.shape.html": body(`
+	report := validateInline(t, map[string]string{"default.semanticshape.html": body(`
 		<val:ld type="ItemList" score=10>
 			<val:prop path="itemListElement.item.offers.priceCurrency" value="one-of:EUR|CHF" score=1/>
 		</val:ld>
@@ -205,7 +205,7 @@ func TestLDEvery(t *testing.T) {
 	assertScore(t, report, "html/body/val:ld(ItemList)", 11, 11)
 
 	// every element has to pass - and has to have the property
-	report = validateInline(t, map[string]string{"default.shape.html": body(`
+	report = validateInline(t, map[string]string{"default.semanticshape.html": body(`
 		<val:ld type="ItemList" score=10>
 			<val:prop path="itemListElement.item.offers.priceCurrency" every value="one-of:EUR|CHF" score=1/>
 		</val:ld>
@@ -217,7 +217,7 @@ func TestLDEvery(t *testing.T) {
 	assertScore(t, report, "html/body/val:ld(ItemList)", 0, 11)
 
 	// optional and every: a missing property is fine, a wrong one is not
-	report = validateInline(t, map[string]string{"default.shape.html": body(`
+	report = validateInline(t, map[string]string{"default.semanticshape.html": body(`
 		<val:ld type="ItemList">
 			<val:prop path="itemListElement.item.offers.priceCurrency" every optional value="one-of:EUR|CHF"/>
 		</val:ld>

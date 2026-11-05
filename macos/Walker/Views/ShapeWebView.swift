@@ -1,13 +1,13 @@
 import SwiftUI
 import WebKit
 
-/// SchemaWebView is the browser of the schema developer - a full size web
+/// ShapeWebView is the browser of the shape developer - a full size web
 /// view, onLoad reports every page that finished loading
-struct SchemaWebView: NSViewRepresentable {
+struct ShapeWebView: NSViewRepresentable {
     let url: URL?
     /// reloadCount reloads the page whenever it changes
     let reloadCount: Int
-    let highlighter: SchemaHighlighter
+    let highlighter: ShapeHighlighter
     let onLoad: (URL) -> Void
     let onFail: (String) -> Void
 
@@ -158,10 +158,10 @@ struct SchemaWebView: NSViewRepresentable {
     }
 }
 
-/// SchemaHighlighter reaches into the page of the schema developer: it
+/// ShapeHighlighter reaches into the page of the shape developer: it
 /// outlines the page nodes of a trace node and takes DOM snapshots
 @MainActor
-final class SchemaHighlighter {
+final class ShapeHighlighter {
     weak var webView: WKWebView?
 
     /// pageURL is the http(s) url of the page in the web view - nil for about:blank and while there is none
@@ -202,7 +202,7 @@ final class SchemaHighlighter {
     /// where something is missing - and scrolls to the first one. It returns
     /// how many locators were found in the page, nil removes the highlight.
     @discardableResult
-    func highlight(_ node: HTMLSchemaVO.TraceNode?, scroll: Bool = true) async -> (found: Int, total: Int) {
+    func highlight(_ node: SemanticShapeVO.TraceNode?, scroll: Bool = true) async -> (found: Int, total: Int) {
         await highlight(
             locators: node?.locators ?? [],
             color: node.map { $0.status.cssColor } ?? "",
@@ -230,7 +230,7 @@ final class SchemaHighlighter {
     /// draws the outline, the color comes from a css variable on the element
     private static let script = """
     (function(locators, color, missing, scroll) {
-        const css = 'walker-schema-highlight'
+        const css = 'walker-shape-highlight'
         if (!document.getElementById(css)) {
             const style = document.createElement('style')
             style.id = css
@@ -260,7 +260,7 @@ final class SchemaHighlighter {
     """
 }
 
-extension HTMLSchemaVO.TraceStatus {
+extension SemanticShapeVO.TraceStatus {
     /// cssColor is the color of the status in the page
     var cssColor: String {
         switch self {

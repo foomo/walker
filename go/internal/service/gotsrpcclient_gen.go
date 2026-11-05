@@ -22,13 +22,13 @@ type ServiceGoTSRPCClient interface {
 	GetRedirects(ctx go_context.Context, scrape string) (retGetRedirects_0 []github_com_foomo_walker_go_internal_vo.RedirectChain, clientErr error)
 	GetResult(ctx go_context.Context, scrape string, targetURL string) (retGetResult_0 *github_com_foomo_walker_go_internal_vo.ScrapeResult, clientErr error)
 	GetResults(ctx go_context.Context, filters Filters, page int, pageSize int) (filterOptions FilterOptions, results []github_com_foomo_walker_go_internal_vo.ScrapeResult, numPages int, folders []github_com_foomo_walker_go_internal_vo.Folder, clientErr error)
-	GetSchemaRoot(ctx go_context.Context, schemaRoot string) (info github_com_foomo_walker_go_internal_vo.SchemaRootInfo, clientErr error)
-	GetSchemaRootVersion(ctx go_context.Context, schemaRoot string) (retGetSchemaRootVersion_0 string, clientErr error)
 	GetScrapes(ctx go_context.Context) (complete *github_com_foomo_walker_go_internal_vo.ScrapeSummary, current *github_com_foomo_walker_go_internal_vo.ScrapeSummary, clientErr error)
 	GetSemanticDocument(ctx go_context.Context, targetURL string, html string, content bool) (result github_com_foomo_walker_go_internal_vo.SemanticDocument, clientErr error)
+	GetShapeRoot(ctx go_context.Context, shapeRoot string) (info github_com_foomo_walker_go_internal_vo.ShapeRootInfo, clientErr error)
+	GetShapeRootVersion(ctx go_context.Context, shapeRoot string) (retGetShapeRootVersion_0 string, clientErr error)
 	GetStatus(ctx go_context.Context) (retGetStatus_0 github_com_foomo_walker_go_internal_vo.ServiceStatus, clientErr error)
 	RestartScrape(ctx go_context.Context) (retRestartScrape_0 bool, clientErr error)
-	ValidateSchema(ctx go_context.Context, schemaRoot string, group string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.SchemaValidation, clientErr error)
+	ValidateShape(ctx go_context.Context, shapeRoot string, group string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.ShapeValidation, clientErr error)
 }
 
 type HTTPServiceGoTSRPCClient struct {
@@ -153,26 +153,6 @@ func (tsc *HTTPServiceGoTSRPCClient) GetResults(ctx go_context.Context, filters 
 	return
 }
 
-func (tsc *HTTPServiceGoTSRPCClient) GetSchemaRoot(ctx go_context.Context, schemaRoot string) (info github_com_foomo_walker_go_internal_vo.SchemaRootInfo, clientErr error) {
-	rpcArgs := []any{schemaRoot}
-	rpcReply := []any{&info}
-	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetSchemaRoot", rpcArgs, rpcReply)
-	if rpcErr != nil {
-		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call service.ServiceGoTSRPCProxy GetSchemaRoot")
-	}
-	return
-}
-
-func (tsc *HTTPServiceGoTSRPCClient) GetSchemaRootVersion(ctx go_context.Context, schemaRoot string) (retGetSchemaRootVersion_0 string, clientErr error) {
-	rpcArgs := []any{schemaRoot}
-	rpcReply := []any{&retGetSchemaRootVersion_0}
-	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetSchemaRootVersion", rpcArgs, rpcReply)
-	if rpcErr != nil {
-		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call service.ServiceGoTSRPCProxy GetSchemaRootVersion")
-	}
-	return
-}
-
 func (tsc *HTTPServiceGoTSRPCClient) GetScrapes(ctx go_context.Context) (complete *github_com_foomo_walker_go_internal_vo.ScrapeSummary, current *github_com_foomo_walker_go_internal_vo.ScrapeSummary, clientErr error) {
 	rpcArgs := []any{}
 	rpcReply := []any{&complete, &current}
@@ -189,6 +169,26 @@ func (tsc *HTTPServiceGoTSRPCClient) GetSemanticDocument(ctx go_context.Context,
 	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetSemanticDocument", rpcArgs, rpcReply)
 	if rpcErr != nil {
 		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call service.ServiceGoTSRPCProxy GetSemanticDocument")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetShapeRoot(ctx go_context.Context, shapeRoot string) (info github_com_foomo_walker_go_internal_vo.ShapeRootInfo, clientErr error) {
+	rpcArgs := []any{shapeRoot}
+	rpcReply := []any{&info}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetShapeRoot", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call service.ServiceGoTSRPCProxy GetShapeRoot")
+	}
+	return
+}
+
+func (tsc *HTTPServiceGoTSRPCClient) GetShapeRootVersion(ctx go_context.Context, shapeRoot string) (retGetShapeRootVersion_0 string, clientErr error) {
+	rpcArgs := []any{shapeRoot}
+	rpcReply := []any{&retGetShapeRootVersion_0}
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "GetShapeRootVersion", rpcArgs, rpcReply)
+	if rpcErr != nil {
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call service.ServiceGoTSRPCProxy GetShapeRootVersion")
 	}
 	return
 }
@@ -213,12 +213,12 @@ func (tsc *HTTPServiceGoTSRPCClient) RestartScrape(ctx go_context.Context) (retR
 	return
 }
 
-func (tsc *HTTPServiceGoTSRPCClient) ValidateSchema(ctx go_context.Context, schemaRoot string, group string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.SchemaValidation, clientErr error) {
-	rpcArgs := []any{schemaRoot, group, targetURL, html}
+func (tsc *HTTPServiceGoTSRPCClient) ValidateShape(ctx go_context.Context, shapeRoot string, group string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.ShapeValidation, clientErr error) {
+	rpcArgs := []any{shapeRoot, group, targetURL, html}
 	rpcReply := []any{&validation}
-	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "ValidateSchema", rpcArgs, rpcReply)
+	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "ValidateShape", rpcArgs, rpcReply)
 	if rpcErr != nil {
-		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call service.ServiceGoTSRPCProxy ValidateSchema")
+		clientErr = pkg_errors.WithMessage(rpcErr, "failed to call service.ServiceGoTSRPCProxy ValidateShape")
 	}
 	return
 }

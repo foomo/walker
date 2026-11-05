@@ -1,7 +1,7 @@
 {
   "name": "semanticshape",
   "displayName": "Semantic Shape",
-  "description": "Completion, hover and lint diagnostics for foomo walker semantic shape files (*.shape.html)",
+  "description": "Completion, hover and lint diagnostics for foomo walker semantic shape files (*.semanticshape.html)",
   "version": "0.2.0",
   "publisher": "foomo",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "Linters"
   ],
   "activationEvents": [
-    "workspaceContains:**/*.shape.html",
+    "workspaceContains:**/*.semanticshape.html",
     "onLanguage:html"
   ],
   "main": "./extension.js",

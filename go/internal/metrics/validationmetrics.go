@@ -11,7 +11,7 @@ import (
 
 var severities = []semanticshape.Severity{semanticshape.SeverityError, semanticshape.SeverityWarn, semanticshape.SeverityInfo}
 
-// validationAggregate sums up the schema validation reports of the pages of a
+// validationAggregate sums up the shape validation reports of the pages of a
 // group below a path - score and penalty are kept apart
 type validationAggregate struct {
 	group string
@@ -58,7 +58,7 @@ func (c *componentAggregate) ratio() float64 {
 	return float64(c.points) / float64(c.max)
 }
 
-// aggregateValidations sums up the schema validation reports of a status by
+// aggregateValidations sums up the shape validation reports of a status by
 // group and the longest matching target path, and the components by group
 func aggregateValidations(status vo.Status) ([]*validationAggregate, []*componentAggregate) {
 	sortedPaths := longestFirst(status.Paths)

@@ -1,15 +1,15 @@
 # Semantic Shape for VS Code
 
 Completion, hover docs and live lint diagnostics for semantic shape files
-(`*.shape.html`) - the `val:*` elements, the `val:` rules of html elements,
+(`*.semanticshape.html`) - the `val:*` elements, the `val:` rules of html elements,
 attribute values like `severity`, `val:include`/`val:comp` paths and attribute
 rule lists.
 
 The extension starts `semanticshape-lsp` (`go/cmd/semanticshape-lsp`), the same
 language server the Zed extension (`editors/zed-semanticshape`) uses. Shape files
 stay html documents, so VS Code's html support keeps working next to it; the
-server only acts on `*.shape.html` files inside a schema root - a directory with
-`groups/` or `default.shape.html`.
+server only acts on `*.semanticshape.html` files inside a shape root - a directory with
+`groups/` or `default.semanticshape.html`.
 
 ## Install
 
@@ -35,7 +35,7 @@ server only acts on `*.shape.html` files inside a schema root - a directory with
    `npx @vscode/vsce package` and `code --install-extension semanticshape-0.2.0.vsix`.
    For development open this directory in VS Code and press F5.
 
-3. Open a shape file, e.g. `go/internal/demoshop/schema/groups/product.shape.html`.
+3. Open a shape file, e.g. `go/internal/demoshop/shapes/groups/product.semanticshape.html`.
 
 ## Settings
 

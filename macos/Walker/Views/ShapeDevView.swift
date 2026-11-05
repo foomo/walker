@@ -1,41 +1,41 @@
 import AppKit
 import SwiftUI
 
-/// SchemaDevWindow is the content of a schema developer window - one per server
-struct SchemaDevWindow: View {
-    static let id = "schema-developer"
+/// ShapeDevWindow is the content of a shape developer window - one per server
+struct ShapeDevWindow: View {
+    static let id = "shape-developer"
 
     let serverID: Server.ID?
     @Environment(ServerStore.self) private var store
 
     var body: some View {
         if let server = store.servers.first(where: { $0.id == serverID }) {
-            SchemaDevView(server: server)
+            ShapeDevView(server: server)
         } else {
             ContentUnavailableView("No Server", systemImage: "server.rack", description: Text("The server of this window was removed."))
         }
     }
 }
 
-/// SchemaDevView iterates on a schema and a website: the evaluated schema as a
+/// ShapeDevView iterates on a shape and a website: the evaluated shape as a
 /// tree next to the page, a selected node is highlighted in the page
-struct SchemaDevView: View {
+struct ShapeDevView: View {
     @Environment(ServerStore.self) private var store
-    @State private var model: SchemaDevModel
-    /// showsPageData shows the head and the JSON-LD between the schema and the page
-    @AppStorage("schemaDevShowsPageData") private var showsPageData = true
+    @State private var model: ShapeDevModel
+    /// showsPageData shows the head and the JSON-LD between the shape and the page
+    @AppStorage("shapeDevShowsPageData") private var showsPageData = true
     /// showsOutline shows the semantic outline of the page right of it
-    @AppStorage("schemaDevShowsOutline") private var showsOutline = false
+    @AppStorage("shapeDevShowsOutline") private var showsOutline = false
 
     init(server: Server) {
-        _model = State(initialValue: SchemaDevModel(server: server))
+        _model = State(initialValue: ShapeDevModel(server: server))
     }
 
     var body: some View {
         // every column takes the full height - small content like a lint
         // error would otherwise be centered vertically by the split view
         HSplitView {
-            SchemaPane(model: model)
+            ShapePane(model: model)
                 .frame(minWidth: 320, idealWidth: 440, maxWidth: 700, maxHeight: .infinity, alignment: .top)
             if showsPageData {
                 PageDataPane(model: model)
@@ -49,12 +49,12 @@ struct SchemaDevView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle("Schema – \(model.server.name)")
+        .navigationTitle("Shape – \(model.server.name)")
         .toolbar { toolbar }
-        .task(id: model.schemaRoot) {
+        .task(id: model.shapeRoot) {
             await model.loadRoot()
-            // edits to the schema files validate again, until the root changes
-            await model.watchSchema()
+            // edits to the shape files validate again, until the root changes
+            await model.watchShape()
         }
         .onChange(of: model.group) {
             Task { await model.validate() }
@@ -62,15 +62,15 @@ struct SchemaDevView: View {
         .onChange(of: model.source) {
             Task { await model.validate() }
         }
-        .onChange(of: model.schemaRoot) {
+        .onChange(of: model.shapeRoot) {
             Task { await model.validate() }
         }
         .onAppear {
             model.open()
         }
-        // the window of a local config starts with the site and schema root of the config
+        // the window of a local config starts with the site and shape root of the config
         .task {
-            guard model.server.isLocal, model.address.isEmpty, model.schemaRoot.isEmpty else { return }
+            guard model.server.isLocal, model.address.isEmpty, model.shapeRoot.isEmpty else { return }
             await load(model.server)
         }
     }
@@ -85,7 +85,7 @@ struct SchemaDevView: View {
         if model.pageURL == nil {
             ContentUnavailableView("No Page", systemImage: "globe", description: Text("Enter the url of a page to validate."))
         } else {
-            SchemaWebView(
+            ShapeWebView(
                 url: model.pageURL,
                 reloadCount: model.reloadCount,
                 highlighter: model.highlighter,
@@ -102,7 +102,7 @@ struct SchemaDevView: View {
                 model.reload()
             }
             .keyboardShortcut("r")
-            .help("Reload the page and the schema, then validate again")
+            .help("Reload the page and the shape, then validate again")
         }
         ToolbarItem(placement: .principal) {
             AddressField(text: $model.address) { model.open() }
@@ -120,11 +120,14 @@ struct SchemaDevView: View {
             }
             .disabled(store.localServers.isEmpty)
             .help(store.localServers.isEmpty
-                ? "Add a local config to load its site and schema root"
-                : "Open the site of a local config and use its schema root")
+                ? "Add a local config to load its site and shape root"
+                : "Open the site of a local config and use its shape root")
         }
         ToolbarItem {
-            SchemaRootMenu(model: model)
+            ShapeRootMenu(model: model)
+        }
+        ToolbarItem {
+            EditorMenu()
         }
         ToolbarItem {
             Picker("Group", selection: $model.group) {
@@ -137,7 +140,7 @@ struct SchemaDevView: View {
                 }
             }
             .frame(minWidth: 160)
-            .help("The group schema to validate with")
+            .help("The group shape to validate with")
         }
         ToolbarItem {
             Toggle(isOn: $showsPageData) {
@@ -161,7 +164,7 @@ struct SchemaDevView: View {
         }
         ToolbarItem {
             Picker("Source", selection: $model.source) {
-                ForEach(SchemaDevModel.Source.allCases) { source in
+                ForEach(ShapeDevModel.Source.allCases) { source in
                     Text(source.rawValue).tag(source)
                 }
             }
@@ -182,10 +185,10 @@ struct SchemaDevView: View {
     }
 }
 
-/// SchemaRootMenu picks the schema root - a directory on the server, which
+/// ShapeRootMenu picks the shape root - a directory on the server, which
 /// shares the file system with this app
-private struct SchemaRootMenu: View {
-    @Bindable var model: SchemaDevModel
+private struct ShapeRootMenu: View {
+    @Bindable var model: ShapeDevModel
 
     var body: some View {
         Menu {
@@ -197,10 +200,10 @@ private struct SchemaRootMenu: View {
             }
             Button("Choose…") { choose() }
         } label: {
-            Label(model.schemaRoot.isEmpty ? "Schema Root" : (model.schemaRoot as NSString).lastPathComponent, systemImage: "folder")
+            Label(model.shapeRoot.isEmpty ? "Shape Root" : (model.shapeRoot as NSString).lastPathComponent, systemImage: "folder")
                 .labelStyle(.titleAndIcon)
         }
-        .help(model.schemaRoot.isEmpty ? "Choose the schema root" : model.schemaRoot)
+        .help(model.shapeRoot.isEmpty ? "Choose the shape root" : model.shapeRoot)
     }
 
     private func choose() {
@@ -208,9 +211,9 @@ private struct SchemaRootMenu: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a schema root - the directory with default.shape.html and groups/"
-        if !model.schemaRoot.isEmpty {
-            panel.directoryURL = URL(filePath: model.schemaRoot)
+        panel.message = "Choose a shape root - the directory with default.semanticshape.html and groups/"
+        if !model.shapeRoot.isEmpty {
+            panel.directoryURL = URL(filePath: model.shapeRoot)
         }
         if panel.runModal() == .OK, let url = panel.url {
             model.chooseRoot(url.path(percentEncoded: false))
@@ -221,7 +224,7 @@ private struct SchemaRootMenu: View {
 /// OutlinePane shows the semantic outline of the page, from the same source as
 /// the validation - hovering an element highlights it in the page
 private struct OutlinePane: View {
-    let model: SchemaDevModel
+    let model: ShapeDevModel
     /// showsContent adds texts, links, images and figures - shared with the result inspector
     @AppStorage("outlineShowsContent") private var showsContent = false
 
@@ -232,7 +235,7 @@ private struct OutlinePane: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        // a new page, source or content setting loads again - schema edits don't change the page
+        // a new page, source or content setting loads again - shape edits don't change the page
         .task(id: "\(model.pageVersion) \(model.source.rawValue) \(showsContent)") {
             await model.loadOutline(content: showsContent)
         }
@@ -284,13 +287,13 @@ private struct OutlinePane: View {
     }
 }
 
-/// SchemaPane shows the result of the validation: summary, lint errors or the schema tree
-private struct SchemaPane: View {
-    @Bindable var model: SchemaDevModel
+/// ShapePane shows the result of the validation: summary, lint errors or the shape tree
+private struct ShapePane: View {
+    @Bindable var model: ShapeDevModel
 
     var body: some View {
         VStack(spacing: 0) {
-            SchemaSummary(model: model)
+            ShapeSummary(model: model)
             Divider()
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -303,28 +306,28 @@ private struct SchemaPane: View {
         if !lintErrors.isEmpty {
             List(Array(lintErrors.enumerated()), id: \.offset) { _, lintError in
                 VStack(alignment: .leading, spacing: 2) {
-                    SourceLink(root: model.schemaRoot, source: "\(lintError.file):\(lintError.line)")
+                    SourceLink(root: model.shapeRoot, source: "\(lintError.file):\(lintError.line)")
                         .font(.caption.monospaced())
                     Text(lintError.message)
                 }
             }
-        } else if model.schemaRoot.isEmpty {
-            ContentUnavailableView("No Schema Root", systemImage: "folder", description: Text("Choose the schema root in the toolbar."))
+        } else if model.shapeRoot.isEmpty {
+            ContentUnavailableView("No Shape Root", systemImage: "folder", description: Text("Choose the shape root in the toolbar."))
         } else if model.items.isEmpty {
             ContentUnavailableView("No Validation", systemImage: "checklist", description: Text(model.isValidating ? "Validating…" : "Load a page to validate it."))
         } else {
-            SchemaTreeView(items: model.items, selection: $model.selection, collapsed: Binding(
+            ShapeTreeView(items: model.items, selection: $model.selection, collapsed: Binding(
                 get: { model.collapsed ?? [] },
                 set: { model.collapsed = $0 }
             ))
-            .environment(\.schemaRoot, model.schemaRoot)
+            .environment(\.shapeRoot, model.shapeRoot)
         }
     }
 }
 
-/// SchemaSummary is the head of the schema pane: score, penalty and findings
-private struct SchemaSummary: View {
-    let model: SchemaDevModel
+/// ShapeSummary is the head of the shape pane: score, penalty and findings
+private struct ShapeSummary: View {
+    let model: ShapeDevModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -343,7 +346,7 @@ private struct SchemaSummary: View {
                     findingCount(report, .info)
                 }
                 .monospacedDigit()
-                Text(report.schema + sourceDescription + reloadDescription)
+                Text(report.shape + sourceDescription + reloadDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -370,8 +373,8 @@ private struct SchemaSummary: View {
     }
 
     private var reloadDescription: String {
-        guard let reloaded = model.schemaReloadedAt else { return "" }
-        return " · schema reloaded " + reloaded.formatted(date: .omitted, time: .standard)
+        guard let reloaded = model.shapeReloadedAt else { return "" }
+        return " · shape reloaded " + reloaded.formatted(date: .omitted, time: .standard)
     }
 
     private var sourceDescription: String {
@@ -382,10 +385,10 @@ private struct SchemaSummary: View {
         return " · rendered DOM"
     }
 
-    private func findingCount(_ report: HTMLSchemaVO.Report, _ severity: HTMLSchemaVO.Severity) -> some View {
+    private func findingCount(_ report: SemanticShapeVO.Report, _ severity: SemanticShapeVO.Severity) -> some View {
         let count = (report.findings ?? []).filter { $0?.severity == severity }.count
         return Text("\(count) \(severity.rawValue)")
-            .foregroundStyle(count > 0 ? HTMLSchemaVO.TraceStatus(rawValue: severity.rawValue).color : Color.secondary)
+            .foregroundStyle(count > 0 ? SemanticShapeVO.TraceStatus(rawValue: severity.rawValue).color : Color.secondary)
     }
 
     private func nonEmpty(_ s: String?) -> String? {

@@ -17,7 +17,7 @@ const semanticPage = `<html><body><main><article aria-label="Teaser"><h2>Hello</
 func TestGetSemanticDocumentRendered(t *testing.T) {
 	result := (&service{}).GetSemanticDocument("http://localhost/page", semanticPage, false)
 	assert.Empty(t, result.Error)
-	assert.Equal(t, SchemaSourceRendered, result.Source)
+	assert.Equal(t, ShapeSourceRendered, result.Source)
 	assert.Equal(t, "http://localhost/page", result.URL)
 	assert.Zero(t, result.StatusCode)
 	require.NotNil(t, result.Document)
@@ -61,7 +61,7 @@ func TestGetSemanticDocumentInvalidURL(t *testing.T) {
 		"ftp://example.com/x": `not an http(s) url: "ftp://example.com/x"`,
 	} {
 		result := (&service{}).GetSemanticDocument(targetURL, "", false)
-		assert.Equal(t, SchemaSourceServer, result.Source, targetURL)
+		assert.Equal(t, ShapeSourceServer, result.Source, targetURL)
 		assert.Equal(t, expected, result.Error, targetURL)
 		assert.Nil(t, result.Document, targetURL)
 	}
@@ -76,7 +76,7 @@ func TestGetSemanticDocumentServer(t *testing.T) {
 	s := &service{conf: &config.Config{Agent: "test-agent"}}
 	result := s.GetSemanticDocument(page.URL+"/page", "", false)
 	assert.Empty(t, result.Error)
-	assert.Equal(t, SchemaSourceServer, result.Source)
+	assert.Equal(t, ShapeSourceServer, result.Source)
 	assert.Equal(t, http.StatusOK, result.StatusCode)
 	require.NotNil(t, result.Document.Main())
 	assert.Equal(t, "Teaser", result.Document.Main().Children[0].Label)

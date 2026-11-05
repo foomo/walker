@@ -13,7 +13,7 @@ import (
 
 func loadDemoRoot(t *testing.T) *Root {
 	t.Helper()
-	root, err := LoadRoot(demoshop.SchemaDir())
+	root, err := LoadRoot(demoshop.ShapesDir())
 	require.NoError(t, err)
 	return root
 }
@@ -83,9 +83,9 @@ func assertScore(t *testing.T, report *Report, path string, points, max int) {
 	assert.Equal(t, [2]int{points, max}, [2]int{s.Points, s.Max}, path)
 }
 
-func assertResult(t *testing.T, report *Report, schema string, points, max, penalty int) {
+func assertResult(t *testing.T, report *Report, shape string, points, max, penalty int) {
 	t.Helper()
-	assert.Equal(t, schema, report.Schema)
+	assert.Equal(t, shape, report.Shape)
 	assert.Equal(t, [3]int{points, max, penalty}, [3]int{report.Score.Points, report.Score.Max, report.Penalty})
 }
 
@@ -128,7 +128,7 @@ func TestExampleCategory(t *testing.T) {
 		"/components/product-tile": {Instances: 10, Points: 58, Max: 60, Penalty: 3},
 	}, report.Components)
 
-	// the same schema on the robots: no long names, full points for the list
+	// the same shape on the robots: no long names, full points for the list
 	robots := validateDemo(t, loadDemoRoot(t), "/category/robots")
 	assert.Empty(t, robots.Findings)
 	assertResult(t, robots, "/groups/category", 142, 182, 0)
@@ -209,7 +209,7 @@ func TestExampleCurrency(t *testing.T) {
 }
 
 func TestExampleFallback(t *testing.T) {
-	// the 404 page sends no group, it is validated with default.shape.html
+	// the 404 page sends no group, it is validated with default.semanticshape.html
 	report := validateDemo(t, loadDemoRoot(t), "/no-such-page")
 	assertFindings(t, []expectedFinding{}, report)
 	assertResult(t, report, "/default", 41, 44, 0)

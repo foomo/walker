@@ -13,12 +13,14 @@ struct SettingsView: View {
             Stepper(value: $refreshInterval, in: 1...60, step: 1) {
                 LabeledContent("Refresh interval", value: "\(Int(refreshInterval)) s")
             }
-            Picker("Schema editor", selection: $editor) {
+            Picker("Shape editor", selection: $editor) {
                 ForEach(Editor.allCases) { editor in
-                    Text(editor.rawValue).tag(editor)
+                    EditorLabel(editor: editor)
+                        .tag(editor)
+                        .disabled(editor.app == nil)
                 }
             }
-            .help("Source links of the schema developer open in this editor, at the line")
+            .help("Source links of the shape developer open in this editor, at the line")
             LabeledContent("Log lines per walker") {
                 HStack {
                     TextField("Log lines per walker", value: $logLines, format: .number)

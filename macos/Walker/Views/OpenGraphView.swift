@@ -2,7 +2,7 @@ import SwiftUI
 
 /// OpenGraph is the OpenGraph data of a validated page, read from the meta
 /// elements of its head - every value keeps its locator, to link it with the
-/// schema tree
+/// shape tree
 struct OpenGraph {
     struct Value {
         let content: String
@@ -15,7 +15,7 @@ struct OpenGraph {
     static let basics = ["og:title", "og:description", "og:image", "og:url"]
 
     /// init reads og:*, product:* and twitter:* meta elements - nil if the page has no og:* at all
-    init?(page: HTMLSchemaVO.PageData) {
+    init?(page: SemanticShapeVO.PageData) {
         for element in (page.head ?? []).compactMap({ $0 }) where element.tag == "meta" {
             let attributes = element.attributes ?? []
             func value(_ key: String) -> String? {
@@ -44,7 +44,7 @@ struct OpenGraph {
         Set(Self.previewKeys.compactMap { values[$0]?.locator })
     }
 
-    /// isPreviewSource tells whether a missing element - as the schema writes it -
+    /// isPreviewSource tells whether a missing element - as the shape writes it -
     /// is one the link preview is made of
     static func isPreviewSource(_ source: String) -> Bool {
         previewKeys.contains { source.contains("property=\"\($0)\"") }
@@ -56,11 +56,11 @@ struct OpenGraph {
 }
 
 /// OpenGraphCard renders the OpenGraph data like a link preview in a social
-/// network. Its parts are linked with the schema tree: a click selects the
-/// schema node of the meta element, a selected node outlines its part.
+/// network. Its parts are linked with the shape tree: a click selects the
+/// shape node of the meta element, a selected node outlines its part.
 struct OpenGraphCard: View {
     let openGraph: OpenGraph
-    let model: SchemaDevModel
+    let model: ShapeDevModel
 
     private var highlight: Color {
         model.headMark?.color ?? .accentColor

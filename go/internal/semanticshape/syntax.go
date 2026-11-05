@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-// LintError is a problem in a schema file
+// LintError is a problem in a shape file
 type LintError struct {
 	File    string
 	Line    int
@@ -20,7 +20,7 @@ func (e LintError) Error() string {
 	return fmt.Sprintf("%s:%d: %s", e.File, e.Line, e.Message)
 }
 
-// LintErrors are all problems found while loading a schema root
+// LintErrors are all problems found while loading a shape root
 type LintErrors []LintError
 
 func (errs LintErrors) Error() string {
@@ -31,7 +31,7 @@ func (errs LintErrors) Error() string {
 	return strings.Join(lines, "\n")
 }
 
-// rawNode is an element of a schema file, exactly as written
+// rawNode is an element of a shape file, exactly as written
 type rawNode struct {
 	name     string
 	attrs    []html.Attribute
@@ -58,7 +58,7 @@ var voidElements = map[string]bool{
 	"input": true, "link": true, "meta": true, "param": true, "source": true, "track": true, "wbr": true,
 }
 
-// parseSyntax reads a schema file with the html tokenizer, but without the
+// parseSyntax reads a shape file with the html tokenizer, but without the
 // error recovery of the html5 parser: the tree is exactly as written, "/>"
 // closes any element and every other element has to be closed explicitly
 func parseSyntax(file string, data []byte) (doc *rawNode, errs LintErrors) {
@@ -79,7 +79,7 @@ func parseSyntax(file string, data []byte) (doc *rawNode, errs LintErrors) {
 		}
 		switch tt {
 		case html.StartTagToken, html.SelfClosingTagToken:
-			// schemas never contain raw text like a <title> or <script> body
+			// shapes never contain raw text like a <title> or <script> body
 			z.NextIsNotRawText()
 			name, hasAttr := z.TagName()
 			n := &rawNode{name: string(name), file: file, line: tokenLine}
@@ -89,7 +89,7 @@ func parseSyntax(file string, data []byte) (doc *rawNode, errs LintErrors) {
 				n.attrs = append(n.attrs, html.Attribute{Key: string(key), Val: string(val)})
 			}
 			selfClosing := tt == html.SelfClosingTagToken
-			// the tokenizer reads <x a=1/> as a="1/" - in a schema that is always meant to close the element
+			// the tokenizer reads <x a=1/> as a="1/" - in a shape that is always meant to close the element
 			if !selfClosing && bytes.HasSuffix(raw, []byte("/>")) && len(n.attrs) > 0 && strings.HasSuffix(n.attrs[len(n.attrs)-1].Val, "/") {
 				last := &n.attrs[len(n.attrs)-1]
 				last.Val = strings.TrimSuffix(last.Val, "/")

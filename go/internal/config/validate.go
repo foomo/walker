@@ -63,13 +63,14 @@ var keys = map[string]keyType{
 	"ignorerobots":      typeBool,
 	"groupheader":       typeString,
 	"agent":             typeString,
-	"schemaroot":        typeString,
+	"shaperoot":         typeString,
+	"schemaroot":        typeString, // the old name of shaperoot
 	"interval":          typeDuration,
 	"offset":            typeDuration,
 }
 
 // Validate checks a config file: unknown keys, types, values and the
-// schema root - relative paths are resolved against base, the directory of
+// shape root - relative paths are resolved against base, the directory of
 // the config file. Every problem has the line it is about.
 func Validate(data []byte, base string) []Problem {
 	v := &validator{}
@@ -106,7 +107,7 @@ func Validate(data []byte, base string) []Problem {
 	} else {
 		v.target(target)
 	}
-	v.schema(values, base)
+	v.shapes(values, base)
 	// the validator and walker must never disagree
 	if _, err := Load(data); err != nil && !v.hasErrors() {
 		v.problems = append(v.problems, Problem{Severity: SeverityError, Line: root.Line, Column: root.Column, Message: err.Error()})
@@ -261,18 +262,27 @@ func (v *validator) url(key string, n *yaml.Node) {
 	}
 }
 
-// schema checks the schema root and its interplay with the group header
-func (v *validator) schema(values map[string]*yaml.Node, base string) {
-	root, hasRoot := values["schemaroot"]
+// shapes checks the shape root and its interplay with the group header -
+// schemaroot is accepted as its old name, its problems are reported as shaperoot
+func (v *validator) shapes(values map[string]*yaml.Node, base string) {
+	root, hasRoot := values["shaperoot"]
+	if old, hasOld := values["schemaroot"]; hasOld {
+		if hasRoot {
+			v.add(SeverityError, "shaperoot", old, "schemaroot is the old name of shaperoot - remove it, shaperoot is set")
+		} else {
+			v.add(SeverityInfo, "shaperoot", old, "schemaroot is the old name of shaperoot")
+			root, hasRoot = old, true
+		}
+	}
 	header, hasHeader := values["groupheader"]
 	if hasHeader && !hasRoot && header.Value != "" {
-		v.add(SeverityInfo, "groupheader", header, "the group header is only used together with a schemaroot")
+		v.add(SeverityInfo, "groupheader", header, "the group header is only used together with a shaperoot")
 	}
 	if !hasRoot || root.Kind != yaml.ScalarNode || root.Value == "" {
 		return
 	}
 	if !hasHeader || header.Value == "" {
-		v.add(SeverityInfo, "schemaroot", root, "without a groupheader every page is validated with default.shape.html")
+		v.add(SeverityInfo, "shaperoot", root, "without a groupheader every page is validated with default"+semanticshape.FileSuffix)
 	}
 	dir := root.Value
 	if !filepath.IsAbs(dir) && base != "" {
@@ -281,14 +291,14 @@ func (v *validator) schema(values map[string]*yaml.Node, base string) {
 	info, err := os.Stat(dir)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		v.add(SeverityError, "schemaroot", root, fmt.Sprintf("schemaroot %s does not exist", dir))
+		v.add(SeverityError, "shaperoot", root, fmt.Sprintf("shaperoot %s does not exist", dir))
 		return
 	case err != nil:
 		// e.g. a sandboxed helper of the desktop app
-		v.add(SeverityInfo, "schemaroot", root, fmt.Sprintf("schemaroot %s could not be checked: %s", dir, err))
+		v.add(SeverityInfo, "shaperoot", root, fmt.Sprintf("shaperoot %s could not be checked: %s", dir, err))
 		return
 	case !info.IsDir():
-		v.add(SeverityError, "schemaroot", root, fmt.Sprintf("schemaroot %s is not a directory", dir))
+		v.add(SeverityError, "shaperoot", root, fmt.Sprintf("shaperoot %s is not a directory", dir))
 		return
 	}
 	_, errLoad := semanticshape.LoadRoot(dir)
@@ -296,10 +306,10 @@ func (v *validator) schema(values map[string]*yaml.Node, base string) {
 	switch {
 	case errors.As(errLoad, &lintErrors):
 		for _, e := range lintErrors {
-			v.add(SeverityError, "schemaroot", root, fmt.Sprintf("schema %s:%d: %s", e.File, e.Line, e.Message))
+			v.add(SeverityError, "shaperoot", root, fmt.Sprintf("shape %s:%d: %s", e.File, e.Line, e.Message))
 		}
 	case errLoad != nil:
-		v.add(SeverityInfo, "schemaroot", root, fmt.Sprintf("schemaroot %s could not be loaded: %s", dir, errLoad))
+		v.add(SeverityInfo, "shaperoot", root, fmt.Sprintf("shaperoot %s could not be loaded: %s", dir, errLoad))
 	}
 }
 

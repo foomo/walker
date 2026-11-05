@@ -75,26 +75,26 @@ walker_scrape_jobs_open{scrape="current"} 1
 # HELP walker_scrape_running 1 while a scrape cycle is in progress, 0 while waiting for the next one
 # TYPE walker_scrape_running gauge
 walker_scrape_running 1
-# HELP walker_scrape_schema_score_ratio average share of the maximum html schema score the validated pages reached
-# TYPE walker_scrape_schema_score_ratio gauge
-walker_scrape_schema_score_ratio{group="product",path="/shop",scrape="complete"} 0.75
-walker_scrape_schema_score_ratio{group="product",path="/shop",scrape="current"} 0.75
-# HELP walker_scrape_schema_penalty average html schema penalty of the validated pages
-# TYPE walker_scrape_schema_penalty gauge
-walker_scrape_schema_penalty{group="product",path="/shop",scrape="complete"} 2
-walker_scrape_schema_penalty{group="product",path="/shop",scrape="current"} 2
-# HELP walker_scrape_schema_findings average number of html schema findings of the validated pages by severity
-# TYPE walker_scrape_schema_findings gauge
-walker_scrape_schema_findings{group="product",path="/shop",scrape="complete",severity="error"} 0
-walker_scrape_schema_findings{group="product",path="/shop",scrape="complete",severity="info"} 0
-walker_scrape_schema_findings{group="product",path="/shop",scrape="complete",severity="warn"} 0.5
-walker_scrape_schema_findings{group="product",path="/shop",scrape="current",severity="error"} 0
-walker_scrape_schema_findings{group="product",path="/shop",scrape="current",severity="info"} 0
-walker_scrape_schema_findings{group="product",path="/shop",scrape="current",severity="warn"} 0.5
-# HELP walker_scrape_schema_component_score_ratio share of the maximum html schema score the instances of a component reached
-# TYPE walker_scrape_schema_component_score_ratio gauge
-walker_scrape_schema_component_score_ratio{component="/components/teaser",group="product",scrape="complete"} 0.8333333333333334
-walker_scrape_schema_component_score_ratio{component="/components/teaser",group="product",scrape="current"} 0.8333333333333334
+# HELP walker_scrape_shape_score_ratio average share of the maximum semantic shape score the validated pages reached
+# TYPE walker_scrape_shape_score_ratio gauge
+walker_scrape_shape_score_ratio{group="product",path="/shop",scrape="complete"} 0.75
+walker_scrape_shape_score_ratio{group="product",path="/shop",scrape="current"} 0.75
+# HELP walker_scrape_shape_penalty average semantic shape penalty of the validated pages
+# TYPE walker_scrape_shape_penalty gauge
+walker_scrape_shape_penalty{group="product",path="/shop",scrape="complete"} 2
+walker_scrape_shape_penalty{group="product",path="/shop",scrape="current"} 2
+# HELP walker_scrape_shape_findings average number of semantic shape findings of the validated pages by severity
+# TYPE walker_scrape_shape_findings gauge
+walker_scrape_shape_findings{group="product",path="/shop",scrape="complete",severity="error"} 0
+walker_scrape_shape_findings{group="product",path="/shop",scrape="complete",severity="info"} 0
+walker_scrape_shape_findings{group="product",path="/shop",scrape="complete",severity="warn"} 0.5
+walker_scrape_shape_findings{group="product",path="/shop",scrape="current",severity="error"} 0
+walker_scrape_shape_findings{group="product",path="/shop",scrape="current",severity="info"} 0
+walker_scrape_shape_findings{group="product",path="/shop",scrape="current",severity="warn"} 0.5
+# HELP walker_scrape_shape_component_score_ratio share of the maximum semantic shape score the instances of a component reached
+# TYPE walker_scrape_shape_component_score_ratio gauge
+walker_scrape_shape_component_score_ratio{component="/components/teaser",group="product",scrape="complete"} 0.8333333333333334
+walker_scrape_shape_component_score_ratio{component="/components/teaser",group="product",scrape="current"} 0.8333333333333334
 # HELP walker_scrape_completed_timestamp_seconds unix timestamp of the end of the scrape cycle
 # TYPE walker_scrape_completed_timestamp_seconds gauge
 walker_scrape_completed_timestamp_seconds{scrape="complete"} 1.7916414e+09
@@ -102,10 +102,10 @@ walker_scrape_completed_timestamp_seconds{scrape="complete"} 1.7916414e+09
 		"walker_scrape_pages",
 		"walker_scrape_jobs_open",
 		"walker_scrape_running",
-		"walker_scrape_schema_score_ratio",
-		"walker_scrape_schema_penalty",
-		"walker_scrape_schema_findings",
-		"walker_scrape_schema_component_score_ratio",
+		"walker_scrape_shape_score_ratio",
+		"walker_scrape_shape_penalty",
+		"walker_scrape_shape_findings",
+		"walker_scrape_shape_component_score_ratio",
 		"walker_scrape_completed_timestamp_seconds",
 	))
 }

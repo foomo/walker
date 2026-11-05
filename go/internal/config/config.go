@@ -34,9 +34,11 @@ type config struct {
 	IgnoreRobots      bool
 	GroupHeader       string
 	Agent             string
-	SchemaRoot        string
-	Interval          time.Duration
-	Offset            time.Duration
+	ShapeRoot         string
+	// SchemaRoot is the old name of ShapeRoot
+	SchemaRoot string
+	Interval   time.Duration
+	Offset     time.Duration
 }
 
 // type shortConfig struct {
@@ -56,7 +58,8 @@ type Config struct {
 	IgnoreRobots      bool
 	GroupHeader       string
 	Agent             string
-	SchemaRoot        string
+	// ShapeRoot is the directory of the semantic shapes the pages are validated with
+	ShapeRoot string
 	// Interval between the starts of full scrape cycles, aligned to the wall
 	// clock - 0 restarts immediately after a cycle completed
 	Interval time.Duration
@@ -100,9 +103,15 @@ func Load(yamlBytes []byte) (conf *Config, err error) {
 		IgnoreRobots:      cnf.IgnoreRobots,
 		GroupHeader:       cnf.GroupHeader,
 		Agent:             cnf.Agent,
-		SchemaRoot:        cnf.SchemaRoot,
+		ShapeRoot:         cnf.ShapeRoot,
 		Interval:          cnf.Interval,
 		Offset:            cnf.Offset,
+	}
+	if cnf.SchemaRoot != "" {
+		if cnf.ShapeRoot != "" {
+			return nil, errors.New("shaperoot and its old name schemaroot are both set")
+		}
+		conf.ShapeRoot = cnf.SchemaRoot
 	}
 	if conf.Interval < 0 {
 		return nil, errors.New("interval must not be negative")

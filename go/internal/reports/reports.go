@@ -28,7 +28,7 @@ func GetReportHandlerMenuHTML(basePath string) string {
 		<li><a href="` + basePath + `/broken-links">broken links</a></li>
 		<li><a href="` + basePath + `/seo">seo</a></li>
 		<li><a href="` + basePath + `/redirects">redirects</a></li>
-		<li><a href="` + basePath + `/schema">schema</a></li>
+		<li><a href="` + basePath + `/shape">shape</a></li>
 		<li><a href="` + basePath + `/validations">validations</a></li>
 		<li><a href="` + basePath + `/errors">errors - calls that returned error status codes</a></li>
 		<li><a href="` + basePath + `/links">links where are pages being linked from</a></li>
@@ -88,8 +88,8 @@ func GetReportHandler(basePath string) func(
 			rep = reportErrors
 		case strings.HasPrefix(path, "validations"):
 			rep = reportValidations
-		case strings.HasPrefix(path, "schema"):
-			rep = reportSchema
+		case strings.HasPrefix(path, "shape"):
+			rep = reportShape
 		case strings.HasPrefix(path, "redirects"):
 			rep = reportRedirects
 		case strings.HasPrefix(path, "links"):

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// VocabularyAttribute describes an attribute of the schema language for
+// VocabularyAttribute describes an attribute of the shape language for
 // editor tooling - completion and hover
 type VocabularyAttribute struct {
 	// Name as written: unprefixed on val:* elements, with val: on html elements and val:comp
@@ -22,7 +22,7 @@ type VocabularyElement struct {
 	Name       string
 	Doc        string
 	Attributes []VocabularyAttribute
-	// HasChildren is true for elements that contain other schema elements
+	// HasChildren is true for elements that contain other shape elements
 	HasChildren bool
 }
 
@@ -60,8 +60,8 @@ var booleanRules = map[string]bool{"optional": true, "forbidden": true, "open": 
 var structuralDocs = map[string]map[string]string{
 	"val:selector":  {"for": "CSS selector, searched in the whole subtree - ignores wildcards and component borders."},
 	"val:wildcard":  {"for": "CSS selector list of the wrappers to skip, e.g. `div, span`. `*` skips anything, empty makes the scope strict."},
-	"val:include":   {"path": "File to insert in place: `/` = schema root, otherwise relative, without .shape.html."},
-	"val:comp":      {"path": "File with a single root element to instantiate: `/` = schema root, otherwise relative, without .shape.html."},
+	"val:include":   {"path": "File to insert in place: `/` = shape root, otherwise relative, without .semanticshape.html."},
+	"val:comp":      {"path": "File with a single root element to instantiate: `/` = shape root, otherwise relative, without .semanticshape.html."},
 	"val:component": {"marker": "Value of the marker attribute (data-component) of the instances.", "selector": "CSS selector for instances without a marker."},
 	"val:ld":        {"type": "JSON-LD @type of the objects, also inside @graph."},
 	"val:prop":      {"path": "Dot path into the JSON-LD object, arrays fan out: `offers.price`."},
@@ -79,12 +79,12 @@ var elementDocs = map[string]string{
 	"val:wildcard":  "Scope in which the wrappers matching `for` between the described elements are skipped - lexical, inherited by everything inside.",
 	"val:include":   "Inserts a file in place, as if it was written here.",
 	"val:comp":      "Instantiates the single root element of a file - its attributes override the root's. A val:component root is a recognized component.",
-	"val:component": "Root of a component file: instances are recognized by marker, or by selector, and are opaque for the schema around them.",
+	"val:component": "Root of a component file: instances are recognized by marker, or by selector, and are opaque for the shape around them.",
 	"val:choice":    "Any number of the listed components in any order - min/max limit the total.",
 	"val:sequence":  "The listed components in this order.",
 	"val:ld":        "JSON-LD objects of a @type, page wide - or inside the instance in a component.",
 	"val:prop":      "A property of the JSON-LD object - required unless optional.",
-	"val:settings":  "Settings of the schema, a direct child of html - shareable with val:include.",
+	"val:settings":  "Settings of the shape, a direct child of html - shareable with val:include.",
 }
 
 var elementKinds = map[string]kind{
@@ -126,7 +126,7 @@ func rulesOf(k kind, prefix string) (attributes []VocabularyAttribute) {
 	return attributes
 }
 
-// Vocabulary describes the schema language: the val:* elements, the rules
+// Vocabulary describes the shape language: the val:* elements, the rules
 // of html elements (with val: prefix) and the rules of a rule list
 func Vocabulary() (elements []VocabularyElement, elementRules []VocabularyAttribute, valueRules []VocabularyAttribute) {
 	names := make([]string, 0, len(elementDocs))

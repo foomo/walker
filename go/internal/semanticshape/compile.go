@@ -26,7 +26,7 @@ type literal struct {
 	val string // "*" = present and not empty
 }
 
-// element is a compiled schema element
+// element is a compiled shape element
 type element struct {
 	kind      kind
 	name      string // tag name of kindElement
@@ -94,8 +94,8 @@ func defaultSettings() settings {
 	}
 }
 
-// schema is a compiled group schema or default.shape.html
-type schema struct {
+// shape is a compiled group shape or default.semanticshape.html
+type shape struct {
 	path     string
 	settings settings
 	elements []*element
@@ -708,7 +708,7 @@ func fileKey(file string) string {
 	return "/" + strings.TrimSuffix(file, FileSuffix)
 }
 
-// attrText writes attributes as in a schema: key=value, or key for booleans
+// attrText writes attributes as in a shape: key=value, or key for booleans
 func attrText(attrs []html.Attribute) string {
 	parts := make([]string, len(attrs))
 	for i, a := range attrs {

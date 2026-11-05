@@ -16,12 +16,12 @@ import (
 
 // FileSuffix is the suffix of shape files - every other file below a root,
 // plain .html files included, is ignored
-const FileSuffix = ".shape.html"
+const FileSuffix = ".semanticshape.html"
 
-// Root is a loaded schema root directory:
+// Root is a loaded shape root directory:
 //
-//	<root>/default.shape.html          fallback for groups without a schema
-//	<root>/groups/<group>.shape.html   one schema per group
+//	<root>/default.semanticshape.html          fallback for groups without a shape
+//	<root>/groups/<group>.semanticshape.html   one shape per group
 //	everything else is organized freely and used with val:include and val:comp
 //
 // A Root is immutable after loading and safe for concurrent use.
@@ -32,16 +32,16 @@ type Root struct {
 	// componentList is sorted by path, for a deterministic recognition
 	componentList []*component
 	markers       map[string]*component
-	schemas       map[string]*schema
+	shapes        map[string]*shape
 }
 
-// LoadRoot loads and compiles all schemas below dir. Problems in schema files
+// LoadRoot loads and compiles all shapes below dir. Problems in shape files
 // are returned as LintErrors.
 func LoadRoot(dir string) (*Root, error) {
 	return LoadRootOverlay(dir, nil)
 }
 
-// LoadRootOverlay loads a schema root like LoadRoot, the contents of overlay
+// LoadRootOverlay loads a shape root like LoadRoot, the contents of overlay
 // - absolute file paths, e.g. unsaved editor buffers - take precedence over
 // the files on disk
 func LoadRootOverlay(dir string, overlay map[string][]byte) (*Root, error) {
@@ -50,10 +50,10 @@ func LoadRootOverlay(dir string, overlay map[string][]byte) (*Root, error) {
 		files:      map[string]*rawNode{},
 		components: map[string]*component{},
 		markers:    map[string]*component{},
-		schemas:    map[string]*schema{},
+		shapes:     map[string]*shape{},
 	}
 	var errs LintErrors
-	// plain .html files - shape files before they were named *.shape.html
+	// plain .html files - shape files before they were named *.semanticshape.html
 	var legacy []string
 	add := func(p string, data []byte) error {
 		rel, errRel := filepath.Rel(dir, p)
@@ -156,7 +156,7 @@ func LoadRootOverlay(dir string, overlay map[string][]byte) (*Root, error) {
 	sort.Strings(keys)
 	for _, key := range keys {
 		if key == "/default" || strings.HasPrefix(key, "/groups/") {
-			r.schemas[key] = c.compileSchema(key)
+			r.shapes[key] = c.compileShape(key)
 		}
 	}
 	errs = append(errs, c.errs...)
@@ -166,8 +166,8 @@ func LoadRootOverlay(dir string, overlay map[string][]byte) (*Root, error) {
 	return r, nil
 }
 
-func (c *compiler) compileSchema(key string) *schema {
-	s := &schema{path: key, settings: defaultSettings()}
+func (c *compiler) compileShape(key string) *shape {
+	s := &shape{path: key, settings: defaultSettings()}
 	c.settings = &s.settings
 	c.settingsNode = nil
 	c.stack = []string{key}
@@ -179,18 +179,18 @@ func (c *compiler) compileSchema(key string) *schema {
 	return s
 }
 
-// schemaFor resolves a group to its schema: groups/<group>.shape.html, then default.shape.html
-func (r *Root) schemaFor(group string) (*schema, error) {
-	if s, ok := r.schemas["/groups/"+strings.Trim(group, "/")]; ok {
+// shapeFor resolves a group to its shape: groups/<group>.semanticshape.html, then default.semanticshape.html
+func (r *Root) shapeFor(group string) (*shape, error) {
+	if s, ok := r.shapes["/groups/"+strings.Trim(group, "/")]; ok {
 		return s, nil
 	}
-	if s, ok := r.schemas["/default"]; ok {
+	if s, ok := r.shapes["/default"]; ok {
 		return s, nil
 	}
-	return nil, errors.New("no schema for group " + strconv.Quote(group) + " and no default" + FileSuffix)
+	return nil, errors.New("no shape for group " + strconv.Quote(group) + " and no default" + FileSuffix)
 }
 
-// resolvePath resolves a schema path: "/x" is relative to the root, anything
+// resolvePath resolves a shape path: "/x" is relative to the root, anything
 // else to the directory of the file key it is used in
 func resolvePath(fromKey string, p string) string {
 	p = strings.TrimSuffix(p, FileSuffix)
@@ -231,10 +231,10 @@ func uniqueErrors(errs LintErrors) LintErrors {
 	return unique
 }
 
-// Groups are the names of all group schemas, sorted
+// Groups are the names of all group shapes, sorted
 func (r *Root) Groups() []string {
 	groups := []string{}
-	for key := range r.schemas {
+	for key := range r.shapes {
 		if group, ok := strings.CutPrefix(key, "/groups/"); ok {
 			groups = append(groups, group)
 		}
@@ -243,13 +243,13 @@ func (r *Root) Groups() []string {
 	return groups
 }
 
-// HasDefault reports whether the root has a default.shape.html for groups without a schema
+// HasDefault reports whether the root has a default.semanticshape.html for groups without a shape
 func (r *Root) HasDefault() bool {
-	_, ok := r.schemas["/default"]
+	_, ok := r.shapes["/default"]
 	return ok
 }
 
-// RootVersion is a fingerprint of all schema files below dir - paths, sizes
+// RootVersion is a fingerprint of all shape files below dir - paths, sizes
 // and modification times. It changes when a file is edited, added or removed,
 // so tools can reload without parsing anything.
 func RootVersion(dir string) (string, error) {

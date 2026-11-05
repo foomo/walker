@@ -14,34 +14,34 @@ import (
 	"github.com/foomo/walker/go/internal/vo"
 )
 
-// the schema developer api - client and server share a file system, schema
+// the shape developer api - client and server share a file system, shape
 // roots are paths on the server
 
 const (
-	SchemaSourceServer   = "server"
-	SchemaSourceRendered = "rendered"
+	ShapeSourceServer   = "server"
+	ShapeSourceRendered = "rendered"
 )
 
-// GetSchemaRoot loads a schema root and lists its groups
-func (s *service) GetSchemaRoot(schemaRoot string) (info vo.SchemaRootInfo) {
+// GetShapeRoot loads a shape root and lists its groups
+func (s *service) GetShapeRoot(shapeRoot string) (info vo.ShapeRootInfo) {
 	start := time.Now()
 	defer func() {
-		logLintErrors(schemaRoot, info.LintErrors)
+		logLintErrors(shapeRoot, info.LintErrors)
 		attrs := []any{
-			"root", schemaRoot,
+			"root", shapeRoot,
 			"groups", len(info.Groups),
 			"default", info.HasDefault,
 			"lintErrors", len(info.LintErrors),
 			"duration", time.Since(start),
 		}
 		if info.Error != "" {
-			slog.Warn("schema root failed", append(attrs, "error", info.Error)...)
+			slog.Warn("shape root failed", append(attrs, "error", info.Error)...)
 			return
 		}
-		slog.Info("schema root loaded", attrs...)
+		slog.Info("shape root loaded", attrs...)
 	}()
 	info.GroupHeader = s.groupHeader()
-	root, lintErrors, err := loadSchemaRoot(schemaRoot)
+	root, lintErrors, err := loadShapeRoot(shapeRoot)
 	info.LintErrors = lintErrors
 	if err != nil {
 		info.Error = err.Error()
@@ -52,25 +52,25 @@ func (s *service) GetSchemaRoot(schemaRoot string) (info vo.SchemaRootInfo) {
 	return info
 }
 
-// GetSchemaRootVersion is a fingerprint of the files of a schema root - it
-// changes with every edit, the schema developer polls it to reload. Empty if
+// GetShapeRootVersion is a fingerprint of the files of a shape root - it
+// changes with every edit, the shape developer polls it to reload. Empty if
 // the root can not be read.
-func (s *service) GetSchemaRootVersion(schemaRoot string) string {
-	if schemaRoot == "" {
+func (s *service) GetShapeRootVersion(shapeRoot string) string {
+	if shapeRoot == "" {
 		return ""
 	}
-	version, err := semanticshape.RootVersion(schemaRoot)
+	version, err := semanticshape.RootVersion(shapeRoot)
 	if err != nil {
 		return ""
 	}
 	return version
 }
 
-// ValidateSchema validates a page against a schema root, which is loaded on
+// ValidateShape validates a page against a shape root, which is loaded on
 // every call to pick up changes. Without html the server fetches targetURL,
 // otherwise html is a snapshot of the page in a browser. An empty group is
-// the group the page reports in the group header, or default.shape.html.
-func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (validation vo.SchemaValidation) {
+// the group the page reports in the group header, or default.semanticshape.html.
+func (s *service) ValidateShape(shapeRoot, group, targetURL, html string) (validation vo.ShapeValidation) {
 	var (
 		start                       = time.Now()
 		loadDuration, fetchDuration time.Duration
@@ -78,9 +78,9 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 		requestedGroup, htmlLength  = group, 0
 	)
 	defer func() {
-		logLintErrors(schemaRoot, validation.LintErrors)
+		logLintErrors(shapeRoot, validation.LintErrors)
 		attrs := []any{
-			"root", schemaRoot,
+			"root", shapeRoot,
 			"url", targetURL,
 			"source", validation.Source,
 			"requestedGroup", requestedGroup,
@@ -90,16 +90,16 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 			"validate", validateDuration,
 			"duration", time.Since(start),
 		}
-		if validation.Source == SchemaSourceServer {
+		if validation.Source == ShapeSourceServer {
 			attrs = append(attrs, "status", validation.StatusCode, "detectedGroup", validation.DetectedGroup, "fetch", fetchDuration)
 		}
 		if validation.Error != "" {
-			slog.Warn("schema validation failed", append(attrs, "lintErrors", len(validation.LintErrors), "error", validation.Error)...)
+			slog.Warn("shape validation failed", append(attrs, "lintErrors", len(validation.LintErrors), "error", validation.Error)...)
 			return
 		}
 		r := validation.Report
 		attrs = append(attrs,
-			"schema", r.Schema,
+			"shape", r.Shape,
 			"points", r.Score.Points,
 			"max", r.Score.Max,
 			"penalty", r.Penalty,
@@ -107,12 +107,12 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 			"warnings", r.Count(semanticshape.SeverityWarn),
 			"infos", r.Count(semanticshape.SeverityInfo),
 		)
-		slog.Info("schema validated", attrs...)
+		slog.Info("shape validated", attrs...)
 	}()
 	validation.URL = targetURL
-	validation.Source = SchemaSourceRendered
+	validation.Source = ShapeSourceRendered
 	loadStart := time.Now()
-	root, lintErrors, err := loadSchemaRoot(schemaRoot)
+	root, lintErrors, err := loadShapeRoot(shapeRoot)
 	loadDuration = time.Since(loadStart)
 	validation.LintErrors = lintErrors
 	if err != nil {
@@ -121,7 +121,7 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 	}
 	htmlBytes := []byte(html)
 	if html == "" {
-		validation.Source = SchemaSourceServer
+		validation.Source = ShapeSourceServer
 		fetchStart := time.Now()
 		body, statusCode, detectedGroup, errFetch := s.fetch(targetURL)
 		fetchDuration = time.Since(fetchStart)
@@ -157,22 +157,22 @@ func (s *service) ValidateSchema(schemaRoot, group, targetURL, html string) (val
 	return validation
 }
 
-// logLintErrors logs every problem of a schema root on debug level, the
+// logLintErrors logs every problem of a shape root on debug level, the
 // summaries only count them
-func logLintErrors(schemaRoot string, lintErrors []semanticshape.LintError) {
+func logLintErrors(shapeRoot string, lintErrors []semanticshape.LintError) {
 	for _, e := range lintErrors {
-		slog.Debug("schema lint error", "root", schemaRoot, "file", e.File, "line", e.Line, "message", e.Message)
+		slog.Debug("shape lint error", "root", shapeRoot, "file", e.File, "line", e.Line, "message", e.Message)
 	}
 }
 
-func loadSchemaRoot(schemaRoot string) (*semanticshape.Root, []semanticshape.LintError, error) {
-	if schemaRoot == "" {
-		return nil, nil, errors.New("no schema root")
+func loadShapeRoot(shapeRoot string) (*semanticshape.Root, []semanticshape.LintError, error) {
+	if shapeRoot == "" {
+		return nil, nil, errors.New("no shape root")
 	}
-	root, err := semanticshape.LoadRoot(schemaRoot)
+	root, err := semanticshape.LoadRoot(shapeRoot)
 	var lintErrors semanticshape.LintErrors
 	if errors.As(err, &lintErrors) {
-		return nil, lintErrors, errors.New("the schema root has errors")
+		return nil, lintErrors, errors.New("the shape root has errors")
 	}
 	return root, nil, err
 }

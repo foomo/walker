@@ -148,7 +148,7 @@ func main() {
 		"paths", conf.Target.Paths,
 		"concurrency", conf.Concurrency,
 		"interval", conf.Interval,
-		"schemaroot", conf.SchemaRoot,
+		"shaperoot", conf.ShapeRoot,
 	)
 	slog.Debug("config", "yaml", string(yamlConfBytes))
 

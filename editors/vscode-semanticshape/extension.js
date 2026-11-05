@@ -1,8 +1,8 @@
 // Semantic Shape for VS Code: starts semanticshape-lsp (go/cmd/semanticshape-lsp
-// of the walker repository) for semantic shape files, *.shape.html. They stay
+// of the walker repository) for semantic shape files, *.semanticshape.html. They stay
 // html documents, so VS Code's own html support keeps working next to it; the
-// server only acts on shape files inside a schema root - a directory with
-// groups/ or default.shape.html.
+// server only acts on shape files inside a shape root - a directory with
+// groups/ or default.semanticshape.html.
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -57,7 +57,7 @@ async function start() {
     "Semantic Shape",
     { command, transport: TransportKind.stdio },
     {
-      documentSelector: [{ scheme: "file", language: "html", pattern: "**/*.shape.html" }],
+      documentSelector: [{ scheme: "file", language: "html", pattern: "**/*.semanticshape.html" }],
       outputChannel: output,
     },
   );

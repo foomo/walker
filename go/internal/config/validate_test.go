@@ -29,8 +29,8 @@ func TestValidate(t *testing.T) {
 		text string
 	}{
 		"minimal": {"target: https://www.bestbytes.de\n", nil, ""},
-		// the fixture of config_test.go points to a schema root that is gone
-		"complex":          {confComplexTarget, []problem{{SeverityInfo, "schemaroot", 14}, {SeverityError, "schemaroot", 14}}, "without a groupheader"},
+		// the fixture of config_test.go points to a shape root that is gone
+		"complex":          {confComplexTarget, []problem{{SeverityInfo, "shaperoot", 14}, {SeverityError, "shaperoot", 14}}, "without a groupheader"},
 		"typo address":     {"target: https://example.com\nagent: Yandex\naddress: \":3001\"\n", []problem{{SeverityWarning, "address", 3}}, `did you mean "addr"?`},
 		"upper case key":   {"Target: https://example.com\ntarget: https://example.com\n", []problem{{SeverityWarning, "Target", 1}}, `keys are lower case: "target"`},
 		"missing target":   {"concurrency: 2\n", []problem{{SeverityError, "target", 1}}, "target is required"},
@@ -45,7 +45,7 @@ func TestValidate(t *testing.T) {
 		"duplicate key":    {"target: https://example.com\ndepth: 1\ndepth: 2\n", []problem{{SeverityError, "depth", 3}}, "set twice, first in line 2"},
 		"target mapping":   {"target:\n  baseurl: https://example.com\n  path:\n    - /\n", []problem{{SeverityWarning, "target", 3}}, "target.path is ignored"},
 		"yaml syntax":      {"target: https://example.com\n  depth: [\n", []problem{{SeverityError, "", 2}}, ""},
-		"header only":      {"target: https://example.com\ngroupheader: x-group\n", []problem{{SeverityInfo, "groupheader", 2}}, "only used together with a schemaroot"},
+		"header only":      {"target: https://example.com\ngroupheader: x-group\n", []problem{{SeverityInfo, "groupheader", 2}}, "only used together with a shaperoot"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			list := Validate([]byte(tc.yaml), "")
@@ -57,19 +57,44 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func TestValidateSchemaRoot(t *testing.T) {
+func TestValidateShapeRoot(t *testing.T) {
 	base := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(base, "schema"), 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(base, "schema", "default.shape.html"), []byte("<html><body><h1 score=1/></body></html>"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(base, "shapes"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(base, "shapes", "default.semanticshape.html"), []byte("<html><body><h1 score=1/></body></html>"), 0o644))
 
-	// relative to the config file, with the lint errors of the schema
-	list := Validate([]byte("target: https://example.com\ngroupheader: x-group\nschemaroot: schema\n"), base)
+	// relative to the config file, with the lint errors of the shapes
+	list := Validate([]byte("target: https://example.com\ngroupheader: x-group\nshaperoot: shapes\n"), base)
 	require.Len(t, list, 1)
-	assert.Equal(t, problem{SeverityError, "schemaroot", 3}, problems(list)[0])
-	assert.Contains(t, list[0].Message, `schema default.shape.html:1: attribute "score" looks like a rule`)
+	assert.Equal(t, problem{SeverityError, "shaperoot", 3}, problems(list)[0])
+	assert.Contains(t, list[0].Message, `shape default.semanticshape.html:1: attribute "score" looks like a rule`)
 
-	list = Validate([]byte("target: https://example.com\nschemaroot: nope\n"), base)
-	assert.Equal(t, []problem{{SeverityInfo, "schemaroot", 2}, {SeverityError, "schemaroot", 2}}, problems(list))
+	list = Validate([]byte("target: https://example.com\nshaperoot: nope\n"), base)
+	assert.Equal(t, []problem{{SeverityInfo, "shaperoot", 2}, {SeverityError, "shaperoot", 2}}, problems(list))
+
+	// schemaroot is the old name - checked like shaperoot, reported as shaperoot
+	list = Validate([]byte("target: https://example.com\ngroupheader: x-group\nschemaroot: nope\n"), base)
+	assert.Equal(t, []problem{{SeverityInfo, "shaperoot", 3}, {SeverityError, "shaperoot", 3}}, problems(list))
+	assert.Contains(t, list[0].Message, "old name of shaperoot")
+	list = Validate([]byte("target: https://example.com\ngroupheader: x-group\nshaperoot: shapes\nschemaroot: shapes\n"), base)
+	assert.Contains(t, problems(list), problem{SeverityError, "shaperoot", 4})
+}
+
+func TestLoadSchemaRootAlias(t *testing.T) {
+	conf, err := Load([]byte("target: https://example.com\nschemaroot: shapes\n"))
+	require.NoError(t, err)
+	assert.Equal(t, "shapes", conf.ShapeRoot)
+	_, err = Load([]byte("target: https://example.com\nschemaroot: a\nshaperoot: b\n"))
+	assert.Error(t, err)
+}
+
+func TestFormRenamesSchemaRoot(t *testing.T) {
+	yaml := "target: https://example.com\n# validation\nschemaroot: shapes # the demo\n"
+	form, err := ReadForm([]byte(yaml))
+	require.NoError(t, err)
+	assert.Equal(t, "shapes", form.ShapeRoot)
+	out, err := WriteForm([]byte(yaml), form)
+	require.NoError(t, err)
+	assert.Equal(t, "target: https://example.com\n# validation\nshaperoot: shapes # the demo\n", string(out))
 }
 
 func TestFormRoundTrip(t *testing.T) {

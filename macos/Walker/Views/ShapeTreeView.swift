@@ -1,25 +1,25 @@
 import AppKit
 import SwiftUI
 
-/// SchemaTreeView is the evaluated schema as an outline - clean subtrees are
-/// folded, problems stay open. Elements from another schema file than their
+/// ShapeTreeView is the evaluated shape as an outline - clean subtrees are
+/// folded, problems stay open. Elements from another shape file than their
 /// parent get a heading with the file.
 ///
 /// The selection is drawn neutral, like an unemphasized selection - the tree
 /// drives the page and the middle column. A click on the selected row toggles
 /// its details, the keyboard moves with ↑ ↓, folds with ← →, Return toggles.
-struct SchemaTreeView: View {
+struct ShapeTreeView: View {
     let items: [TraceItem]
     @Binding var selection: TraceItem.ID?
     @Binding var collapsed: Set<TraceItem.ID>
     /// showsDetails shows the details inline the selected row
-    @AppStorage("schemaDevShowsDetails") private var showsDetails = true
+    @AppStorage("shapeDevShowsDetails") private var showsDetails = true
     @FocusState private var focused: Bool
 
     var body: some View {
         ScrollViewReader { proxy in
             List {
-                SchemaTreeRows(
+                ShapeTreeRows(
                     items: items,
                     parentFile: items.first.map { TraceSource.file($0.node.source) } ?? "",
                     selection: selection,
@@ -98,9 +98,9 @@ private struct TreeActions {
     let closeDetails: () -> Void
 }
 
-private struct SchemaTreeRows: View {
+private struct ShapeTreeRows: View {
     let items: [TraceItem]
-    /// parentFile is the schema file of the parent - a different file gets a heading
+    /// parentFile is the shape file of the parent - a different file gets a heading
     let parentFile: String
     let selection: TraceItem.ID?
     let showsDetails: Bool
@@ -123,7 +123,7 @@ private struct SchemaTreeRows: View {
                         }
                     }
                 )) {
-                    SchemaTreeRows(items: children, parentFile: childFile(of: item, children: children), selection: selection, showsDetails: showsDetails, collapsed: $collapsed, actions: actions)
+                    ShapeTreeRows(items: children, parentFile: childFile(of: item, children: children), selection: selection, showsDetails: showsDetails, collapsed: $collapsed, actions: actions)
                 } label: {
                     row(item, isCollapsed: collapsed.contains(item.id))
                 }
@@ -151,7 +151,7 @@ private struct SchemaTreeRows: View {
         let file = TraceSource.file(items[index].node.source)
         let before = index == 0 ? parentFile : TraceSource.file(items[index - 1].node.source)
         guard !file.isEmpty, file != before else { return nil }
-        return file == parentFile ? file : "from " + TraceSource.schemaPath(file)
+        return file == parentFile ? file : "from " + TraceSource.shapePath(file)
     }
 
     /// childFile is the file the children of an item are read against - the
@@ -164,7 +164,7 @@ private struct SchemaTreeRows: View {
     }
 }
 
-/// TraceSource reads the source of a trace node: file.shape.html:line
+/// TraceSource reads the source of a trace node: file.semanticshape.html:line
 enum TraceSource {
     static func file(_ source: String) -> String {
         guard let colon = source.lastIndex(of: ":"), source[source.index(after: colon)...].allSatisfy(\.isNumber) else {
@@ -173,18 +173,18 @@ enum TraceSource {
         return String(source[..<colon])
     }
 
-    /// schemaPath is how schemas refer to a file: partials/head.shape.html is /partials/head
-    static func schemaPath(_ file: String) -> String {
-        let suffix = ".shape.html"
+    /// shapePath is how shapes refer to a file: partials/head.semanticshape.html is /partials/head
+    static func shapePath(_ file: String) -> String {
+        let suffix = ".semanticshape.html"
         return "/" + (file.hasSuffix(suffix) ? String(file.dropLast(suffix.count)) : file)
     }
 }
 
-/// OriginHeading separates elements of another schema file
+/// OriginHeading separates elements of another shape file
 private struct OriginHeading: View {
     let text: String
     let file: String
-    @Environment(\.schemaRoot) private var root
+    @Environment(\.shapeRoot) private var root
 
     var body: some View {
         HStack(spacing: 6) {
@@ -199,7 +199,7 @@ private struct OriginHeading: View {
     }
 }
 
-/// TraceRow is one schema element in the tree: label, rule chips, score,
+/// TraceRow is one shape element in the tree: label, rule chips, score,
 /// penalty, the findings of the element itself - and its details when selected
 private struct TraceRow: View {
     let item: TraceItem
@@ -208,7 +208,7 @@ private struct TraceRow: View {
     let showsDetails: Bool
     let actions: TreeActions
 
-    private var node: HTMLSchemaVO.TraceNode { item.node }
+    private var node: SemanticShapeVO.TraceNode { item.node }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -253,10 +253,10 @@ private struct TraceRow: View {
             ForEach(Array((node.findings ?? []).compactMap { $0 }.enumerated()), id: \.offset) { _, finding in
                 Text("\(finding.rule): \(finding.message)")
                     .font(.caption)
-                    .foregroundStyle(HTMLSchemaVO.TraceStatus(rawValue: finding.severity.rawValue).color)
+                    .foregroundStyle(SemanticShapeVO.TraceStatus(rawValue: finding.severity.rawValue).color)
             }
             if showsDetails {
-                SchemaNodeDetails(node: node, close: actions.closeDetails)
+                ShapeNodeDetails(node: node, close: actions.closeDetails)
                     .padding(.top, 4)
             }
         }
@@ -275,11 +275,11 @@ private struct TraceRow: View {
 }
 
 /// TraceLabel writes a node like a css-ish tag - `meta property=og:title` - or
-/// with a kind tag for the special nodes of the schema language
+/// with a kind tag for the special nodes of the shape language
 struct TraceLabel: View {
     let item: TraceItem
 
-    private var node: HTMLSchemaVO.TraceNode { item.node }
+    private var node: SemanticShapeVO.TraceNode { item.node }
 
     var body: some View {
         switch node.kind {
@@ -392,14 +392,14 @@ struct RuleChip: Identifiable {
 
     let id: String
     let text: String
-    /// rule is the rule as written in the schema, for the tooltip
+    /// rule is the rule as written in the shape, for the tooltip
     let rule: String
     let topic: Topic
     var failed = false
     var quiet = false
 
     /// chips are computed once per validation - see TraceItem
-    static func chips(for node: HTMLSchemaVO.TraceNode) -> [RuleChip] {
+    static func chips(for node: SemanticShapeVO.TraceNode) -> [RuleChip] {
         let tokens = RuleTokens.parse(node.rules)
         var values: [String: String] = [:]
         for token in tokens {
@@ -491,7 +491,7 @@ struct RuleChip: Identifiable {
         return chips
     }
 
-    private static func topic(of finding: HTMLSchemaVO.Finding) -> Topic {
+    private static func topic(of finding: SemanticShapeVO.Finding) -> Topic {
         let rule = finding.rule.hasPrefix("ld-prop:") ? String(finding.rule.dropFirst(8)) : finding.rule
         switch rule {
         case "occurrence", "ld-occurrence", "required":
@@ -590,12 +590,12 @@ private struct RuleChipView: View {
     }
 }
 
-/// SchemaNodeDetails shows a node in full, inline its row: status, rules,
-/// findings with their locators, the matched elements and the schema source
-struct SchemaNodeDetails: View {
-    let node: HTMLSchemaVO.TraceNode
+/// ShapeNodeDetails shows a node in full, inline its row: status, rules,
+/// findings with their locators, the matched elements and the shape source
+struct ShapeNodeDetails: View {
+    let node: SemanticShapeVO.TraceNode
     var close: (() -> Void)?
-    @Environment(\.schemaRoot) private var root
+    @Environment(\.shapeRoot) private var root
 
     var body: some View {
         grid
@@ -650,7 +650,7 @@ struct SchemaNodeDetails: View {
                 row(finding.severity.rawValue) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(finding.rule): \(finding.message)")
-                            .foregroundStyle(HTMLSchemaVO.TraceStatus(rawValue: finding.severity.rawValue).color)
+                            .foregroundStyle(SemanticShapeVO.TraceStatus(rawValue: finding.severity.rawValue).color)
                         mono(finding.locator)
                             .foregroundStyle(.secondary)
                         if !finding.source.isEmpty, finding.source != node.source {
@@ -691,7 +691,7 @@ struct SchemaNodeDetails: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func status(_ node: HTMLSchemaVO.TraceNode) -> String {
+    private func status(_ node: SemanticShapeVO.TraceNode) -> String {
         var parts = [node.status.rawValue]
         if node.max > 0 {
             parts.append("\(node.points) / \(node.max) points")

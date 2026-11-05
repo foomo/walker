@@ -14,18 +14,18 @@ type Finding struct {
 	// Penalty is the weight of the finding, it is never subtracted from the score
 	Penalty int
 	Rule    string // "occurrence", "min-length", "attr:url", "component-not-allowed", …
-	// Path is the schema path with page positions, stable across layout changes
+	// Path is the shape path with page positions, stable across layout changes
 	Path string
 	// Locator is a CSS path to the page node, for document.querySelector
 	Locator string
 	Message string
 	// Component is the path of the innermost component instance, "" on page level
 	Component string
-	// Source is the schema file and line of the rule
+	// Source is the shape file and line of the rule
 	Source string
 }
 
-// ScoreNode is the score of a schema element, for drill down
+// ScoreNode is the score of a shape element, for drill down
 type ScoreNode struct {
 	Path     string
 	Points   int
@@ -45,7 +45,7 @@ type ComponentSummary struct {
 // never combined.
 type Report struct {
 	Group      string
-	Schema     string
+	Shape      string
 	Findings   []*Finding
 	Score      *ScoreNode
 	Penalty    int
@@ -79,7 +79,7 @@ func percent(points, max int) string {
 
 // Print the report as text
 func (r *Report) Print(w io.Writer) {
-	fmt.Fprintf(w, "schema %s (group %s)\n", r.Schema, r.Group)
+	fmt.Fprintf(w, "shape %s (group %s)\n", r.Shape, r.Group)
 	fmt.Fprintf(w, "score %d/%d (%s), penalty %d, findings: %d error, %d warn, %d info\n",
 		r.Score.Points, r.Score.Max, percent(r.Score.Points, r.Score.Max), r.Penalty,
 		r.Count(SeverityError), r.Count(SeverityWarn), r.Count(SeverityInfo))

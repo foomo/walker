@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-// instance is a recognized component in a page - opaque for the schema around it
+// instance is a recognized component in a page - opaque for the shape around it
 type instance struct {
 	node      *html.Node
 	comp      *component   // nil for ambiguous selectors
@@ -83,7 +83,7 @@ func (p *page) prepare(n *html.Node, excluded bool, enclosing []*component, r *R
 }
 
 func (p *page) recognize(n *html.Node, enclosing []*component, r *Root, set settings) *instance {
-	// a marker without a component schema is ignored, as if it was not there
+	// a marker without a component shape is ignored, as if it was not there
 	if marker, _ := attr(n, set.markerAttribute); marker != "" {
 		if comp, ok := r.markers[marker]; ok {
 			return &instance{node: n, comp: comp}

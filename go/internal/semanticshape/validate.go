@@ -9,15 +9,15 @@ import (
 	"golang.org/x/net/html"
 )
 
-// Validate a page of a group: groups/<group>.shape.html, or default.shape.html if the
-// group has no schema
+// Validate a page of a group: groups/<group>.semanticshape.html, or default.semanticshape.html if the
+// group has no shape
 func (r *Root) Validate(group string, htmlBytes []byte) (*Report, error) {
 	report, _, err := r.validate(group, htmlBytes, false)
 	return report, err
 }
 
 func (r *Root) validate(group string, htmlBytes []byte, trace bool) (*Report, *TraceNode, error) {
-	s, err := r.schemaFor(group)
+	s, err := r.shapeFor(group)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -26,9 +26,9 @@ func (r *Root) validate(group string, htmlBytes []byte, trace bool) (*Report, *T
 		return nil, nil, err
 	}
 	v := &validator{
-		schema: s,
+		shape:  s,
 		page:   p,
-		report: &Report{Group: group, Schema: s.path, Components: map[string]*ComponentSummary{}},
+		report: &Report{Group: group, Shape: s.path, Components: map[string]*ComponentSummary{}},
 	}
 	var root *TraceNode
 	if trace {
@@ -59,7 +59,7 @@ func (r *Root) validate(group string, htmlBytes []byte, trace bool) (*Report, *T
 }
 
 type validator struct {
-	schema *schema
+	shape  *shape
 	page   *page
 	report *Report
 	// trace is the current trace node, nil while not tracing
@@ -98,7 +98,7 @@ func (v *validator) penaltyFor(sev Severity, explicit int) int {
 	if explicit >= 0 {
 		return explicit
 	}
-	return v.schema.settings.penalties[sev]
+	return v.shape.settings.penalties[sev]
 }
 
 func (v *validator) summary(path string) *ComponentSummary {

@@ -14,13 +14,13 @@ import (
 )
 
 // server is a language server for semantic shape files. It only works on
-// *.shape.html files inside a schema root - a directory with groups/ or
-// default.shape.html - and leaves every other html file alone.
+// *.semanticshape.html files inside a shape root - a directory with groups/ or
+// default.semanticshape.html - and leaves every other html file alone.
 type server struct {
 	conn *conn
 	// docs are the open documents by uri
 	docs map[string]string
-	// published are the uris with diagnostics by schema root
+	// published are the uris with diagnostics by shape root
 	published map[string]map[string]bool
 
 	elements     map[string]semanticshape.VocabularyElement
@@ -146,9 +146,9 @@ func pathToURI(p string) string {
 	return (&url.URL{Scheme: "file", Path: filepath.ToSlash(p)}).String()
 }
 
-// schemaRoot is the closest directory above a shape file with groups/ or
-// default.shape.html - "" for any other file
-func schemaRoot(file string) string {
+// shapeRoot is the closest directory above a shape file with groups/ or
+// default.semanticshape.html - "" for any other file
+func shapeRoot(file string) string {
 	if !strings.HasSuffix(file, semanticshape.FileSuffix) {
 		return ""
 	}
@@ -165,11 +165,11 @@ func schemaRoot(file string) string {
 	}
 }
 
-// lint loads the schema root of the document with all open documents and
+// lint loads the shape root of the document with all open documents and
 // publishes the lint errors of every file in it
 func (s *server) lint(uri string) {
 	file := uriToPath(uri)
-	root := schemaRoot(file)
+	root := shapeRoot(file)
 	if file == "" || root == "" {
 		return
 	}
@@ -227,10 +227,10 @@ func markdown(value string) *markupContent {
 }
 
 // complete offers val:* elements, their attributes, the val: rules of html
-// elements and attribute values - all only inside schema roots
+// elements and attribute values - all only inside shape roots
 func (s *server) complete(uri string, pos position) []completionItem {
 	file := uriToPath(uri)
-	root := schemaRoot(file)
+	root := shapeRoot(file)
 	text, ok := s.docs[uri]
 	if root == "" || !ok {
 		return []completionItem{}
@@ -322,7 +322,7 @@ func (s *server) completeValue(ctx completionContext, root, file, text string, p
 	}
 	switch {
 	case name == "path" && (ctx.tag == "val:include" || ctx.tag == "val:comp"):
-		for _, p := range schemaFiles(root, file) {
+		for _, p := range shapeFiles(root, file) {
 			add(p, "", completionKindFile, ctx.prefixStart)
 		}
 	case strings.HasPrefix(name, "attr-") || name == "attr" || name == "value":
@@ -352,9 +352,9 @@ func (s *server) completeValue(ctx completionContext, root, file, text string, p
 	return items
 }
 
-// schemaFiles are the files of a schema root as val:include and val:comp
-// paths: root relative with a leading /, without .shape.html - the file itself is left out
-func schemaFiles(root, self string) (paths []string) {
+// shapeFiles are the files of a shape root as val:include and val:comp
+// paths: root relative with a leading /, without .semanticshape.html - the file itself is left out
+func shapeFiles(root, self string) (paths []string) {
 	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -380,7 +380,7 @@ func schemaFiles(root, self string) (paths []string) {
 // hover explains val:* elements and rule attributes
 func (s *server) hover(uri string, pos position) any {
 	text, ok := s.docs[uri]
-	if !ok || schemaRoot(uriToPath(uri)) == "" {
+	if !ok || shapeRoot(uriToPath(uri)) == "" {
 		return nil
 	}
 	off := offset(text, pos)

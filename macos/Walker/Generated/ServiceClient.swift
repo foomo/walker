@@ -269,50 +269,6 @@ extension Walker {
             return (result.r0, result.r1, result.r2, result.r3)
         }
 
-        public func getSchemaRoot(schemaRoot: String) async throws -> WalkerVO.SchemaRootInfo {
-            struct _Args: Encodable {
-                let a0: String
-
-                func encode(to encoder: Encoder) throws {
-                    var container = encoder.unkeyedContainer()
-                    try container.encode(a0)
-                }
-            }
-
-            struct _Result: Decodable {
-                let r0: WalkerVO.SchemaRootInfo
-
-                init(from decoder: Decoder) throws {
-                    var container = try decoder.unkeyedContainer()
-                    r0 = try container.decode(WalkerVO.SchemaRootInfo.self)
-                }
-            }
-
-            return try await transport.call(endpoint: endpoint, method: "GetSchemaRoot", args: _Args(a0: schemaRoot), result: _Result.self).r0
-        }
-
-        public func getSchemaRootVersion(schemaRoot: String) async throws -> String {
-            struct _Args: Encodable {
-                let a0: String
-
-                func encode(to encoder: Encoder) throws {
-                    var container = encoder.unkeyedContainer()
-                    try container.encode(a0)
-                }
-            }
-
-            struct _Result: Decodable {
-                let r0: String
-
-                init(from decoder: Decoder) throws {
-                    var container = try decoder.unkeyedContainer()
-                    r0 = try container.decode(String.self)
-                }
-            }
-
-            return try await transport.call(endpoint: endpoint, method: "GetSchemaRootVersion", args: _Args(a0: schemaRoot), result: _Result.self).r0
-        }
-
         public func getScrapes() async throws -> (complete: WalkerVO.ScrapeSummary?, current: WalkerVO.ScrapeSummary?) {
             struct _Result: Decodable {
                 let r0: WalkerVO.ScrapeSummary?
@@ -355,6 +311,50 @@ extension Walker {
             return try await transport.call(endpoint: endpoint, method: "GetSemanticDocument", args: _Args(a0: targetURL, a1: html, a2: content), result: _Result.self).r0
         }
 
+        public func getShapeRoot(shapeRoot: String) async throws -> WalkerVO.ShapeRootInfo {
+            struct _Args: Encodable {
+                let a0: String
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.unkeyedContainer()
+                    try container.encode(a0)
+                }
+            }
+
+            struct _Result: Decodable {
+                let r0: WalkerVO.ShapeRootInfo
+
+                init(from decoder: Decoder) throws {
+                    var container = try decoder.unkeyedContainer()
+                    r0 = try container.decode(WalkerVO.ShapeRootInfo.self)
+                }
+            }
+
+            return try await transport.call(endpoint: endpoint, method: "GetShapeRoot", args: _Args(a0: shapeRoot), result: _Result.self).r0
+        }
+
+        public func getShapeRootVersion(shapeRoot: String) async throws -> String {
+            struct _Args: Encodable {
+                let a0: String
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.unkeyedContainer()
+                    try container.encode(a0)
+                }
+            }
+
+            struct _Result: Decodable {
+                let r0: String
+
+                init(from decoder: Decoder) throws {
+                    var container = try decoder.unkeyedContainer()
+                    r0 = try container.decode(String.self)
+                }
+            }
+
+            return try await transport.call(endpoint: endpoint, method: "GetShapeRootVersion", args: _Args(a0: shapeRoot), result: _Result.self).r0
+        }
+
         public func getStatus() async throws -> WalkerVO.ServiceStatus {
             struct _Result: Decodable {
                 let r0: WalkerVO.ServiceStatus
@@ -381,7 +381,7 @@ extension Walker {
             return try await transport.call(endpoint: endpoint, method: "RestartScrape", args: GotsRPCNoArgs(), result: _Result.self).r0
         }
 
-        public func validateSchema(schemaRoot: String, group: String, targetURL: String, html: String) async throws -> WalkerVO.SchemaValidation {
+        public func validateShape(shapeRoot: String, group: String, targetURL: String, html: String) async throws -> WalkerVO.ShapeValidation {
             struct _Args: Encodable {
                 let a0: String
                 let a1: String
@@ -398,15 +398,15 @@ extension Walker {
             }
 
             struct _Result: Decodable {
-                let r0: WalkerVO.SchemaValidation
+                let r0: WalkerVO.ShapeValidation
 
                 init(from decoder: Decoder) throws {
                     var container = try decoder.unkeyedContainer()
-                    r0 = try container.decode(WalkerVO.SchemaValidation.self)
+                    r0 = try container.decode(WalkerVO.ShapeValidation.self)
                 }
             }
 
-            return try await transport.call(endpoint: endpoint, method: "ValidateSchema", args: _Args(a0: schemaRoot, a1: group, a2: targetURL, a3: html), result: _Result.self).r0
+            return try await transport.call(endpoint: endpoint, method: "ValidateShape", args: _Args(a0: shapeRoot, a1: group, a2: targetURL, a3: html), result: _Result.self).r0
         }
     }
 }

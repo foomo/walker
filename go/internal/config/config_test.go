@@ -21,7 +21,7 @@ depth: 4
 paging: false
 agent: foomo-walker
 addr: ":3001"
-schemaroot: htmlschema/example/schema/bestbytes
+shaperoot: shapes/bestbytes
 ...
 `
 	confComplexMinimal = `

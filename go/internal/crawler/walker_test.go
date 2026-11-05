@@ -45,7 +45,7 @@ func TestWalker(t *testing.T) {
 		GroupHeader:  demoshop.GroupHeader,
 		IgnoreRobots: true,
 		Concurrency:  1,
-		SchemaRoot:   demoshop.SchemaDir(),
+		ShapeRoot:    demoshop.ShapesDir(),
 	}
 	chanStatus, errWalk := w.Walk(conf, nil, nil, nil, nil)
 	assert.NoError(t, errWalk)

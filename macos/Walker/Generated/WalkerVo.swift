@@ -442,78 +442,13 @@ extension WalkerVO {
         }
     }
 
-    // github.com/foomo/walker/go/internal/vo.SchemaRootInfo
-    public struct SchemaRootInfo: Codable, Sendable, Equatable {
-        public var groups: [String]?
-        public var hasDefault: Bool
-        public var groupHeader: String
-        public var lintErrors: [HTMLSchemaVO.LintError]?
-        public var error: String
-
-        public init(groups: [String]? = nil, hasDefault: Bool, groupHeader: String, lintErrors: [HTMLSchemaVO.LintError]? = nil, error: String) {
-            self.groups = groups
-            self.hasDefault = hasDefault
-            self.groupHeader = groupHeader
-            self.lintErrors = lintErrors
-            self.error = error
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case groups = "Groups"
-            case hasDefault = "HasDefault"
-            case groupHeader = "GroupHeader"
-            case lintErrors = "LintErrors"
-            case error = "Error"
-        }
-    }
-
-    // github.com/foomo/walker/go/internal/vo.SchemaValidation
-    public struct SchemaValidation: Codable, Sendable, Equatable {
-        public var url: String
-        public var group: String
-        public var source: String
-        public var statusCode: Int
-        public var detectedGroup: String
-        public var report: HTMLSchemaVO.Report?
-        public var trace: HTMLSchemaVO.TraceNode?
-        public var page: HTMLSchemaVO.PageData?
-        public var lintErrors: [HTMLSchemaVO.LintError]?
-        public var error: String
-
-        public init(url: String, group: String, source: String, statusCode: Int, detectedGroup: String, report: HTMLSchemaVO.Report? = nil, trace: HTMLSchemaVO.TraceNode? = nil, page: HTMLSchemaVO.PageData? = nil, lintErrors: [HTMLSchemaVO.LintError]? = nil, error: String) {
-            self.url = url
-            self.group = group
-            self.source = source
-            self.statusCode = statusCode
-            self.detectedGroup = detectedGroup
-            self.report = report
-            self.trace = trace
-            self.page = page
-            self.lintErrors = lintErrors
-            self.error = error
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case url = "URL"
-            case group = "Group"
-            case source = "Source"
-            case statusCode = "StatusCode"
-            case detectedGroup = "DetectedGroup"
-            case report = "Report"
-            case trace = "Trace"
-            case page = "Page"
-            case lintErrors = "LintErrors"
-            case error = "Error"
-        }
-    }
-
     // github.com/foomo/walker/go/internal/vo.ScrapeResult
     public struct ScrapeResult: Codable, Sendable, Equatable {
         public var targetURL: String
         public var redirects: [WalkerVO.Redirect]?
         public var error: String
         public var code: Int
-        public var validationReport: HTMLSchemaVO.Report?
+        public var validationReport: SemanticShapeVO.Report?
         public var validationError: String
         public var status: String
         public var contentType: String
@@ -528,7 +463,7 @@ extension WalkerVO {
         public var data: GotsRPCJSONValue
         public var group: String
 
-        public init(targetURL: String, redirects: [WalkerVO.Redirect]? = nil, error: String, code: Int, validationReport: HTMLSchemaVO.Report? = nil, validationError: String, status: String, contentType: String, length: Int, links: WalkerVO.LinkList? = nil, normalizedLinks: WalkerVO.LinkList? = nil, duration: GoTime.Duration, ttfb: GoTime.Duration, time: Date, structure: WalkerVO.Structure, validations: [WalkerVO.ResultValidation]? = nil, data: GotsRPCJSONValue, group: String) {
+        public init(targetURL: String, redirects: [WalkerVO.Redirect]? = nil, error: String, code: Int, validationReport: SemanticShapeVO.Report? = nil, validationError: String, status: String, contentType: String, length: Int, links: WalkerVO.LinkList? = nil, normalizedLinks: WalkerVO.LinkList? = nil, duration: GoTime.Duration, ttfb: GoTime.Duration, time: Date, structure: WalkerVO.Structure, validations: [WalkerVO.ResultValidation]? = nil, data: GotsRPCJSONValue, group: String) {
             self.targetURL = targetURL
             self.redirects = redirects
             self.error = error
@@ -664,6 +599,71 @@ extension WalkerVO {
             case `open` = "Open"
             case done = "Done"
             case pending = "Pending"
+        }
+    }
+
+    // github.com/foomo/walker/go/internal/vo.ShapeRootInfo
+    public struct ShapeRootInfo: Codable, Sendable, Equatable {
+        public var groups: [String]?
+        public var hasDefault: Bool
+        public var groupHeader: String
+        public var lintErrors: [SemanticShapeVO.LintError]?
+        public var error: String
+
+        public init(groups: [String]? = nil, hasDefault: Bool, groupHeader: String, lintErrors: [SemanticShapeVO.LintError]? = nil, error: String) {
+            self.groups = groups
+            self.hasDefault = hasDefault
+            self.groupHeader = groupHeader
+            self.lintErrors = lintErrors
+            self.error = error
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case groups = "Groups"
+            case hasDefault = "HasDefault"
+            case groupHeader = "GroupHeader"
+            case lintErrors = "LintErrors"
+            case error = "Error"
+        }
+    }
+
+    // github.com/foomo/walker/go/internal/vo.ShapeValidation
+    public struct ShapeValidation: Codable, Sendable, Equatable {
+        public var url: String
+        public var group: String
+        public var source: String
+        public var statusCode: Int
+        public var detectedGroup: String
+        public var report: SemanticShapeVO.Report?
+        public var trace: SemanticShapeVO.TraceNode?
+        public var page: SemanticShapeVO.PageData?
+        public var lintErrors: [SemanticShapeVO.LintError]?
+        public var error: String
+
+        public init(url: String, group: String, source: String, statusCode: Int, detectedGroup: String, report: SemanticShapeVO.Report? = nil, trace: SemanticShapeVO.TraceNode? = nil, page: SemanticShapeVO.PageData? = nil, lintErrors: [SemanticShapeVO.LintError]? = nil, error: String) {
+            self.url = url
+            self.group = group
+            self.source = source
+            self.statusCode = statusCode
+            self.detectedGroup = detectedGroup
+            self.report = report
+            self.trace = trace
+            self.page = page
+            self.lintErrors = lintErrors
+            self.error = error
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case url = "URL"
+            case group = "Group"
+            case source = "Source"
+            case statusCode = "StatusCode"
+            case detectedGroup = "DetectedGroup"
+            case report = "Report"
+            case trace = "Trace"
+            case page = "Page"
+            case lintErrors = "LintErrors"
+            case error = "Error"
         }
     }
 

@@ -12,9 +12,9 @@ struct WalkerApp: App {
                 .environment(store)
                 .environment(appDelegate.walkers)
         }
-        // the schema developer of a server - a schema and a website side by side
-        WindowGroup("Schema Developer", id: SchemaDevWindow.id, for: Server.ID.self) { $serverID in
-            SchemaDevWindow(serverID: serverID)
+        // the shape developer of a server - a shape and a website side by side
+        WindowGroup("Shape Developer", id: ShapeDevWindow.id, for: Server.ID.self) { $serverID in
+            ShapeDevWindow(serverID: serverID)
                 .environment(store)
                 .environment(appDelegate.walkers)
         }

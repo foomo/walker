@@ -2,9 +2,9 @@
 import Foundation
 
 // github.com/foomo/walker/go/internal/semanticshape
-public enum HTMLSchemaVO {}
+public enum SemanticShapeVO {}
 
-extension HTMLSchemaVO {
+extension SemanticShapeVO {
     // github.com/foomo/walker/go/internal/semanticshape.ComponentSummary
     public struct ComponentSummary: Codable, Sendable, Equatable {
         public var instances: Int
@@ -29,7 +29,7 @@ extension HTMLSchemaVO {
 
     // github.com/foomo/walker/go/internal/semanticshape.Finding
     public struct Finding: Codable, Sendable, Equatable {
-        public var severity: HTMLSchemaVO.Severity
+        public var severity: SemanticShapeVO.Severity
         public var penalty: Int
         public var rule: String
         public var path: String
@@ -38,7 +38,7 @@ extension HTMLSchemaVO {
         public var component: String
         public var source: String
 
-        public init(severity: HTMLSchemaVO.Severity, penalty: Int, rule: String, path: String, locator: String, message: String, component: String, source: String) {
+        public init(severity: SemanticShapeVO.Severity, penalty: Int, rule: String, path: String, locator: String, message: String, component: String, source: String) {
             self.severity = severity
             self.penalty = penalty
             self.rule = rule
@@ -80,11 +80,11 @@ extension HTMLSchemaVO {
     // github.com/foomo/walker/go/internal/semanticshape.HeadElement
     public struct HeadElement: Codable, Sendable, Equatable {
         public var tag: String
-        public var attributes: [HTMLSchemaVO.HeadAttribute]?
+        public var attributes: [SemanticShapeVO.HeadAttribute]?
         public var text: String
         public var locator: String
 
-        public init(tag: String, attributes: [HTMLSchemaVO.HeadAttribute]? = nil, text: String, locator: String) {
+        public init(tag: String, attributes: [SemanticShapeVO.HeadAttribute]? = nil, text: String, locator: String) {
             self.tag = tag
             self.attributes = attributes
             self.text = text
@@ -142,11 +142,11 @@ extension HTMLSchemaVO {
 
     // github.com/foomo/walker/go/internal/semanticshape.PageData
     public struct PageData: Codable, Sendable, Equatable {
-        public var html: HTMLSchemaVO.HeadElement?
-        public var head: [HTMLSchemaVO.HeadElement?]?
-        public var linkedData: [HTMLSchemaVO.LDBlock?]?
+        public var html: SemanticShapeVO.HeadElement?
+        public var head: [SemanticShapeVO.HeadElement?]?
+        public var linkedData: [SemanticShapeVO.LDBlock?]?
 
-        public init(html: HTMLSchemaVO.HeadElement? = nil, head: [HTMLSchemaVO.HeadElement?]? = nil, linkedData: [HTMLSchemaVO.LDBlock?]? = nil) {
+        public init(html: SemanticShapeVO.HeadElement? = nil, head: [SemanticShapeVO.HeadElement?]? = nil, linkedData: [SemanticShapeVO.LDBlock?]? = nil) {
             self.html = html
             self.head = head
             self.linkedData = linkedData
@@ -162,15 +162,15 @@ extension HTMLSchemaVO {
     // github.com/foomo/walker/go/internal/semanticshape.Report
     public struct Report: Codable, Sendable, Equatable {
         public var group: String
-        public var schema: String
-        public var findings: [HTMLSchemaVO.Finding?]?
-        public var score: HTMLSchemaVO.ScoreNode?
+        public var shape: String
+        public var findings: [SemanticShapeVO.Finding?]?
+        public var score: SemanticShapeVO.ScoreNode?
         public var penalty: Int
-        public var components: [String: HTMLSchemaVO.ComponentSummary?]?
+        public var components: [String: SemanticShapeVO.ComponentSummary?]?
 
-        public init(group: String, schema: String, findings: [HTMLSchemaVO.Finding?]? = nil, score: HTMLSchemaVO.ScoreNode? = nil, penalty: Int, components: [String: HTMLSchemaVO.ComponentSummary?]? = nil) {
+        public init(group: String, shape: String, findings: [SemanticShapeVO.Finding?]? = nil, score: SemanticShapeVO.ScoreNode? = nil, penalty: Int, components: [String: SemanticShapeVO.ComponentSummary?]? = nil) {
             self.group = group
-            self.schema = schema
+            self.shape = shape
             self.findings = findings
             self.score = score
             self.penalty = penalty
@@ -179,7 +179,7 @@ extension HTMLSchemaVO {
 
         enum CodingKeys: String, CodingKey {
             case group = "Group"
-            case schema = "Schema"
+            case shape = "Shape"
             case findings = "Findings"
             case score = "Score"
             case penalty = "Penalty"
@@ -192,9 +192,9 @@ extension HTMLSchemaVO {
         public var path: String
         public var points: Int
         public var max: Int
-        public var children: [HTMLSchemaVO.ScoreNode?]?
+        public var children: [SemanticShapeVO.ScoreNode?]?
 
-        public init(path: String, points: Int, max: Int, children: [HTMLSchemaVO.ScoreNode?]? = nil) {
+        public init(path: String, points: Int, max: Int, children: [SemanticShapeVO.ScoreNode?]? = nil) {
             self.path = path
             self.points = points
             self.max = max
@@ -229,17 +229,17 @@ extension HTMLSchemaVO {
         public var path: String
         public var source: String
         public var rules: String
-        public var status: HTMLSchemaVO.TraceStatus
+        public var status: SemanticShapeVO.TraceStatus
         public var points: Int
         public var max: Int
         public var penalty: Int
         public var locators: [String]?
-        public var findings: [HTMLSchemaVO.Finding?]?
-        public var children: [HTMLSchemaVO.TraceNode?]?
+        public var findings: [SemanticShapeVO.Finding?]?
+        public var children: [SemanticShapeVO.TraceNode?]?
         public var found: Bool
         public var via: String
 
-        public init(kind: String, label: String, path: String, source: String, rules: String, status: HTMLSchemaVO.TraceStatus, points: Int, max: Int, penalty: Int, locators: [String]? = nil, findings: [HTMLSchemaVO.Finding?]? = nil, children: [HTMLSchemaVO.TraceNode?]? = nil, found: Bool, via: String) {
+        public init(kind: String, label: String, path: String, source: String, rules: String, status: SemanticShapeVO.TraceStatus, points: Int, max: Int, penalty: Int, locators: [String]? = nil, findings: [SemanticShapeVO.Finding?]? = nil, children: [SemanticShapeVO.TraceNode?]? = nil, found: Bool, via: String) {
             self.kind = kind
             self.label = label
             self.path = path

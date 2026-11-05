@@ -1,13 +1,13 @@
 # Semantic Shape for Zed
 
 Completion, hover docs and live lint diagnostics for semantic shape files
-(`*.shape.html`) - the `val:*` elements, the `val:` rules of html elements,
+(`*.semanticshape.html`) - the `val:*` elements, the `val:` rules of html elements,
 attribute values like `severity`, `val:include`/`val:comp` paths and attribute
 rule lists.
 
 The extension starts `semanticshape-lsp` (`go/cmd/semanticshape-lsp`). It runs
-next to Zed's html language server and only acts on `*.shape.html` files inside
-a schema root - a directory with `groups/` or `default.shape.html` - every other
+next to Zed's html language server and only acts on `*.semanticshape.html` files inside
+a shape root - a directory with `groups/` or `default.semanticshape.html` - every other
 html file is left alone.
 
 ## Install
@@ -22,7 +22,7 @@ html file is left alone.
    (`editors/zed-semanticshape`). Zed builds it with your rustup toolchain.
    If the old `htmlschema` dev extension is still installed, uninstall it.
 
-3. Open a shape file, e.g. `go/internal/demoshop/schema/groups/product.shape.html`.
+3. Open a shape file, e.g. `go/internal/demoshop/shapes/groups/product.semanticshape.html`.
 
 If the server does not start for html files, enable it explicitly in the
 settings:

@@ -18,16 +18,16 @@ func main() {
 	flag.Parse()
 
 	if len(flag.Args()) != 3 || *flagHelp {
-		fmt.Println("foomo walker validator - validate a html page against an html schema")
-		fmt.Println("usage:", os.Args[0], "path/to/schema-root", "group", "http://server.com/doc-to-validate|path/to/file.html")
-		fmt.Println("exit codes: 1 usage or schema errors, 2 page could not be loaded, 3 the page has error findings")
+		fmt.Println("foomo walker validator - validate a html page against an html shape")
+		fmt.Println("usage:", os.Args[0], "path/to/shape-root", "group", "http://server.com/doc-to-validate|path/to/file.html")
+		fmt.Println("exit codes: 1 usage or shape errors, 2 page could not be loaded, 3 the page has error findings")
 		os.Exit(1)
 	}
-	schemaRoot, group, target := flag.Arg(0), flag.Arg(1), flag.Arg(2)
+	shapeRoot, group, target := flag.Arg(0), flag.Arg(1), flag.Arg(2)
 
-	root, errLoad := semanticshape.LoadRoot(schemaRoot)
+	root, errLoad := semanticshape.LoadRoot(shapeRoot)
 	if errLoad != nil {
-		slog.Error("could not load the schema root", "root", schemaRoot)
+		slog.Error("could not load the shape root", "root", shapeRoot)
 		// the lint errors, one per line - file:line message
 		fmt.Fprintln(os.Stderr, errLoad)
 		os.Exit(1)

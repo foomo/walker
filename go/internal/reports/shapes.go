@@ -6,7 +6,7 @@ import (
 	"github.com/foomo/walker/go/internal/vo"
 )
 
-func reportSchema(status vo.Status, w io.Writer, filter scrapeResultFilter) {
+func reportShape(status vo.Status, w io.Writer, filter scrapeResultFilter) {
 	printh, println, _ := printers(w)
 	if filter == nil {
 		printh("results", len(status.Results))

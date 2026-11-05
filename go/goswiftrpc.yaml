@@ -13,8 +13,8 @@ mappings:
     out: ../macos/Walker/Generated/WalkerVo.swift
     namespace: WalkerVO
   github.com/foomo/walker/go/internal/semanticshape:
-    out: ../macos/Walker/Generated/HTMLSchemaVO.swift
-    namespace: HTMLSchemaVO
+    out: ../macos/Walker/Generated/SemanticShapeVO.swift
+    namespace: SemanticShapeVO
   github.com/foomo/walker/go/internal/semanticscrape:
     out: ../macos/Walker/Generated/SemanticScrapeVO.swift
     namespace: SemanticScrapeVO

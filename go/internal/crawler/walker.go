@@ -15,7 +15,7 @@ import (
 
 type start struct {
 	conf                     config.Config
-	schemaRoot               *semanticshape.Root
+	shapeRoot                *semanticshape.Root
 	linkListFilterFunc       LinkListFilterFunc
 	validationFunc           ValidationFunc
 	scrapeFunc               ScrapeFunc
@@ -112,16 +112,16 @@ func (w *Walker) Walk(
 	validationFunc ValidationFunc,
 	scrapeResultModifierFunc ScrapeResultModifierFunc,
 ) (chanLoopStatus chan vo.Status, err error) {
-	var schemaRoot *semanticshape.Root
-	if conf.SchemaRoot != "" {
-		root, errLoad := semanticshape.LoadRoot(conf.SchemaRoot)
+	var shapeRoot *semanticshape.Root
+	if conf.ShapeRoot != "" {
+		root, errLoad := semanticshape.LoadRoot(conf.ShapeRoot)
 		if errLoad != nil {
 			return nil, errLoad
 		}
-		schemaRoot = root
+		shapeRoot = root
 	}
 	w.chanStart <- start{
-		schemaRoot:               schemaRoot,
+		shapeRoot:                shapeRoot,
 		conf:                     *conf,
 		scrapeFunc:               scrapeFunc,
 		linkListFilterFunc:       linkListFilter,

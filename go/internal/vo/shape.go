@@ -2,8 +2,8 @@ package vo
 
 import "github.com/foomo/walker/go/internal/semanticshape"
 
-// SchemaRootInfo describes a schema root for the schema developer
-type SchemaRootInfo struct {
+// ShapeRootInfo describes a shape root for the shape developer
+type ShapeRootInfo struct {
 	Groups     []string
 	HasDefault bool
 	// GroupHeader is the response header the walker reads a page's group from
@@ -12,8 +12,8 @@ type SchemaRootInfo struct {
 	Error       string
 }
 
-// SchemaValidation is a page validated by the schema developer
-type SchemaValidation struct {
+// ShapeValidation is a page validated by the shape developer
+type ShapeValidation struct {
 	URL   string
 	Group string
 	// Source is "server" for a page the server fetched, "rendered" for a snapshot of a browser's DOM

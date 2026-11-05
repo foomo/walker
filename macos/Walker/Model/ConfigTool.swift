@@ -26,7 +26,7 @@ enum ConfigTool {
         var depth = 0
         var paging = false
         var groupHeader = ""
-        var schemaRoot = ""
+        var shapeRoot = ""
         var interval = ""
         var offset = ""
     }

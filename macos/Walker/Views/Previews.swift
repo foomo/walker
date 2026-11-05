@@ -214,8 +214,8 @@ enum PreviewData {
     .frame(width: 720)
 }
 extension PreviewData {
-    static func trace(_ kind: String, _ label: String, _ status: HTMLSchemaVO.TraceStatus, points: Int = 0, max: Int = 0, penalty: Int = 0, rules: String = "", found: Bool = true, findings: [HTMLSchemaVO.Finding] = [], children: [HTMLSchemaVO.TraceNode] = []) -> HTMLSchemaVO.TraceNode {
-        HTMLSchemaVO.TraceNode(kind: kind, label: label, path: label, source: "groups/content/landing.shape.html:12", rules: rules, status: status, points: points, max: max, penalty: penalty, locators: ["html > body"], findings: findings, children: children, found: found, via: "")
+    static func trace(_ kind: String, _ label: String, _ status: SemanticShapeVO.TraceStatus, points: Int = 0, max: Int = 0, penalty: Int = 0, rules: String = "", found: Bool = true, findings: [SemanticShapeVO.Finding] = [], children: [SemanticShapeVO.TraceNode] = []) -> SemanticShapeVO.TraceNode {
+        SemanticShapeVO.TraceNode(kind: kind, label: label, path: label, source: "groups/content/landing.semanticshape.html:12", rules: rules, status: status, points: points, max: max, penalty: penalty, locators: ["html > body"], findings: findings, children: children, found: found, via: "")
     }
 
     static let traceTree = trace("page", "/groups/content/landing", .ok, points: 112, max: 165, penalty: 5, children: [
@@ -229,7 +229,7 @@ extension PreviewData {
                     trace("component", "teaser[1]", .ok, points: 10, max: 10),
                     trace("component", "teaser[2]", .ok, points: 8, max: 10, penalty: 5, children: [
                         trace("element", "img", .error, max: 2, penalty: 5, rules: "optional score=2 penalty=5 attr-alt=min-length:5", findings: [
-                            HTMLSchemaVO.Finding(severity: .error, penalty: 5, rule: "attr:min-length", path: "html/body/main/teaser[2]/img@alt", locator: "html > body > img", message: "got 0, expected at least 5", component: "/components/teaser", source: "components/teaser.shape.html:7"),
+                            SemanticShapeVO.Finding(severity: .error, penalty: 5, rule: "attr:min-length", path: "html/body/main/teaser[2]/img@alt", locator: "html > body > img", message: "got 0, expected at least 5", component: "/components/teaser", source: "components/teaser.semanticshape.html:7"),
                         ]),
                     ]),
                 ]),
@@ -238,10 +238,10 @@ extension PreviewData {
     ])
 }
 
-#Preview("Schema tree") {
+#Preview("Shape tree") {
     @Previewable @State var selection: TraceItem.ID?
     @Previewable @State var collapsed: Set<TraceItem.ID> = []
-    SchemaTreeView(items: [TraceItem(node: PreviewData.traceTree, parentID: "")], selection: $selection, collapsed: $collapsed)
+    ShapeTreeView(items: [TraceItem(node: PreviewData.traceTree, parentID: "")], selection: $selection, collapsed: $collapsed)
         .frame(width: 440, height: 420)
 }
 #endif

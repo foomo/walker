@@ -30,7 +30,7 @@ func (s *service) GetSemanticDocument(targetURL, html string, content bool) (res
 			"bytes", htmlLength,
 			"duration", time.Since(start),
 		}
-		if result.Source == SchemaSourceServer {
+		if result.Source == ShapeSourceServer {
 			attrs = append(attrs, "status", result.StatusCode, "fetch", fetchDuration)
 		}
 		if result.Error != "" {
@@ -41,10 +41,10 @@ func (s *service) GetSemanticDocument(targetURL, html string, content bool) (res
 		slog.Info("semantic document extracted", attrs...)
 	}()
 	result.URL = targetURL
-	result.Source = SchemaSourceRendered
+	result.Source = ShapeSourceRendered
 	htmlBytes := []byte(html)
 	if html == "" {
-		result.Source = SchemaSourceServer
+		result.Source = ShapeSourceServer
 		if err := checkPageURL(targetURL); err != nil {
 			result.Error = err.Error()
 			return result
