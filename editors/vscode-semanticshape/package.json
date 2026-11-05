@@ -34,8 +34,8 @@
       "properties": {
         "semanticshape.serverPath": {
           "type": "string",
-          "default": "semanticshape-lsp",
-          "markdownDescription": "Path of the `semanticshape-lsp` binary. A bare name is looked up on the `PATH`, then in `$GOBIN`, `$GOPATH/bin` and `~/go/bin`."
+          "default": "",
+          "markdownDescription": "Path of a `semanticshape-lsp` binary to use instead of the one bundled with the extension. Empty: the bundled one, or - in a build without it - `semanticshape-lsp` on the `PATH`, in `$GOBIN`, `$GOPATH/bin` or `~/go/bin`. A bare name is looked up the same way."
         },
         "semanticshape.trace.server": {
           "type": "string",

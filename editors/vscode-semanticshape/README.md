@@ -5,44 +5,42 @@ Completion, hover docs and live lint diagnostics for semantic shape files
 attribute values like `severity`, `val:include`/`val:comp` paths and attribute
 rule lists.
 
-The extension starts `semanticshape-lsp` (`go/cmd/semanticshape-lsp`), the same
-language server the Zed extension (`editors/zed-semanticshape`) uses. Shape files
+The extension starts its bundled `semanticshape-lsp` (`go/cmd/semanticshape-lsp`),
+the same language server the Zed extension (`editors/zed-semanticshape`) uses. Shape files
 stay html documents, so VS Code's html support keeps working next to it; the
 server only acts on `*.semanticshape.html` files inside a shape root - a directory with
 `groups/` or `default.semanticshape.html`.
 
 ## Install
 
-1. Install the language server, from the walker repository:
+The extension brings its own `semanticshape-lsp` for macOS (arm64, x64),
+Linux (x64, arm64) and Windows (x64), in `server/<platform>-<arch>`. From the
+walker repository:
 
-   ```sh
-   go -C go install ./cmd/semanticshape-lsp
-   ```
+```sh
+mise run editors:vscode:install   # build the servers, package the .vsix and install it
+```
 
-   The extension looks for it on the `PATH`, then in `$GOBIN`, `$GOPATH/bin`
-   and `~/go/bin` - VS Code started from the Dock often has a `PATH` without
-   them. Elsewhere set `semanticshape.serverPath` to the binary.
+`mise run editors:vscode` only packages
+`editors/vscode-semanticshape/semanticshape-<version>.vsix` - install it with
+`code --install-extension semanticshape-0.2.0.vsix`.
 
-2. Install the extension's dependency and link it into VS Code's extensions:
+For development: `mise run editors:vscode:server` builds the servers, then
+`npm install` in this directory and `ln -s "$PWD" ~/.vscode/extensions/foomo.semanticshape-0.2.0`,
+or open the directory in VS Code and press F5. Without `server/` the
+extension looks for `semanticshape-lsp` on the `PATH`, in `$GOBIN`,
+`$GOPATH/bin` and `~/go/bin` (`go -C go install ./cmd/semanticshape-lsp`).
 
-   ```sh
-   cd editors/vscode-semanticshape
-   npm install
-   ln -s "$PWD" ~/.vscode/extensions/foomo.semanticshape-0.2.0
-   ```
-
-   Then `Developer: Reload Window`. To package it instead:
-   `npx @vscode/vsce package` and `code --install-extension semanticshape-0.2.0.vsix`.
-   For development open this directory in VS Code and press F5.
-
-3. Open a shape file, e.g. `go/internal/demoshop/shapes/groups/product.semanticshape.html`.
+Open a shape file, e.g. `go/internal/demoshop/shapes/groups/product.semanticshape.html`.
 
 ## Settings
 
-- `semanticshape.serverPath` - the `semanticshape-lsp` binary, default `semanticshape-lsp`
+- `semanticshape.serverPath` - a `semanticshape-lsp` binary to use instead of the bundled one, e.g. one you are working on; empty by default
 - `semanticshape.trace.server` - `off`, `messages` or `verbose`, the protocol in
   the output channel
 
-Logs: the output channel "Semantic Shape". After changes to the server run
-`go -C go install ./cmd/semanticshape-lsp` again and
+Logs: the output channel "Semantic Shape" - it names the binary it started.
+After changes to the server run `mise run editors:vscode:install` again, or
+point `semanticshape.serverPath` at a binary you build with
+`go -C go build -o /tmp/semanticshape-lsp ./cmd/semanticshape-lsp` and run
 `Semantic Shape: Restart Language Server`.

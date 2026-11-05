@@ -1,2 +1,4 @@
 node_modules/
 *.vsix
+# the bundled servers, built by mise run editors:vscode
+server/

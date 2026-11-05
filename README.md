@@ -82,14 +82,14 @@ With `shaperoot` (and usually `groupheader`) every page is validated against the
 mise run lsp                      # install semanticshape-lsp into ~/go/bin
 mise run editors                  # the language server + both extensions below
 mise run editors:zed              # check that the Zed extension compiles (wasm32-wasip2)
-mise run editors:vscode           # package editors/vscode-semanticshape/semanticshape-<version>.vsix
+mise run editors:vscode           # package editors/vscode-semanticshape/semanticshape-<version>.vsix, with the server for 5 platforms
 mise run editors:vscode:install   # package and install it into VS Code
 ```
 
 - **Zed** (`editors/zed-semanticshape`): `zed: install dev extension` and choose the directory - Zed builds it with your rustup toolchain. After changes: `zed: rebuild dev extension`.
-- **VS Code** (`editors/vscode-semanticshape`): `mise run editors:vscode:install`, or for development `npm install` in the directory and `ln -s "$PWD" ~/.vscode/extensions/foomo.semanticshape-0.2.0`, then `Developer: Reload Window`. The setting `semanticshape.serverPath` points to the binary if it isn't on the `PATH`, `$GOBIN`, `$GOPATH/bin` or `~/go/bin`.
+- **VS Code** (`editors/vscode-semanticshape`): `mise run editors:vscode:install`. The extension bundles `semanticshape-lsp` for macOS, Linux and Windows (`editors:vscode:server` cross-compiles them into `server/`), nothing else needs to be installed. The setting `semanticshape.serverPath` points to another binary, e.g. one you are working on.
 
-After changes to the server, run `mise run lsp` again and restart the language server (`Semantic Shape: Restart Language Server` in VS Code, `editor: restart language server` in Zed). The extensions' READMEs have the details.
+After changes to the server: for Zed run `mise run lsp` again, for VS Code `mise run editors:vscode:install` - then restart the language server (`Semantic Shape: Restart Language Server` in VS Code, `editor: restart language server` in Zed). The extensions' READMEs have the details.
 
 ## service API
 

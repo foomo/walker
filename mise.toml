@@ -67,8 +67,23 @@ rustup target add wasm32-wasip2
 cargo build --release --target wasm32-wasip2
 """
 
+[tasks."editors:vscode:server"]
+description = "Build semanticshape-lsp for every platform into the VS Code extension - server/<platform>-<arch>, named like node's process.platform and process.arch"
+dir = "go"
+run = """
+set -e
+out=../editors/vscode-semanticshape/server
+rm -rf "$out"
+for target in darwin/arm64/darwin-arm64 darwin/amd64/darwin-x64 linux/amd64/linux-x64 linux/arm64/linux-arm64 windows/amd64/win32-x64; do
+  goos=${target%%/*}; rest=${target#*/}; goarch=${rest%%/*}; dir=${rest#*/}
+  exe=semanticshape-lsp; [ "$goos" = windows ] && exe=$exe.exe
+  CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath -ldflags="-s -w" -o "$out/$dir/$exe" ./cmd/semanticshape-lsp
+done
+"""
+
 [tasks."editors:vscode"]
-description = "Package the VS Code extension as editors/vscode-semanticshape/semanticshape-<version>.vsix"
+description = "Package the VS Code extension with its bundled servers as editors/vscode-semanticshape/semanticshape-<version>.vsix"
+depends = ["editors:vscode:server"]
 dir = "editors/vscode-semanticshape"
 run = """
 npm install --no-audit --no-fund
