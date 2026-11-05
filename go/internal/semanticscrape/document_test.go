@@ -801,3 +801,55 @@ func runOutlineTests(t *testing.T, tests []outlineTest) {
 		})
 	}
 }
+
+// contentHidden removes what Options{Content: true} adds: the content
+// elements - an outline element in one stays - and the links of everything
+// but navs. The macOS app shows the content per branch from one document with
+// content, by hiding it the same way.
+func contentHidden(elements []DocumentElement) []DocumentElement {
+	content := map[ElementType]bool{
+		ElementTypeText: true, ElementTypeImage: true, ElementTypeFigure: true,
+		ElementTypeUnorderedList: true, ElementTypeOrderedList: true, ElementTypeListItem: true,
+		ElementTypeDefinitions: true, ElementTypeTerm: true, ElementTypeDefinition: true,
+		ElementTypeTable: true, ElementTypeRow: true, ElementTypeHeaderCell: true, ElementTypeCell: true,
+	}
+	result := []DocumentElement{}
+	for _, e := range elements {
+		if content[e.ElementType] {
+			result = append(result, contentHidden(e.Children)...)
+			continue
+		}
+		if e.ElementType != ElementTypeNav {
+			e.Links = nil
+		}
+		e.Children = contentHidden(e.Children)
+		result = append(result, e)
+	}
+	return result
+}
+
+func normalized(elements []DocumentElement) []DocumentElement {
+	result := []DocumentElement{}
+	for _, e := range elements {
+		e.Children = normalized(e.Children)
+		if len(e.Links) == 0 {
+			e.Links = nil
+		}
+		result = append(result, e)
+	}
+	return result
+}
+
+func TestExtractDocument_ContentKeepsTheOutline(t *testing.T) {
+	pages := map[string][]byte{}
+	for _, name := range []string{"keeping-sourdough-alive.html", "keeping-sourdough-alive-divs.html", "keeping-sourdough-alive-aria.html", "news-portal-home.html"} {
+		pages[name] = readTestData(t, name)
+	}
+	for name, htmlBytes := range pages {
+		t.Run(name, func(t *testing.T) {
+			structure := extract(t, htmlBytes)
+			withContent := extractContent(t, htmlBytes)
+			assert.Equal(t, normalized(structure.Body), normalized(contentHidden(withContent.Body)))
+		})
+	}
+}

@@ -5,7 +5,6 @@ struct ServerDetailView: View {
     @AppStorage(SettingsView.refreshIntervalKey) private var refreshInterval = SettingsView
         .defaultRefreshInterval
     @State private var section = Section.overview
-    @Environment(\.openWindow) private var openWindow
 
     enum Section: String, CaseIterable, Identifiable {
         case overview = "Overview"
@@ -14,6 +13,7 @@ struct ServerDetailView: View {
         case redirects = "Redirects"
         case links = "Links"
         case performance = "Performance"
+        case shapes = "Shapes"
 
         var id: Self { self }
 
@@ -48,6 +48,8 @@ struct ServerDetailView: View {
                 LinksView(model: model)
             case .performance:
                 PerformanceView(model: model)
+            case .shapes:
+                ShapeDevView(model: model.shapeDev)
             }
         }
         // the result inspectors of all sections load outlines from this server
@@ -81,8 +83,8 @@ struct ServerDetailView: View {
                 .help("Overview of \(model.server.name)")
             }
             .sharedBackgroundVisibility(.hidden)
-            // the overview shows both scrapes side by side
-            if section != .overview {
+            // the overview shows both scrapes side by side, the shapes validate live pages
+            if section != .overview, section != .shapes {
                 ToolbarItem(placement: .navigation) {
                     Picker("Scrape", selection: $model.scrape) {
                         ForEach(ServerModel.Scrape.allCases) { scrape in
@@ -101,13 +103,6 @@ struct ServerDetailView: View {
                 ToolbarItem(placement: .primaryAction) {
                     LocalWalkerButton(server: model.server)
                 }
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button("Shape Developer", systemImage: "checklist") {
-                    openWindow(id: ShapeDevWindow.id, value: model.server.id)
-                }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-                .help("Iterate on a semantic shape against a page of this server's site")
             }
             ToolbarItem(placement: .principal) {
                 Picker("Section", selection: $section) {

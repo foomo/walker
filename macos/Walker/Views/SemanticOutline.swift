@@ -17,7 +17,8 @@ extension EnvironmentValues {
 }
 
 /// SemanticOutlineSection loads the outline of a page from the server - the
-/// live page, fetched like the crawler does - and shows it
+/// live page, fetched like the crawler does - and shows it. The content of a
+/// branch is loaded when the user clicks it.
 struct SemanticOutlineSection: View {
     let url: String
     /// preview shows the page - hovering an element highlights it there
@@ -25,8 +26,8 @@ struct SemanticOutlineSection: View {
 
     @Environment(\.semanticDocumentLoader) private var loader
     @State private var state = LoadState.loading
-    /// showsContent adds texts, links, images and figures to the outline
-    @AppStorage("outlineShowsContent") private var showsContent = false
+    /// loads counts the loaded outlines - a new one starts without content
+    @State private var loads = 0
 
     enum LoadState {
         case loading
@@ -38,17 +39,10 @@ struct SemanticOutlineSection: View {
         Section {
             content
         } header: {
-            HStack {
-                Text("Document outline")
-                    .help("The landmarks, articles, sections, asides and headings of the page, as the server fetches it now")
-                Spacer()
-                Toggle("Content", isOn: $showsContent)
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .help(showsContent ? "Show the structure only" : "Show the texts, links, images and figures too")
-            }
+            Text("Document outline")
+                .help("The landmarks, articles, sections, asides and headings of the page, as the server fetches it now - click an element to show the content of its branch")
         }
-        .task(id: "\(showsContent) \(url)") {
+        .task(id: url) {
             await load()
         }
     }
@@ -64,10 +58,16 @@ struct SemanticOutlineSection: View {
             Label(message, systemImage: "exclamationmark.triangle")
                 .foregroundStyle(.red)
         case let .loaded(result):
-            SemanticDocumentContent(result: result, pageURL: URL(string: url)) { selector, element in
+            SemanticDocumentContent(result: result, pageURL: URL(string: url), loadContent: loadContent) { selector, element in
                 preview?.highlight(selector: selector, element: element)
             }
+            .id(loads)
         }
+    }
+
+    private var loadContent: SemanticDocumentContent.ContentLoader? {
+        guard let loader else { return nil }
+        return { [url] in try await loader(url, true) }
     }
 
     private func load() async {
@@ -77,8 +77,9 @@ struct SemanticOutlineSection: View {
         }
         state = .loading
         do {
-            let result = try await loader(url, showsContent)
+            let result = try await loader(url, false)
             guard !Task.isCancelled else { return }
+            loads += 1
             state = .loaded(result)
         } catch is CancellationError {
             return
@@ -92,9 +93,15 @@ struct SemanticOutlineSection: View {
 /// missing main, the outline and the language - rows of a form section or a
 /// stack
 struct SemanticDocumentContent: View {
+    /// ContentLoader loads the same document with its content - texts,
+    /// links, images, figures, lists and tables
+    typealias ContentLoader = @MainActor () async throws -> WalkerVO.SemanticDocument
+
     let result: WalkerVO.SemanticDocument
     /// pageURL resolves relative image sources
     var pageURL: URL?
+    /// loadContent is called when the user opens the content of a branch the first time
+    var loadContent: ContentLoader?
     var onHover: ((String?, SemanticScrapeVO.DocumentElement?) -> Void)?
 
     var body: some View {
@@ -111,31 +118,76 @@ struct SemanticDocumentContent: View {
                 Label("The page has no landmarks, articles, sections, asides or headings.", systemImage: "rectangle.dashed")
                     .foregroundStyle(.orange)
             } else {
-                SemanticOutline(elements: body, pageURL: pageURL, onHover: onHover)
+                SemanticOutline(elements: body, pageURL: pageURL, loadContent: loadBody, onHover: onHover)
             }
             if !document.lang.isEmpty {
                 LabeledContent("Language", value: document.lang)
             }
         }
     }
+
+    private var loadBody: SemanticOutline.ContentLoader? {
+        guard let loadContent else { return nil }
+        return {
+            let result = try await loadContent()
+            if !result.error.isEmpty {
+                throw SemanticOutline.ContentError(message: result.error)
+            }
+            return result.document?.body ?? []
+        }
+    }
 }
 
 /// SemanticOutline renders the outline of a page as an indented tree:
 /// landmarks and containers with their labels, the links of navs, headings
-/// sized by level, and with content texts, images, figures, lists and tables -
-/// a table as a grid. Containers collapse - navs start collapsed, menus are long.
-/// Headings are marked for what search engines dislike: empty headings,
-/// skipped levels and more than one h1.
+/// sized by level. Clicking an element shows the content of its branch - texts,
+/// teaser links, images, figures, lists and tables, a table as a grid - and
+/// clicking it again hides it; the content is loaded with the first click.
+/// Containers collapse - navs start collapsed, menus are long. Headings are
+/// marked for what search engines dislike: empty headings, skipped levels and
+/// more than one h1.
 struct SemanticOutline: View {
+    /// ContentLoader loads the outline with its content - the same structure,
+    /// the content elements between its elements
+    typealias ContentLoader = @MainActor () async throws -> [SemanticScrapeVO.DocumentElement]
+
+    struct ContentError: LocalizedError {
+        let message: String
+        var errorDescription: String? { message }
+    }
+
+    /// elements are the outline without content
     let elements: [SemanticScrapeVO.DocumentElement]
     /// pageURL resolves relative image sources
     var pageURL: URL?
+    /// loadContent loads the content - without it, clicks show nothing
+    var loadContent: ContentLoader?
     /// onHover reports the selector under the mouse, with its element - a link
     /// has none - and nil, when it left
     var onHover: ((String?, SemanticScrapeVO.DocumentElement?) -> Void)?
 
     /// containers the user opened or closed, by selector - against their default
     @State private var toggled: Set<String> = []
+    /// branches whose content the user showed (true) or hid (false), by
+    /// selector - an element without an entry follows its parent, the outline
+    /// starts without content
+    @State private var branches: [String: Bool] = [:]
+    @State private var content = ContentState.none
+
+    enum ContentState {
+        case none
+        case loading
+        case loaded([SemanticScrapeVO.DocumentElement])
+        case failed(String)
+    }
+
+    /// source is the tree the rows come from: the outline with content once it is loaded
+    private var source: [SemanticScrapeVO.DocumentElement] {
+        if case let .loaded(elements) = content {
+            return elements
+        }
+        return elements
+    }
 
     private static let indent: CGFloat = 14
 
@@ -155,6 +207,8 @@ struct SemanticOutline: View {
         let depth: Int
         /// marker of a list item: a bullet or its number
         var marker: String?
+        /// showsContent: the content of this row's branch is shown
+        var showsContent = false
 
         var selector: String {
             switch content {
@@ -209,40 +263,90 @@ struct SemanticOutline: View {
     }
 
     /// rows are the visible elements and links - without the content of
-    /// collapsed containers
+    /// collapsed containers, and content only in the branches that show it
     private var rows: [Row] {
         var rows: [Row] = []
-        func visit(_ elements: [SemanticScrapeVO.DocumentElement], parent: SemanticScrapeVO.ElementType?, path: String, depth: Int) {
+        func visit(_ elements: [SemanticScrapeVO.DocumentElement], parent: SemanticScrapeVO.ElementType?, path: String, depth: Int, showsContent inherited: Bool) {
             for (index, element) in elements.enumerated() {
                 let id = "\(path)/\(index)"
+                if element.isContent, !inherited {
+                    // hidden content - an outline element in it, which the content pass never makes, stays
+                    visit(element.children ?? [], parent: element.elementType, path: id, depth: depth, showsContent: false)
+                    continue
+                }
+                let showsContent = element.isContent ? inherited : branches[element.selector] ?? inherited
                 let marker: String? = switch parent {
                 case .unorderedList: "•"
                 case .orderedList: "\(index + 1)."
                 default: nil
                 }
-                rows.append(Row(id: id, content: .element(element), depth: depth, marker: marker))
+                rows.append(Row(id: id, content: .element(element), depth: depth, marker: marker, showsContent: showsContent))
                 if isCollapsed(element) {
                     continue
                 }
-                for (linkIndex, link) in (element.links ?? []).enumerated() {
-                    rows.append(Row(id: "\(id)/link\(linkIndex)", content: .link(link), depth: depth + 1))
+                // the links of a nav are structure, all others - teasers of headings, links in texts - content
+                if element.elementType == .nav || showsContent {
+                    for (linkIndex, link) in (element.links ?? []).enumerated() {
+                        rows.append(Row(id: "\(id)/link\(linkIndex)", content: .link(link), depth: depth + 1, showsContent: showsContent))
+                    }
                 }
                 if element.elementType == .table {
                     if !(element.children ?? []).isEmpty {
-                        rows.append(Row(id: "\(id)/grid", content: .grid(element), depth: depth + 1))
+                        rows.append(Row(id: "\(id)/grid", content: .grid(element), depth: depth + 1, showsContent: showsContent))
                     }
                 } else {
-                    visit(element.children ?? [], parent: element.elementType, path: id, depth: depth + 1)
+                    visit(element.children ?? [], parent: element.elementType, path: id, depth: depth + 1, showsContent: showsContent)
                 }
             }
         }
-        visit(elements, parent: nil, path: "", depth: 0)
+        visit(source, parent: nil, path: "", depth: 0, showsContent: false)
         return rows
+    }
+
+    /// toggleContent shows or hides the content of the branch of an element -
+    /// its descendants follow it - and loads the content the first time
+    private func toggleContent(_ element: SemanticScrapeVO.DocumentElement, showsContent: Bool) {
+        func forget(_ elements: [SemanticScrapeVO.DocumentElement]) {
+            for child in elements {
+                branches[child.selector] = nil
+                forget(child.children ?? [])
+            }
+        }
+        forget(element.children ?? [])
+        branches[element.selector] = !showsContent
+        if !showsContent {
+            // a collapsed container opens to show its content
+            if isCollapsed(element) {
+                toggled.formSymmetricDifference([element.selector])
+            }
+            Task { await loadContentIfNeeded() }
+        }
+    }
+
+    private func loadContentIfNeeded() async {
+        switch content {
+        case .loading, .loaded: return
+        case .none, .failed: break
+        }
+        guard let loadContent else { return }
+        content = .loading
+        do {
+            content = .loaded(try await loadContent())
+        } catch is CancellationError {
+            content = .none
+        } catch {
+            content = .failed(error.localizedDescription)
+        }
     }
 
     var body: some View {
         let issues = issues
         VStack(alignment: .leading, spacing: 6) {
+            if case let .failed(message) = content {
+                Label("The content could not be loaded: \(message)", systemImage: "exclamationmark.triangle")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+            }
             ForEach(rows, id: \.id) { row in
                 content(row, issues: issues)
                     .padding(.leading, CGFloat(row.depth) * Self.indent)
@@ -271,13 +375,45 @@ struct SemanticOutline: View {
         case let .element(element):
             if element.isListItem {
                 listItemRow(element, marker: row.marker)
-            } else {
+            } else if element.isContent || loadContent == nil {
                 self.row(element, issue: issues[element.selector])
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    self.row(element, issue: issues[element.selector])
+                    Spacer(minLength: 4)
+                    contentIndicator(row.showsContent)
+                }
+                // selectable text - the outline panes enable it - would take the click
+                .textSelection(.disabled)
+                .contentShape(.rect)
+                .onTapGesture {
+                    toggleContent(element, showsContent: row.showsContent)
+                }
+                .pointerStyle(.link)
+                .help(row.showsContent
+                    ? "Click to hide the content of this branch"
+                    : "Click to show the texts, links, images, lists and tables of this branch")
             }
         case let .link(link):
             linkRow(link)
         case let .grid(table):
             tableGrid(table)
+        }
+    }
+
+    /// contentIndicator marks a branch that shows its content - a spinner
+    /// while the content loads
+    @ViewBuilder
+    private func contentIndicator(_ showsContent: Bool) -> some View {
+        if showsContent {
+            if case .loading = content {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Image(systemName: "text.alignleft")
+                    .font(.caption2)
+                    .foregroundStyle(Color.accentColor)
+            }
         }
     }
 
@@ -516,6 +652,16 @@ struct SemanticOutline: View {
 }
 
 extension SemanticScrapeVO.DocumentElement {
+    /// isContent: texts, images, figures, lists and tables - what the outline
+    /// gets with content, between its elements
+    var isContent: Bool {
+        [
+            .text, .image, .figure,
+            .unorderedList, .orderedList, .listItem, .definitions, .term, .definition,
+            .table, .row, .headerCell, .cell,
+        ].contains(elementType)
+    }
+
     /// isListItem: li, dt and dd
     var isListItem: Bool {
         [.listItem, .term, .definition].contains(elementType)

@@ -12,6 +12,8 @@ enum SettingsMigration {
             }
             defaults.removeObject(forKey: key)
         }
+        // the content switch of the outline is gone - a branch shows its content on a click
+        defaults.removeObject(forKey: "outlineShowsContent")
     }
 
     /// renamed is the current name of an old key - schemaDevEditor is

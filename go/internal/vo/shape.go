@@ -19,6 +19,8 @@ type ShapeValidation struct {
 	// Source is "server" for a page the server fetched, "rendered" for a snapshot of a browser's DOM
 	Source     string
 	StatusCode int
+	// GroupHeader is the response header the group was read from - "" if there is none
+	GroupHeader string
 	// DetectedGroup is the value of the group header of the fetched page
 	DetectedGroup string
 	Report        *semanticshape.Report

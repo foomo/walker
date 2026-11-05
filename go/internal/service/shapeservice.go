@@ -70,7 +70,9 @@ func (s *service) GetShapeRootVersion(shapeRoot string) string {
 // every call to pick up changes. Without html the server fetches targetURL,
 // otherwise html is a snapshot of the page in a browser. An empty group is
 // the group the page reports in the group header, or default.semanticshape.html.
-func (s *service) ValidateShape(shapeRoot, group, targetURL, html string) (validation vo.ShapeValidation) {
+// groupHeader names that response header, empty is the one of the walker's
+// config - an edited header is used before the walker restarts.
+func (s *service) ValidateShape(shapeRoot, group, groupHeader, targetURL, html string) (validation vo.ShapeValidation) {
 	var (
 		start                       = time.Now()
 		loadDuration, fetchDuration time.Duration
@@ -84,6 +86,7 @@ func (s *service) ValidateShape(shapeRoot, group, targetURL, html string) (valid
 			"url", targetURL,
 			"source", validation.Source,
 			"requestedGroup", requestedGroup,
+			"groupHeader", validation.GroupHeader,
 			"group", validation.Group,
 			"bytes", htmlLength,
 			"load", loadDuration,
@@ -109,7 +112,11 @@ func (s *service) ValidateShape(shapeRoot, group, targetURL, html string) (valid
 		)
 		slog.Info("shape validated", attrs...)
 	}()
+	if groupHeader == "" {
+		groupHeader = s.groupHeader()
+	}
 	validation.URL = targetURL
+	validation.GroupHeader = groupHeader
 	validation.Source = ShapeSourceRendered
 	loadStart := time.Now()
 	root, lintErrors, err := loadShapeRoot(shapeRoot)
@@ -123,7 +130,7 @@ func (s *service) ValidateShape(shapeRoot, group, targetURL, html string) (valid
 	if html == "" {
 		validation.Source = ShapeSourceServer
 		fetchStart := time.Now()
-		body, statusCode, detectedGroup, errFetch := s.fetch(targetURL)
+		body, statusCode, detectedGroup, errFetch := s.fetch(targetURL, groupHeader)
 		fetchDuration = time.Since(fetchStart)
 		validation.StatusCode = statusCode
 		validation.DetectedGroup = detectedGroup
@@ -184,8 +191,9 @@ func (s *service) groupHeader() string {
 	return s.conf.GroupHeader
 }
 
-// fetch loads a page like the crawler does
-func (s *service) fetch(targetURL string) (body []byte, statusCode int, group string, err error) {
+// fetch loads a page like the crawler does - group is the value of the
+// response header groupHeader
+func (s *service) fetch(targetURL, groupHeader string) (body []byte, statusCode int, group string, err error) {
 	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
 		return nil, 0, "", err
@@ -202,8 +210,8 @@ func (s *service) fetch(targetURL string) (body []byte, statusCode int, group st
 		return nil, 0, "", err
 	}
 	defer resp.Body.Close()
-	if header := s.groupHeader(); header != "" {
-		group = resp.Header.Get(header)
+	if groupHeader != "" {
+		group = resp.Header.Get(groupHeader)
 		if strings.HasSuffix(group, "/") {
 			group += "index"
 		}

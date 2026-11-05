@@ -381,12 +381,13 @@ extension Walker {
             return try await transport.call(endpoint: endpoint, method: "RestartScrape", args: GotsRPCNoArgs(), result: _Result.self).r0
         }
 
-        public func validateShape(shapeRoot: String, group: String, targetURL: String, html: String) async throws -> WalkerVO.ShapeValidation {
+        public func validateShape(shapeRoot: String, group: String, groupHeader: String, targetURL: String, html: String) async throws -> WalkerVO.ShapeValidation {
             struct _Args: Encodable {
                 let a0: String
                 let a1: String
                 let a2: String
                 let a3: String
+                let a4: String
 
                 func encode(to encoder: Encoder) throws {
                     var container = encoder.unkeyedContainer()
@@ -394,6 +395,7 @@ extension Walker {
                     try container.encode(a1)
                     try container.encode(a2)
                     try container.encode(a3)
+                    try container.encode(a4)
                 }
             }
 
@@ -406,7 +408,7 @@ extension Walker {
                 }
             }
 
-            return try await transport.call(endpoint: endpoint, method: "ValidateShape", args: _Args(a0: shapeRoot, a1: group, a2: targetURL, a3: html), result: _Result.self).r0
+            return try await transport.call(endpoint: endpoint, method: "ValidateShape", args: _Args(a0: shapeRoot, a1: group, a2: groupHeader, a3: targetURL, a4: html), result: _Result.self).r0
         }
     }
 }

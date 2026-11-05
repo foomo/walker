@@ -31,7 +31,7 @@ type Service interface {
 	// shape developer
 	GetShapeRoot(shapeRoot string) (info vo.ShapeRootInfo)
 	GetShapeRootVersion(shapeRoot string) string
-	ValidateShape(shapeRoot, group, targetURL, html string) (validation vo.ShapeValidation)
+	ValidateShape(shapeRoot, group, groupHeader, targetURL, html string) (validation vo.ShapeValidation)
 
 	// semantic scrape
 	GetSemanticDocument(targetURL, html string, content bool) (result vo.SemanticDocument)

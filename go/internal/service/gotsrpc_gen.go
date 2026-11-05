@@ -391,19 +391,20 @@ func (p *ServiceGoTSRPCProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	case ServiceGoTSRPCProxyValidateShape:
 		var rets []any
 		var (
-			arg_shapeRoot string
-			arg_group     string
-			arg_targetURL string
-			arg_html      string
+			arg_shapeRoot   string
+			arg_group       string
+			arg_groupHeader string
+			arg_targetURL   string
+			arg_html        string
 		)
-		args := []any{&arg_shapeRoot, &arg_group, &arg_targetURL, &arg_html}
+		args := []any{&arg_shapeRoot, &arg_group, &arg_groupHeader, &arg_targetURL, &arg_html}
 		if err := gotsrpc.LoadArgs(&args, call, r); err != nil {
 			call.SetError(err)
 			gotsrpc.ErrorCouldNotLoadArgs(w)
 			return
 		}
 		call.ExecutionStart()
-		validateShapeValidation := p.service.ValidateShape(arg_shapeRoot, arg_group, arg_targetURL, arg_html)
+		validateShapeValidation := p.service.ValidateShape(arg_shapeRoot, arg_group, arg_groupHeader, arg_targetURL, arg_html)
 		call.ExecutionEnd()
 		rets = []any{validateShapeValidation}
 		if err := gotsrpc.Reply(rets, call, r, w); err != nil {

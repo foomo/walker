@@ -42,7 +42,7 @@ func TestValidateShapeRendered(t *testing.T) {
 	w := httptest.NewRecorder()
 	demoHandler(t).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "http://localhost/product/car-04", nil))
 	s := &service{}
-	validation := s.ValidateShape(demoshop.ShapesDir(), "product", "http://localhost/product/car-04", w.Body.String())
+	validation := s.ValidateShape(demoshop.ShapesDir(), "product", "", "http://localhost/product/car-04", w.Body.String())
 	assert.Empty(t, validation.Error)
 	assert.Equal(t, ShapeSourceRendered, validation.Source)
 	require.NotNil(t, validation.Report)
@@ -58,18 +58,25 @@ func TestValidateShapeServer(t *testing.T) {
 	}))
 	defer page.Close()
 	s := &service{conf: &config.Config{GroupHeader: demoshop.GroupHeader, Agent: "test-agent"}}
-	validation := s.ValidateShape(demoshop.ShapesDir(), "", page.URL+"/product/robot-01", "")
+	validation := s.ValidateShape(demoshop.ShapesDir(), "", "", page.URL+"/product/robot-01", "")
 	assert.Empty(t, validation.Error)
 	assert.Equal(t, ShapeSourceServer, validation.Source)
 	assert.Equal(t, http.StatusOK, validation.StatusCode)
 	assert.Equal(t, "product", validation.Group, "the group comes from the header")
+	assert.Equal(t, demoshop.GroupHeader, validation.GroupHeader)
 	assert.Equal(t, 121, validation.Report.Score.Points)
+
+	// a header passed in wins over the config's - an edited one, before the walker restarts
+	stale := &service{conf: &config.Config{GroupHeader: "x-old-header", Agent: "test-agent"}}
+	validation = stale.ValidateShape(demoshop.ShapesDir(), "", demoshop.GroupHeader, page.URL+"/product/robot-01", "")
+	assert.Equal(t, "product", validation.Group)
+	assert.Equal(t, demoshop.GroupHeader, validation.GroupHeader)
 }
 
 func TestValidateShapeServerErrorPage(t *testing.T) {
 	page := httptest.NewServer(http.NotFoundHandler())
 	defer page.Close()
-	validation := (&service{}).ValidateShape(demoshop.ShapesDir(), "product", page.URL+"/product/robot-01", "")
+	validation := (&service{}).ValidateShape(demoshop.ShapesDir(), "product", "", page.URL+"/product/robot-01", "")
 	assert.Equal(t, http.StatusNotFound, validation.StatusCode)
 	assert.Equal(t, "the page returned 404 Not Found - nothing validated", validation.Error)
 	assert.Nil(t, validation.Report)

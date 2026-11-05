@@ -32,6 +32,17 @@ final class ShapeDevModel {
     var group: String {
         didSet { save() }
     }
+    /// groupHeader names the response header the group of a page is read
+    /// from - "" is the one of the server's config. A local server takes it
+    /// from its config, which may be newer than the running walker's.
+    var groupHeader: String {
+        didSet { save() }
+    }
+
+    /// effectiveGroupHeader is the header the validation reads the group from
+    var effectiveGroupHeader: String {
+        groupHeader.isEmpty ? rootInfo?.groupHeader ?? "" : groupHeader
+    }
     var source: Source {
         didSet { save() }
     }
@@ -53,6 +64,8 @@ final class ShapeDevModel {
     private(set) var pageVersion = 0
     /// outline is the semantic document of the page, from the same source as the validation
     private(set) var outline: OutlineState = .idle
+    /// outlineVersion counts the loaded outlines - a new one starts without content
+    private(set) var outlineVersion = 0
 
     enum OutlineState {
         case idle
@@ -60,6 +73,9 @@ final class ShapeDevModel {
         case loaded(WalkerVO.SemanticDocument)
         case failed(String)
     }
+
+    /// configRoot is the shape root of the config of a local server, nil if it has none
+    private(set) var configRoot: String?
 
     /// selection is the id of the selected trace item
     var selection: TraceItem.ID? {
@@ -86,6 +102,7 @@ final class ShapeDevModel {
         address = defaults.string(forKey: prefix + "address") ?? ""
         shapeRoot = defaults.string(forKey: prefix + "shapeRoot") ?? ""
         group = defaults.string(forKey: prefix + "group") ?? ""
+        groupHeader = defaults.string(forKey: prefix + "groupHeader") ?? ""
         source = Source(rawValue: defaults.string(forKey: prefix + "source") ?? "") ?? .server
         recentRoots = defaults.stringArray(forKey: Self.recentRootsKey) ?? []
     }
@@ -95,6 +112,7 @@ final class ShapeDevModel {
         defaults.set(address, forKey: prefix + "address")
         defaults.set(shapeRoot, forKey: prefix + "shapeRoot")
         defaults.set(group, forKey: prefix + "group")
+        defaults.set(groupHeader, forKey: prefix + "groupHeader")
         defaults.set(source.rawValue, forKey: prefix + "source")
     }
 
@@ -139,20 +157,30 @@ final class ShapeDevModel {
     /// load takes the site and the shape root of a walker config: the page
     /// is the base url with the first start path, a relative shape root is
     /// resolved against the directory of the config, like walker does
-    func load(_ form: ConfigTool.Form, configURL: URL) {
+    /// follow takes the shape root of the config of a local server - the
+    /// section belongs to it - and its site as the first page
+    func follow(_ form: ConfigTool.Form, configURL: URL) {
         if !form.shapeRoot.isEmpty {
             let root = form.shapeRoot.hasPrefix("/")
                 ? URL(filePath: form.shapeRoot)
                 : configURL.deletingLastPathComponent().appending(path: form.shapeRoot)
-            chooseRoot(root.standardizedFileURL.path(percentEncoded: false))
+            let path = root.standardizedFileURL.path(percentEncoded: false)
+            if path != shapeRoot {
+                chooseRoot(path)
+            }
+            configRoot = path
+        } else {
+            configRoot = nil
         }
-        guard !form.baseURL.isEmpty else { return }
+        if groupHeader != form.groupHeader {
+            groupHeader = form.groupHeader
+        }
+        guard address.isEmpty, !form.baseURL.isEmpty else { return }
         var page = form.baseURL
         if let path = form.paths.first, !path.isEmpty, path != "/" {
             page = page.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + (path.hasPrefix("/") ? path : "/" + path)
         }
         address = page
-        open()
     }
 
     func loadRoot() async {
@@ -234,7 +262,7 @@ final class ShapeDevModel {
                 }
                 html = snapshot
             }
-            let validation = try await client.validateShape(shapeRoot: shapeRoot, group: group, targetURL: url.absoluteString, html: html)
+            let validation = try await client.validateShape(shapeRoot: shapeRoot, group: group, groupHeader: groupHeader, targetURL: url.absoluteString, html: html)
             guard !Task.isCancelled, count == validationCount else { return }
             apply(validation)
             error = nil
@@ -371,10 +399,11 @@ final class ShapeDevModel {
         error = message
     }
 
-    /// loadOutline extracts the semantic document of the page in the web view:
-    /// the server fetches it, or it gets the snapshot of the rendered DOM
-    func loadOutline(content: Bool) async {
-        guard let url = highlighter.pageURL ?? pageURL else {
+    /// loadOutline extracts the semantic outline of the page in the web view,
+    /// without content: the server fetches it, or it gets the snapshot of the
+    /// rendered DOM
+    func loadOutline() async {
+        guard highlighter.pageURL ?? pageURL != nil else {
             outline = .idle
             return
         }
@@ -383,22 +412,39 @@ final class ShapeDevModel {
         }
         outline = .loading
         do {
-            var html = ""
-            if source == .rendered {
-                guard let snapshot = await highlighter.snapshot() else {
-                    outline = .failed("the page has no DOM yet")
-                    return
-                }
-                html = snapshot
-            }
-            let document = try await client.getSemanticDocument(targetURL: url.absoluteString, html: html, content: content)
+            let document = try await fetchOutline(content: false)
             guard !Task.isCancelled else { return }
+            outlineVersion += 1
             outline = .loaded(document)
         } catch is CancellationError {
             return
         } catch {
             outline = .failed(error.localizedDescription)
         }
+    }
+
+    /// outlineContent extracts the outline with its content from the same
+    /// source - for the branches the user opens
+    func outlineContent() async throws -> WalkerVO.SemanticDocument {
+        try await fetchOutline(content: true)
+    }
+
+    private struct OutlineError: LocalizedError {
+        let errorDescription: String?
+    }
+
+    private func fetchOutline(content: Bool) async throws -> WalkerVO.SemanticDocument {
+        guard let url = highlighter.pageURL ?? pageURL else {
+            throw OutlineError(errorDescription: "no page")
+        }
+        var html = ""
+        if source == .rendered {
+            guard let snapshot = await highlighter.snapshot() else {
+                throw OutlineError(errorDescription: "the page has no DOM yet")
+            }
+            html = snapshot
+        }
+        return try await client.getSemanticDocument(targetURL: url.absoluteString, html: html, content: content)
     }
 
     /// hoverOutline highlights an element of the outline in the page, nil

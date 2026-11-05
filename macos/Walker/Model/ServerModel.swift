@@ -8,6 +8,19 @@ import Observation
 @MainActor
 @Observable
 final class ServerModel {
+    /// shapeDevModel is the shape developer of this server - made when its
+    /// section opens the first time, kept while the app runs
+    @ObservationIgnored private var shapeDevModel: ShapeDevModel?
+
+    var shapeDev: ShapeDevModel {
+        if let shapeDevModel {
+            return shapeDevModel
+        }
+        let model = ShapeDevModel(server: server)
+        shapeDevModel = model
+        return model
+    }
+
     enum Connection: Equatable {
         case unknown
         case online

@@ -28,7 +28,7 @@ type ServiceGoTSRPCClient interface {
 	GetShapeRootVersion(ctx go_context.Context, shapeRoot string) (retGetShapeRootVersion_0 string, clientErr error)
 	GetStatus(ctx go_context.Context) (retGetStatus_0 github_com_foomo_walker_go_internal_vo.ServiceStatus, clientErr error)
 	RestartScrape(ctx go_context.Context) (retRestartScrape_0 bool, clientErr error)
-	ValidateShape(ctx go_context.Context, shapeRoot string, group string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.ShapeValidation, clientErr error)
+	ValidateShape(ctx go_context.Context, shapeRoot string, group string, groupHeader string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.ShapeValidation, clientErr error)
 }
 
 type HTTPServiceGoTSRPCClient struct {
@@ -213,8 +213,8 @@ func (tsc *HTTPServiceGoTSRPCClient) RestartScrape(ctx go_context.Context) (retR
 	return
 }
 
-func (tsc *HTTPServiceGoTSRPCClient) ValidateShape(ctx go_context.Context, shapeRoot string, group string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.ShapeValidation, clientErr error) {
-	rpcArgs := []any{shapeRoot, group, targetURL, html}
+func (tsc *HTTPServiceGoTSRPCClient) ValidateShape(ctx go_context.Context, shapeRoot string, group string, groupHeader string, targetURL string, html string) (validation github_com_foomo_walker_go_internal_vo.ShapeValidation, clientErr error) {
+	rpcArgs := []any{shapeRoot, group, groupHeader, targetURL, html}
 	rpcReply := []any{&validation}
 	rpcErr := tsc.Client.Call(ctx, tsc.URL, tsc.EndPoint, "ValidateShape", rpcArgs, rpcReply)
 	if rpcErr != nil {

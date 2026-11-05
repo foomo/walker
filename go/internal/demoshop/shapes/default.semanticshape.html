@@ -10,7 +10,9 @@
         <val:include path="/partials/page-baseline" />
         <val:comp path="/partials/site-header" />
         <main>
-            <h1 val:score="10" />
+            <val:wildcard for="*">                
+                <h1 val:score="10" />
+            </val:wildcard>
         </main>
         <val:comp path="/partials/site-footer" />
     </body>

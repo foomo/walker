@@ -633,6 +633,7 @@ extension WalkerVO {
         public var group: String
         public var source: String
         public var statusCode: Int
+        public var groupHeader: String
         public var detectedGroup: String
         public var report: SemanticShapeVO.Report?
         public var trace: SemanticShapeVO.TraceNode?
@@ -640,11 +641,12 @@ extension WalkerVO {
         public var lintErrors: [SemanticShapeVO.LintError]?
         public var error: String
 
-        public init(url: String, group: String, source: String, statusCode: Int, detectedGroup: String, report: SemanticShapeVO.Report? = nil, trace: SemanticShapeVO.TraceNode? = nil, page: SemanticShapeVO.PageData? = nil, lintErrors: [SemanticShapeVO.LintError]? = nil, error: String) {
+        public init(url: String, group: String, source: String, statusCode: Int, groupHeader: String, detectedGroup: String, report: SemanticShapeVO.Report? = nil, trace: SemanticShapeVO.TraceNode? = nil, page: SemanticShapeVO.PageData? = nil, lintErrors: [SemanticShapeVO.LintError]? = nil, error: String) {
             self.url = url
             self.group = group
             self.source = source
             self.statusCode = statusCode
+            self.groupHeader = groupHeader
             self.detectedGroup = detectedGroup
             self.report = report
             self.trace = trace
@@ -658,6 +660,7 @@ extension WalkerVO {
             case group = "Group"
             case source = "Source"
             case statusCode = "StatusCode"
+            case groupHeader = "GroupHeader"
             case detectedGroup = "DetectedGroup"
             case report = "Report"
             case trace = "Trace"

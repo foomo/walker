@@ -50,7 +50,7 @@ func (s *service) GetSemanticDocument(targetURL, html string, content bool) (res
 			return result
 		}
 		fetchStart := time.Now()
-		body, statusCode, _, err := s.fetch(targetURL)
+		body, statusCode, _, err := s.fetch(targetURL, s.groupHeader())
 		fetchDuration = time.Since(fetchStart)
 		result.StatusCode = statusCode
 		if err != nil {

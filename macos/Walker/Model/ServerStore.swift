@@ -68,6 +68,37 @@ final class ServerStore {
         return server
     }
 
+    /// setShapeRoot writes the shape root into the config of a local server -
+    /// relative to the config's directory if it is in it, as walker resolves it
+    func setShapeRoot(_ id: Server.ID, path: String) async throws {
+        try await updateConfig(id) { form, base in
+            let dir = base.hasSuffix("/") ? base : base + "/"
+            form.shapeRoot = path.hasPrefix(dir) ? String(path.dropFirst(dir.count)) : path
+        }
+    }
+
+    /// setGroupHeader writes the group header into the config of a local server
+    func setGroupHeader(_ id: Server.ID, header: String) async throws {
+        try await updateConfig(id) { form, _ in
+            form.groupHeader = header
+        }
+    }
+
+    /// updateConfig changes the form of the config of a local server and
+    /// writes it - comments and unknown keys of the config stay. base is the
+    /// directory of the config.
+    private func updateConfig(_ id: Server.ID, _ change: (inout ConfigTool.Form, _ base: String) -> Void) async throws {
+        guard let url = server(id)?.configURL else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        let yaml = try String(contentsOf: url, encoding: .utf8)
+        let base = url.deletingLastPathComponent().path(percentEncoded: false)
+        var form = try await ConfigTool.read(yaml: yaml, base: base).form
+        change(&form, base)
+        let written = try await ConfigTool.write(yaml: yaml, form: form)
+        try written.write(to: url, atomically: true, encoding: .utf8)
+    }
+
     /// refreshLocal reads and validates a local config - the address of the
     /// server follows its addr
     @discardableResult

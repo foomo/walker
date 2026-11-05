@@ -176,18 +176,6 @@ final class ShapeHighlighter {
         return pageURL != nil && !webView.isLoading
     }
 
-    /// showInspector opens the Web Inspector of the page. WebKit has no public
-    /// api for it - the private inspector is only used if the web view has it,
-    /// right click "Inspect Element" works in any case.
-    func showInspector() {
-        let inspectorSelector = NSSelectorFromString("_inspector")
-        let showSelector = NSSelectorFromString("show")
-        guard let webView, webView.responds(to: inspectorSelector),
-              let inspector = webView.perform(inspectorSelector)?.takeUnretainedValue() as? NSObject,
-              inspector.responds(to: showSelector) else { return }
-        inspector.perform(showSelector)
-    }
-
     /// snapshot is the html of the DOM as it is now
     func snapshot() async -> String? {
         guard let webView else { return nil }
