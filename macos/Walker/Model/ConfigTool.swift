@@ -104,3 +104,23 @@ enum ConfigTool {
         }.value
     }
 }
+
+extension ConfigTool {
+    /// relativePath is path relative to the directory dir - "shapes" inside
+    /// it, "../shapes" next to it, "." for dir itself. Shape roots are always
+    /// written to configs this way: walker resolves them against the config
+    /// file, so a config keeps working wherever its folder moves.
+    static func relativePath(_ path: String, from dir: String) -> String {
+        func components(_ path: String) -> [String] {
+            URL(filePath: path, directoryHint: .isDirectory).standardizedFileURL.pathComponents
+        }
+        let target = components(path)
+        let base = components(dir)
+        var common = 0
+        while common < target.count, common < base.count, target[common] == base[common] {
+            common += 1
+        }
+        let parts = Array(repeating: "..", count: base.count - common) + target[common...]
+        return parts.isEmpty ? "." : parts.joined(separator: "/")
+    }
+}

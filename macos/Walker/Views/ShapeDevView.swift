@@ -12,6 +12,8 @@ struct ShapeDevView: View {
     @AppStorage("shapeDevShowsPageData") private var showsPageData = true
     /// showsOutline shows the semantic outline of the page right of it
     @AppStorage("shapeDevShowsOutline") private var showsOutline = false
+    /// showsElementHTML shows the html of the selected elements under the page
+    @AppStorage("shapeDevShowsElementHTML") private var showsElementHTML = true
 
     /// followed is set once a local server brought the shape root of its
     /// config - until then the prompt for a root would flash
@@ -81,8 +83,20 @@ struct ShapeDevView: View {
         }
     }
 
-    @ViewBuilder
+    /// page is the web view - with the html of the selected elements under it
     private var page: some View {
+        VSplitView {
+            webPage
+                .frame(minHeight: 200, maxHeight: .infinity)
+            if showsElementHTML {
+                ElementHTMLPane(model: model)
+                    .frame(minHeight: 100, idealHeight: 220, maxHeight: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var webPage: some View {
         if model.pageURL == nil {
             ContentUnavailableView("No Page", systemImage: "globe", description: Text("Enter the url of a page to validate."))
         } else {
@@ -141,6 +155,10 @@ struct ShapeDevView: View {
                 Label("Head & JSON-LD", systemImage: "curlybraces.square")
             }
             .help(showsPageData ? "Hide the head and the JSON-LD of the validated html" : "Show the head and the JSON-LD of the validated html")
+            Toggle(isOn: $showsElementHTML) {
+                Label("Element HTML", systemImage: "chevron.left.forwardslash.chevron.right")
+            }
+            .help(showsElementHTML ? "Hide the html of the selected elements" : "Show the html of the elements the selected shape node matched, under the page")
             Toggle(isOn: $showsOutline) {
                 Label("Document Outline", systemImage: "list.bullet.indent")
             }
@@ -457,6 +475,8 @@ private struct OutlinePane: View {
                 VStack(alignment: .leading, spacing: 8) {
                     SemanticDocumentContent(result: result, pageURL: model.highlighter.pageURL ?? model.pageURL, loadContent: { [model] in
                         try await model.outlineContent()
+                    }, marked: model.selectedLocators, selected: model.outlineSelection?.selector, onSelect: { [model] selector, element in
+                        model.selectOutline(selector, label: element.outlineLabel)
                     }) { selector, _ in
                         model.hoverOutline(selector)
                     }
@@ -467,6 +487,121 @@ private struct OutlinePane: View {
                 .textSelection(.enabled)
             }
         }
+    }
+}
+
+/// ElementHTMLPane shows the html of the elements the selected shape node
+/// matched - from the page in the web view, the one that is highlighted
+private struct ElementHTMLPane: View {
+    let model: ShapeDevModel
+
+    private var node: SemanticShapeVO.TraceNode? { model.item(model.selection)?.node }
+
+    /// title names the selection: the element of the outline, else the shape node
+    private var title: String? { model.outlineSelection?.label ?? node?.label }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Element HTML")
+                    .font(.headline)
+                if let title {
+                    Text(title)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                Spacer()
+                Button("Copy", systemImage: "doc.on.doc") {
+                    copy()
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
+                .disabled(html.isEmpty)
+                .help("Copy the html")
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            Divider()
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    /// html is the found elements as one text
+    private var html: String {
+        (model.selectedHTML ?? []).compactMap(\.html).joined(separator: "\n\n")
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if model.outlineSelection != nil, let elements = model.selectedHTML {
+            elementsView(elements)
+        } else if model.outlineSelection != nil {
+            ProgressView()
+                .controlSize(.small)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let node, let elements = model.selectedHTML {
+            if !node.found {
+                note("The selected node matched no element - there is no html to show.")
+            } else if elements.isEmpty {
+                note("The selected node has no elements in the page.")
+            } else {
+                elementsView(elements)
+            }
+        } else if node != nil {
+            ProgressView()
+                .controlSize(.small)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            note("Select a node in the shape tree or an element of the outline to see its html.")
+        }
+    }
+
+    /// elementsView shows the html of the elements, each with its locator if there are several
+    private func elementsView(_ elements: [ShapeHighlighter.ElementHTML]) -> some View {
+        ScrollView([.vertical, .horizontal]) {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(elements, id: \.locator) { element in
+                    VStack(alignment: .leading, spacing: 4) {
+                        if elements.count > 1 {
+                            Text(element.locator)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(.tertiary)
+                        }
+                        if let html = element.html {
+                            Text(HTMLHighlighter.highlight(html))
+                                .font(.caption.monospaced())
+                                .fixedSize()
+                            if element.truncated {
+                                Text("… cut off - the element is too large to show in full")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text("Not in the page of the web view - with the source Server the crawler's html can differ from the DOM.")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+            }
+            .padding(10)
+            .textSelection(.enabled)
+        }
+    }
+
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(10)
+    }
+
+    private func copy() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(html, forType: .string)
     }
 }
 

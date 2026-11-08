@@ -102,6 +102,12 @@ struct SemanticDocumentContent: View {
     var pageURL: URL?
     /// loadContent is called when the user opens the content of a branch the first time
     var loadContent: ContentLoader?
+    /// marked are locators of page elements selected elsewhere - their rows are marked
+    var marked: [String] = []
+    /// selected is the selector of the element selected in the outline
+    var selected: String?
+    /// onSelect is called with an element the user clicked - nil: the outline has no selection
+    var onSelect: ((String, SemanticScrapeVO.DocumentElement) -> Void)?
     var onHover: ((String?, SemanticScrapeVO.DocumentElement?) -> Void)?
 
     var body: some View {
@@ -118,7 +124,7 @@ struct SemanticDocumentContent: View {
                 Label("The page has no landmarks, articles, sections, asides or headings.", systemImage: "rectangle.dashed")
                     .foregroundStyle(.orange)
             } else {
-                SemanticOutline(elements: body, pageURL: pageURL, loadContent: loadBody, onHover: onHover)
+                SemanticOutline(elements: body, pageURL: pageURL, loadContent: loadBody, marked: marked, selected: selected, onSelect: onSelect, onHover: onHover)
             }
             if !document.lang.isEmpty {
                 LabeledContent("Language", value: document.lang)
@@ -162,6 +168,13 @@ struct SemanticOutline: View {
     var pageURL: URL?
     /// loadContent loads the content - without it, clicks show nothing
     var loadContent: ContentLoader?
+    /// marked are locators of page elements selected elsewhere, e.g. a node of
+    /// the shape tree - same scheme as the selectors of the outline
+    var marked: [String] = []
+    /// selected is the selector of the element selected in the outline
+    var selected: String?
+    /// onSelect is called with an element the user clicked - nil: the outline has no selection
+    var onSelect: ((String, SemanticScrapeVO.DocumentElement) -> Void)?
     /// onHover reports the selector under the mouse, with its element - a link
     /// has none - and nil, when it left
     var onHover: ((String?, SemanticScrapeVO.DocumentElement?) -> Void)?
@@ -339,8 +352,64 @@ struct SemanticOutline: View {
         }
     }
 
+    /// Mark is how a row relates to the marked page elements
+    enum Mark {
+        /// the row is a marked element - or the outline element directly in a marked one
+        case element
+        /// a marked element is inside the row, e.g. an image in a section or a link in a collapsed nav
+        case contains
+    }
+
+    /// marks are the marks of the visible element rows by id: a row with the
+    /// locator itself, else the outermost rows inside it, else the nearest row
+    /// around it. Content rows share their container's selector and get none.
+    private func marks(_ rows: [Row]) -> [String: Mark] {
+        guard !marked.isEmpty else { return [:] }
+        let elementRows = rows.filter {
+            if case let .element(element) = $0.content { return !element.isContent }
+            return false
+        }
+        var marks: [String: Mark] = [:]
+        for locator in marked {
+            let exact = elementRows.filter { $0.selector == locator }
+            if !exact.isEmpty {
+                exact.forEach { marks[$0.id] = .element }
+                continue
+            }
+            let inside = elementRows.filter { $0.selector.hasPrefix(locator + " > ") }
+            let outermost = inside.filter { row in
+                !inside.contains { other in other.id != row.id && row.selector.hasPrefix(other.selector + " > ") }
+            }
+            if !outermost.isEmpty {
+                outermost.forEach { marks[$0.id] = .element }
+                continue
+            }
+            if let around = elementRows.filter({ locator.hasPrefix($0.selector + " > ") }).max(by: { $0.selector.count < $1.selector.count }),
+               marks[around.id] == nil {
+                marks[around.id] = .contains
+            }
+        }
+        return marks
+    }
+
     var body: some View {
         let issues = issues
+        let rows = rows
+        let marks = marks(rows)
+        ScrollViewReader { proxy in
+            outline(rows: rows, issues: issues, marks: marks)
+                .onChange(of: marked) {
+                    // the first marked row, in document order
+                    if let first = rows.first(where: { marks[$0.id] != nil }) {
+                        withAnimation {
+                            proxy.scrollTo(first.id, anchor: .center)
+                        }
+                    }
+                }
+        }
+    }
+
+    private func outline(rows: [Row], issues: [String: Issue], marks: [String: Mark]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if case let .failed(message) = content {
                 Label("The content could not be loaded: \(message)", systemImage: "exclamationmark.triangle")
@@ -350,6 +419,14 @@ struct SemanticOutline: View {
             ForEach(rows, id: \.id) { row in
                 content(row, issues: issues)
                     .padding(.leading, CGFloat(row.depth) * Self.indent)
+                    .background(alignment: .leading) {
+                        if isSelected(row) {
+                            selectionBackground(depth: row.depth)
+                        } else {
+                            markBackground(marks[row.id], depth: row.depth)
+                        }
+                    }
+                    .id(row.id)
                     .overlay(alignment: .leading) {
                         guides(depth: row.depth)
                     }
@@ -388,16 +465,62 @@ struct SemanticOutline: View {
                 .contentShape(.rect)
                 .onTapGesture {
                     toggleContent(element, showsContent: row.showsContent)
+                    onSelect?(element.selector, element)
                 }
                 .pointerStyle(.link)
-                .help(row.showsContent
-                    ? "Click to hide the content of this branch"
-                    : "Click to show the texts, links, images, lists and tables of this branch")
+                .help(onSelect == nil
+                    ? (row.showsContent ? "Click to hide the content of this branch" : "Click to show the texts, links, images, lists and tables of this branch")
+                    : (row.showsContent ? "Click to select it and hide the content of this branch" : "Click to select it and show the texts, links, images, lists and tables of this branch"))
             }
         case let .link(link):
             linkRow(link)
         case let .grid(table):
             tableGrid(table)
+        }
+    }
+
+    /// isSelected: the row is the element selected in the outline - its
+    /// content rows share the selector and are not
+    private func isSelected(_ row: Row) -> Bool {
+        guard onSelect != nil, let selected, case let .element(element) = row.content else { return false }
+        return !element.isContent && element.selector == selected
+    }
+
+    /// selectionColor is the color the outline highlights in the page with
+    static let selectionColor = Color(red: 0xaf / 255, green: 0x52 / 255, blue: 0xde / 255)
+
+    /// selectionBackground marks the selected row - in the color of its highlight in the page
+    private func selectionBackground(depth: Int) -> some View {
+        RoundedRectangle(cornerRadius: 4)
+            .fill(Self.selectionColor.opacity(0.22))
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(Self.selectionColor)
+                    .frame(width: 3)
+                    .padding(.vertical, 2)
+            }
+            .padding(.leading, CGFloat(depth) * Self.indent - 4)
+            .padding(.vertical, -2)
+    }
+
+    /// markBackground tints a marked row from its indentation on - an element
+    /// stronger than a row that contains one
+    @ViewBuilder
+    private func markBackground(_ mark: Mark?, depth: Int) -> some View {
+        if let mark {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.accentColor.opacity(mark == .element ? 0.2 : 0.08))
+                .overlay(alignment: .leading) {
+                    if mark == .element {
+                        Capsule()
+                            .fill(Color.accentColor)
+                            .frame(width: 3)
+                            .padding(.vertical, 2)
+                    }
+                }
+                .padding(.leading, CGFloat(depth) * Self.indent - 4)
+                .padding(.vertical, -2)
+                .help(mark == .element ? "selected in the shape tree" : "contains an element selected in the shape tree")
         }
     }
 
@@ -660,6 +783,13 @@ extension SemanticScrapeVO.DocumentElement {
             .unorderedList, .orderedList, .listItem, .definitions, .term, .definition,
             .table, .row, .headerCell, .cell,
         ].contains(elementType)
+    }
+
+    /// outlineLabel names the element as the outline shows it: its type and
+    /// its label, or its text
+    var outlineLabel: String {
+        let name = label.isEmpty ? text : label
+        return name.isEmpty ? elementType.rawValue : "\(elementType.rawValue) \(name)"
     }
 
     /// isListItem: li, dt and dd

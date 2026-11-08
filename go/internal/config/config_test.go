@@ -1,10 +1,13 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -72,4 +75,22 @@ func TestLoadInterval(t *testing.T) {
 		_, errCnf = Load([]byte("target: https://www.bestbytes.de\n" + invalid + "\n"))
 		assert.Error(t, errCnf, invalid)
 	}
+}
+
+func TestGetResolvesShapeRoot(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "sites", "shop.yaml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(file), 0o755))
+
+	// relative to the config file, not to the working directory
+	require.NoError(t, os.WriteFile(file, []byte("target: https://example.com\nshaperoot: ../shapes\n"), 0o644))
+	conf, err := Get(file)
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(dir, "shapes"), conf.ShapeRoot)
+
+	// absolute stays
+	require.NoError(t, os.WriteFile(file, []byte("target: https://example.com\nshaperoot: /srv/shapes\n"), 0o644))
+	conf, err = Get(file)
+	require.NoError(t, err)
+	assert.Equal(t, "/srv/shapes", conf.ShapeRoot)
 }

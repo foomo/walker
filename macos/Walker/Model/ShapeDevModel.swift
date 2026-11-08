@@ -60,6 +60,9 @@ final class ShapeDevModel {
     private(set) var shapeReloadedAt: Date?
     /// highlighted is how many locators of the selection were found in the page - nil without selection
     private(set) var highlighted: (found: Int, total: Int)?
+    /// selectedHTML are the elements the selected shape node matched, as html
+    /// from the page in the web view - nil without selection
+    private(set) var selectedHTML: [ShapeHighlighter.ElementHTML]?
     /// pageVersion counts the pages the web view loaded - the outline reloads with it
     private(set) var pageVersion = 0
     /// outline is the semantic document of the page, from the same source as the validation
@@ -79,7 +82,35 @@ final class ShapeDevModel {
 
     /// selection is the id of the selected trace item
     var selection: TraceItem.ID? {
-        didSet { highlightSelection() }
+        didSet {
+            // one selection at a time - a shape node ends the one in the outline
+            if selection != nil {
+                outlineSelection = nil
+            }
+            highlightSelection()
+        }
+    }
+
+    /// OutlineSelection is an element selected in the document outline
+    struct OutlineSelection: Equatable {
+        let selector: String
+        /// label names it in the html pane, e.g. section Feeding
+        let label: String
+    }
+
+    /// outlineSelection is the element selected in the outline - instead of a
+    /// shape node it is highlighted in the page and shown in the html pane
+    private(set) var outlineSelection: OutlineSelection?
+
+    /// selectOutline selects an element of the outline - the shape node is deselected
+    func selectOutline(_ selector: String, label: String) {
+        let outline = OutlineSelection(selector: selector, label: label)
+        guard outline != outlineSelection else { return }
+        if selection != nil {
+            selection = nil
+        }
+        outlineSelection = outline
+        highlightSelection()
     }
     /// collapsed trace items - nil until the first trace collapsed the clean subtrees
     var collapsed: Set<TraceItem.ID>?
@@ -415,6 +446,11 @@ final class ShapeDevModel {
             let document = try await fetchOutline(content: false)
             guard !Task.isCancelled else { return }
             outlineVersion += 1
+            // a new outline - its elements may be gone
+            if outlineSelection != nil {
+                outlineSelection = nil
+                highlightSelection()
+            }
             outline = .loaded(document)
         } catch is CancellationError {
             return
@@ -448,7 +484,7 @@ final class ShapeDevModel {
     }
 
     /// hoverOutline highlights an element of the outline in the page, nil
-    /// brings back the highlight of the selected shape node
+    /// brings back the highlight of the selection
     func hoverOutline(_ selector: String?) {
         guard let selector else {
             highlightSelection()
@@ -461,11 +497,29 @@ final class ShapeDevModel {
 
     private static let outlineColor = "#af52de"
 
+    /// highlightSelection highlights the selection in the page and gets the
+    /// html of its elements: the element of the outline, else the shape node
     private func highlightSelection() {
+        if let outline = outlineSelection {
+            Task {
+                await highlighter.highlight(locators: [outline.selector], color: Self.outlineColor, scroll: true)
+                highlighted = nil
+                let html = await highlighter.html(locators: [outline.selector])
+                if outlineSelection == outline {
+                    selectedHTML = html
+                }
+            }
+            return
+        }
         let node = item(selection)?.node
         Task {
             let result = await highlighter.highlight(node)
             highlighted = node == nil ? nil : result
+            let html = node == nil ? nil : await highlighter.html(locators: node?.found == true ? node?.locators ?? [] : [])
+            // a newer selection may have finished first
+            if outlineSelection == nil, item(selection)?.node == node {
+                selectedHTML = html
+            }
         }
     }
 }

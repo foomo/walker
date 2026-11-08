@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -67,13 +68,19 @@ type Config struct {
 	Offset time.Duration
 }
 
+// Get loads the config file filename - a relative shaperoot is resolved
+// against the directory of the file, as configs write it
 func Get(filename string) (conf *Config, err error) {
 	yamlBytes, errRead := ioutil.ReadFile(filename)
 	if errRead != nil {
 		err = errRead
 		return
 	}
-	return Load(yamlBytes)
+	conf, err = Load(yamlBytes)
+	if err == nil && conf.ShapeRoot != "" && !filepath.IsAbs(conf.ShapeRoot) {
+		conf.ShapeRoot = filepath.Join(filepath.Dir(filename), conf.ShapeRoot)
+	}
+	return conf, err
 }
 
 func Load(yamlBytes []byte) (conf *Config, err error) {

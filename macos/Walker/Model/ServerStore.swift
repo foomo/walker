@@ -69,11 +69,10 @@ final class ServerStore {
     }
 
     /// setShapeRoot writes the shape root into the config of a local server -
-    /// relative to the config's directory if it is in it, as walker resolves it
+    /// always relative to the config file, walker resolves it against it
     func setShapeRoot(_ id: Server.ID, path: String) async throws {
         try await updateConfig(id) { form, base in
-            let dir = base.hasSuffix("/") ? base : base + "/"
-            form.shapeRoot = path.hasPrefix(dir) ? String(path.dropFirst(dir.count)) : path
+            form.shapeRoot = ConfigTool.relativePath(path, from: base)
         }
     }
 

@@ -176,6 +176,103 @@ final class ShapeHighlighter {
         return pageURL != nil && !webView.isLoading
     }
 
+    /// ElementHTML is an element of the page as indented html - nil if the
+    /// locator matched nothing in the page of the web view
+    struct ElementHTML: Hashable, Sendable {
+        let locator: String
+        let html: String?
+        /// truncated: the element was too large and is cut off
+        let truncated: Bool
+    }
+
+    /// html serializes the elements at the locators from the DOM of the web
+    /// view, indented, without the marks of the highlight
+    func html(locators: [String]) async -> [ElementHTML] {
+        guard let webView, !locators.isEmpty,
+              let json = try? String(data: JSONEncoder().encode(locators), encoding: .utf8) else { return [] }
+        let script = Self.htmlScript + "(\(json))"
+        return await withCheckedContinuation { continuation in
+            webView.evaluateJavaScript(script) { result, _ in
+                // the untyped result stays here, only the Sendable elements leave
+                let entries = result as? [[String: Any]] ?? []
+                let elements = zip(locators, entries).map { locator, entry in
+                    ElementHTML(locator: locator, html: entry["html"] as? String, truncated: entry["truncated"] as? Bool ?? false)
+                }
+                continuation.resume(returning: elements)
+            }
+        }
+    }
+
+    /// htmlScript serializes elements: one line per element, text and
+    /// comment, an element with only a short text on one line, script and
+    /// style bodies shortened - at most maxLines lines per element
+    private static let htmlScript = """
+    (function(locators) {
+        const css = 'walker-shape-highlight'
+        const voids = new Set(['area','base','br','col','embed','hr','img','input','link','meta','source','track','wbr'])
+        const maxLines = 2000
+        const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        const attrs = (el) => {
+            let out = ''
+            for (const a of el.attributes) {
+                let value = a.value
+                if (a.name === 'class') value = value.split(/\\s+/).filter((c) => c && c !== css).join(' ')
+                if (a.name === 'style') value = value.split(';').filter((d) => d.trim() && !d.trim().startsWith('--walker-')).join(';').trim()
+                if ((a.name === 'class' || a.name === 'style') && !value) continue
+                // always with the value - alt="" is not the same as no alt
+                out += ' ' + a.name + '="' + value.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"'
+            }
+            return out
+        }
+        const text = (s) => s.replace(/\\s+/g, ' ').trim()
+        return locators.map((locator) => {
+            let root = null
+            try { root = document.querySelector(locator) } catch (e) {}
+            if (!root) return {}
+            const lines = []
+            let truncated = false
+            const add = (depth, line) => {
+                if (lines.length >= maxLines) { truncated = true; return false }
+                lines.push('  '.repeat(depth) + line)
+                return true
+            }
+            const visit = (node, depth) => {
+                if (truncated) return
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const t = text(node.textContent)
+                    if (t) add(depth, esc(t))
+                    return
+                }
+                if (node.nodeType === Node.COMMENT_NODE) {
+                    add(depth, '<!-- ' + text(node.textContent) + ' -->')
+                    return
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) return
+                const tag = node.tagName.toLowerCase()
+                const open = '<' + tag + attrs(node) + '>'
+                if (voids.has(tag)) { add(depth, open); return }
+                if (tag === 'script' || tag === 'style') {
+                    const body = node.textContent.trim()
+                    const short = body.length > 200 ? body.slice(0, 200) + ' …' : body
+                    add(depth, open + esc(text(short)) + '</' + tag + '>')
+                    return
+                }
+                const children = Array.from(node.childNodes).filter((c) => c.nodeType !== Node.TEXT_NODE || text(c.textContent))
+                if (children.length === 0) { add(depth, open + '</' + tag + '>'); return }
+                if (children.length === 1 && children[0].nodeType === Node.TEXT_NODE && text(children[0].textContent).length <= 80) {
+                    add(depth, open + esc(text(children[0].textContent)) + '</' + tag + '>')
+                    return
+                }
+                if (!add(depth, open)) return
+                for (const child of children) visit(child, depth + 1)
+                add(depth, '</' + tag + '>')
+            }
+            visit(root, 0)
+            return { html: lines.join('\\n'), truncated: truncated }
+        })
+    })
+    """
+
     /// snapshot is the html of the DOM as it is now
     func snapshot() async -> String? {
         guard let webView else { return nil }

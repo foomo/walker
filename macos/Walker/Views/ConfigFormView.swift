@@ -18,6 +18,8 @@ struct ConfigFormView<Header: View, Footer: View>: View {
     @ViewBuilder var footer: Footer
 
     @State private var form = ConfigTool.Form()
+    /// shapeRootFocused: the shape root is being typed - it is made relative when it loses the focus
+    @FocusState private var shapeRootFocused: Bool
     /// readForm is the form as the yaml has it - only edits beyond it are written,
     /// so opening a file never changes it
     @State private var readForm: ConfigTool.Form?
@@ -87,6 +89,13 @@ struct ConfigFormView<Header: View, Footer: View>: View {
                     HStack {
                         TextField("Shape root", text: $form.shapeRoot, prompt: Text("relative to this file"))
                             .labelsHidden()
+                            .focused($shapeRootFocused)
+                            .onSubmit(relativizeShapeRoot)
+                            .onChange(of: shapeRootFocused) {
+                                if !shapeRootFocused {
+                                    relativizeShapeRoot()
+                                }
+                            }
                         Button("Choose…", action: chooseShapeRoot)
                     }
                 }
@@ -176,12 +185,16 @@ struct ConfigFormView<Header: View, Footer: View>: View {
         }
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let path = url.path(percentEncoded: false)
-        // inside the config's directory the path is written relative, like walker resolves it
-        if !base.isEmpty, path.hasPrefix(base + "/") {
-            form.shapeRoot = String(path.dropFirst(base.count + 1))
-        } else {
-            form.shapeRoot = path
-        }
+        // always relative to the config file - walker resolves it against it
+        form.shapeRoot = base.isEmpty ? path : ConfigTool.relativePath(path, from: base)
+    }
+
+    /// relativizeShapeRoot makes a typed absolute shape root relative to the config file
+    private func relativizeShapeRoot() {
+        let root = form.shapeRoot.trimmingCharacters(in: .whitespaces)
+        guard !base.isEmpty, root.hasPrefix("/") || root.hasPrefix("~") else { return }
+        let path = (root as NSString).expandingTildeInPath
+        form.shapeRoot = ConfigTool.relativePath(path, from: base)
     }
 }
 
