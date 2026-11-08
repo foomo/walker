@@ -247,6 +247,10 @@ final class ShapeDevModel {
         }
         validationCount += 1
         let count = validationCount
+        let requestedSource = source
+        let requestedGroup = group
+        let requestedHeader = groupHeader
+        let requestedRoot = shapeRoot
         isValidating = true
         defer {
             if count == validationCount {
@@ -255,20 +259,30 @@ final class ShapeDevModel {
         }
         do {
             var html = ""
-            if source == .rendered {
+            var resolvedGroup = requestedGroup
+            if requestedSource == .rendered {
+                if requestedGroup.isEmpty, !effectiveGroupHeader.isEmpty {
+                    resolvedGroup = try await highlighter.groupHeaderValue(effectiveGroupHeader)
+                }
+                guard !Task.isCancelled, count == validationCount, highlighter.pageURL == url else { return }
                 guard let snapshot = await highlighter.snapshot() else {
                     error = "the page has no DOM to validate yet"
                     return
                 }
                 html = snapshot
             }
-            let validation = try await client.validateShape(shapeRoot: shapeRoot, group: group, groupHeader: groupHeader, targetURL: url.absoluteString, html: html)
+            var validation = try await client.validateShape(shapeRoot: requestedRoot, group: resolvedGroup, groupHeader: requestedHeader, targetURL: url.absoluteString, html: html)
+            if requestedSource == .rendered, requestedGroup.isEmpty {
+                validation.detectedGroup = resolvedGroup
+            }
             guard !Task.isCancelled, count == validationCount else { return }
+            guard (highlighter.pageURL ?? pageURL) == url else { return }
             apply(validation)
             error = nil
         } catch is CancellationError {
             return
         } catch {
+            guard !Task.isCancelled, count == validationCount, (highlighter.pageURL ?? pageURL) == url else { return }
             self.error = error.localizedDescription
         }
     }

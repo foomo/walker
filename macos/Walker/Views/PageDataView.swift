@@ -208,9 +208,16 @@ private struct HeadRow: View {
                     .lineLimit(3)
             }
             if !isValidated {
-                Label("not in the shape", systemImage: "questionmark.circle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
+                if isExcludedFromMatching {
+                    Label("excluded from semantic matching", systemImage: "minus.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .help("Walker excludes scripts and styles from its semantic tree. JSON-LD is validated separately.")
+                } else {
+                    Label("not in the shape", systemImage: "questionmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
             }
         }
         .help(element.locator)
@@ -228,6 +235,12 @@ private struct HeadRow: View {
 
     private var attributes: [SemanticShapeVO.HeadAttribute] {
         element.attributes ?? []
+    }
+
+    private var isExcludedFromMatching: Bool {
+        if ["style", "template", "noscript"].contains(element.tag) { return true }
+        let type = attributes.first { $0.key == "type" }?.value.lowercased() ?? ""
+        return element.tag == "script" && type != "application/ld+json"
     }
 
     /// source shows the tag purple, attribute names secondary and the values -

@@ -176,6 +176,28 @@ final class ShapeHighlighter {
         return pageURL != nil && !webView.isLoading
     }
 
+    /// Resolve the configured group header using the browser's current session.
+    func groupHeaderValue(_ header: String) async throws -> String {
+        guard let webView else { return "" }
+        return try await webView.callAsyncJavaScript(
+            Self.groupHeaderScript, arguments: ["header": header], in: nil, contentWorld: .page
+        ) as? String ?? ""
+    }
+
+    // Fetch in the browser so cookies and client-side navigation use the current page.
+    private static let groupHeaderScript = """
+    const url = window.location.href;
+    const options = {cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(10000)};
+    let response = await fetch(url, {...options, method: 'HEAD'});
+    if (response.status === 405 || response.status === 501) {
+        response = await fetch(url, {...options, method: 'GET'});
+        if (response.body) await response.body.cancel();
+    }
+    if (!response.ok) throw new Error('Could not read page group: HTTP ' + response.status);
+    const group = response.headers.get(header) || '';
+    return group.endsWith('/') ? group + 'index' : group;
+    """
+
     /// snapshot is the html of the DOM as it is now
     func snapshot() async -> String? {
         guard let webView else { return nil }
